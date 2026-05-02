@@ -191,7 +191,7 @@ Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, k
       method: "POST",
       headers: { "x-api-key": ANTHROPIC, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-3-5-haiku-20241022",
+        model: "claude-sonnet-4-6",
         max_tokens: 400,
         system: "You are Vulture Vision. Be concise, analytical, operational.",
         messages: [{ role: "user", content: prompt }],
