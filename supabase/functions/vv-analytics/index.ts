@@ -172,7 +172,8 @@ async function buildAsset(symbol: string, type: "CRYPTO" | "EQUITY", price: numb
 
 async function aiNarrative(crypto: Crypto[], assets: Asset[], port: any): Promise<string> {
   const ANTHROPIC = Deno.env.get("ANTHROPIC_API_KEY");
-  const LOVABLE = Deno.env.get("LOVABLE_API_KEY");
+  if (!ANTHROPIC) return "AI synthesis offline — ANTHROPIC_API_KEY not configured.";
+
   const prompt = `VULTURE VISION INTEL BRIEF — ${new Date().toISOString()}
 
 Top crypto:
@@ -186,37 +187,26 @@ Portfolio: regime=${port.dominant_regime} avgQ=${port.avg_quantum_score.toFixed(
 Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, key risks, conviction. Tight clipped operational tone.`;
 
   try {
-    if (ANTHROPIC) {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "x-api-key": ANTHROPIC, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 400,
-          system: "You are Vulture Vision. Be concise, analytical, operational.",
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-      const j = await r.json();
-      if (r.ok) return j?.content?.[0]?.text || "";
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": ANTHROPIC, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 400,
+        system: "You are Vulture Vision. Be concise, analytical, operational.",
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      console.error("Claude narrative error:", r.status, j);
+      return `AI synthesis error: ${j?.error?.message || r.status}`;
     }
-    if (LOVABLE) {
-      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: "You are Vulture Vision. Concise operational tone." },
-            { role: "user", content: prompt },
-          ],
-        }),
-      });
-      const j = await r.json();
-      if (r.ok) return j?.choices?.[0]?.message?.content || "";
-    }
-  } catch {}
-  return "AI synthesis offline — engine running on raw quantitative signals only.";
+    return j?.content?.[0]?.text || "";
+  } catch (e) {
+    console.error("Claude narrative threw:", e);
+    return "AI synthesis offline — engine running on raw quantitative signals only.";
+  }
 }
 
 Deno.serve(async (req) => {
