@@ -1,4 +1,4 @@
-import { corsHeaders } from "@supabase/supabase-js/cors";
+const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 // Live .onion search via Ahmia (clearnet endpoint that indexes Tor sites).
 // No Tor proxy required. Parses the public HTML results page.

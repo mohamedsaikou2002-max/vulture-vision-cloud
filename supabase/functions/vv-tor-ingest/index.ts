@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
-import { corsHeaders } from "@supabase/supabase-js/cors";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 // Ingest TorBot JSON output. POST a JSON body shaped like:
 // { entries: [ { name, url, description?, category?, status?, tags?, ping_ms? }, ... ] }

@@ -1,4 +1,4 @@
-import { corsHeaders } from "@supabase/supabase-js/cors";
+const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 // Live market analytics. CoinGecko for crypto, Stooq for SPY/equities (no key).
 // Computes derived signals (RSI/MACD-hist proxies, quantum-style amplitude,
@@ -219,7 +219,7 @@ Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, k
   return "AI synthesis offline — engine running on raw quantitative signals only.";
 }
 
-import { corsHeaders } from "@supabase/supabase-js/cors";
+const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
