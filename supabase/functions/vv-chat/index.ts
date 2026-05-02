@@ -17,26 +17,40 @@ Deno.serve(async (req) => {
     const system = "You are Vulture Vision, an elite intelligence synthesis AI. Analyze market data, news, and OSINT intel with precision. Be concise, analytical, and actionable. Speak in clipped operational tone.";
 
     let reply = "";
+    let lastError = "";
 
+    // Try Anthropic first
     if (ANTHROPIC) {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": ANTHROPIC,
-          "anthropic-version": "2023-06-01",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system,
-          messages: [{ role: "user", content: message }],
-        }),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j?.error?.message || `Claude ${r.status}`);
-      reply = j?.content?.[0]?.text || "[no response]";
-    } else if (LOVABLE) {
+      try {
+        const r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key": ANTHROPIC,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1000,
+            system,
+            messages: [{ role: "user", content: message }],
+          }),
+        });
+        const j = await r.json();
+        if (r.ok) {
+          reply = j?.content?.[0]?.text || "";
+        } else {
+          lastError = j?.error?.message || `Claude ${r.status}`;
+          console.error("Anthropic failed, falling back:", lastError);
+        }
+      } catch (err) {
+        lastError = String((err as Error).message);
+        console.error("Anthropic threw:", lastError);
+      }
+    }
+
+    // Fallback to Lovable AI Gateway
+    if (!reply && LOVABLE) {
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE}`, "Content-Type": "application/json" },
@@ -49,10 +63,16 @@ Deno.serve(async (req) => {
         }),
       });
       const j = await r.json();
-      if (!r.ok) throw new Error(j?.error?.message || `Gateway ${r.status}`);
+      if (!r.ok) {
+        if (r.status === 429) throw new Error("Rate limit exceeded, try again shortly.");
+        if (r.status === 402) throw new Error("AI credits exhausted. Add funds in Settings → Workspace → Usage.");
+        throw new Error(j?.error?.message || `Gateway ${r.status}`);
+      }
       reply = j?.choices?.[0]?.message?.content || "[no response]";
-    } else {
-      reply = "[No AI provider configured]";
+    }
+
+    if (!reply) {
+      reply = lastError ? `[AI offline: ${lastError}]` : "[No AI provider configured]";
     }
 
     return new Response(JSON.stringify({ reply }), {
