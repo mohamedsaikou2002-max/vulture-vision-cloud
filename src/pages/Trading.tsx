@@ -1,473 +1,434 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { io, Socket } from "socket.io-client";
+import {
+  LineChart, Line, XAxis, YAxis, ReferenceLine, ResponsiveContainer, Tooltip,
+} from "recharts";
 import VVLayout from "@/components/VVLayout";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
-interface Trade {
-  id: string;
-  instrument: string;
-  side: string;
-  qty: number;
-  price: number;
-  pnl: number | null;
-  mode: string;
-  meta: Record<string, any>;
-  created_at: string;
-}
-interface Synth {
-  id: string;
-  thesis: any;
-  antithesis: any;
-  synthesis: any;
-  narrative: string | null;
-  score: number | null;
-  created_at: string;
-}
-interface Alert {
-  id: string;
-  level: string;
-  reason: string;
-  source: string | null;
-  payload: any;
-  created_at: string;
-}
-interface Tick {
-  id: string;
-  bid: number;
-  ask: number;
-  mid: number;
-  last: number;
-  change_24h_pct: number;
-  ofi: number;
-}
-interface QState {
-  n_qubits: number;
-  labels: string[];
-  coherence: number;
-  dominant: number;
-  top: { i: number; p: number }[];
-  backend: string;
-  ts: string;
-}
-interface Mirofish {
-  verdict: string;
-  confidence: number;
-  drift: number;
-  ofi: number;
-  coherence: number;
-  instruments: number;
-  ts: string;
-}
+const VV_HOST = (import.meta.env.VITE_VV_HOST as string) || "localhost:5000";
+const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${VV_HOST}`;
+const HTTP_URL = `${location.protocol === "https:" ? "https" : "http"}://${VV_HOST}`;
 
-const STARTING_EQUITY = 100_000;
+const EXCHANGES = ["binance", "bybit", "oanda", "alpaca"] as const;
+type Exch = typeof EXCHANGES[number];
 
-const PAPER_GATE = {
-  min_win_rate: 0.55,
-  min_sharpe: 1.5,
-  max_drawdown: 0.15,
-  min_weeks_clean: 3,
-  min_trades: 30,
+// ---------- types (loose; we render whatever the server sends) ----------
+interface ConnState { state?: string; last_msg?: number; reconnects?: number }
+interface Tick { instrument: string; bid?: number; ask?: number; price?: number; ts?: number }
+interface LatencyMsg { [k: string]: number }
+interface PortfolioMsg {
+  value_usd: number;
+  peak_value_usd?: number;
+  kill_switch_active?: boolean;
+  ts?: number;
+  positions?: Record<string, any>;
+  connection_state?: Record<string, ConnState>;
+}
+interface MirofishMsg {
+  forced_action_signal?: string;
+  coherence_score?: number;
+  exfiltration_opportunity?: boolean;
+  agent_stress?: Record<string, number>;
+  verdict?: string;
+  confidence?: number;
+}
+interface QuantumMsg { [instrument: string]: number }
+interface SynthMsg {
+  l3_quantum?: { top_allocations?: Array<{ instrument: string; weight: number; p_win: number }> };
+  [k: string]: any;
+}
+interface NewsItem { id?: string; title: string; source?: string; ts?: number; url?: string }
+interface RegimeMsg { regime: string; ts?: number; [k: string]: any }
+interface HegelMsg { thesis?: string; antithesis?: string; synthesis?: string; ts?: number }
+
+// ---------- helpers (pure presentation) ----------
+const latencyColor = (ms?: number) =>
+  ms == null ? "#666" : ms < 200 ? "#3df58a" : ms < 1000 ? "#f5c84a" : "#ff5560";
+
+const lerpHex = (a: string, b: string, t: number) => {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ar = (pa >> 16) & 255, ag = (pa >> 8) & 255, ab = pa & 255;
+  const br = (pb >> 16) & 255, bg = (pb >> 8) & 255, bb = pb & 255;
+  const r = Math.round(ar + (br - ar) * t);
+  const g = Math.round(ag + (bg - ag) * t);
+  const bl = Math.round(ab + (bb - ab) * t);
+  return `rgb(${r},${g},${bl})`;
 };
+const coherenceColor = (s: number) =>
+  s < 0.3 ? lerpHex("#ff3b3b", "#f5c84a", s / 0.3) : lerpHex("#f5c84a", "#3df58a", (s - 0.3) / 0.7);
 
-const RISK = {
-  MAX_POSITION_SIZE_USD: 100,
-  MAX_PORTFOLIO_EXPOSURE: 0.9,
-  MAX_DRAWDOWN_THRESHOLD: 0.15,
-  MIN_ORDER_USD: 5,
+const LS_KEY = "vv-trading-prefs";
+const loadPrefs = () => {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch { return {}; }
 };
-
-const fUsd = (n: number | null | undefined) => n == null ? "—" : (n >= 0 ? "+" : "") + "$" + Math.abs(n).toFixed(2);
-const fNum = (n: number | null | undefined, d = 2) => n == null || isNaN(n) ? "—" : n.toFixed(d);
-const fPct = (n: number | null | undefined) => n == null ? "—" : (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
-const dir = (n?: number | null) => (n != null && n >= 0 ? "up" : "down");
-
-const sideBadge = (s: string) => s.toUpperCase() === "BUY" ? "badge-green" : "badge-red";
-const levelBadge = (l: string) => ({ critical: "badge-red", warning: "badge-yellow", info: "badge-navy" } as any)[l] || "badge-dim";
+const savePrefs = (p: any) => localStorage.setItem(LS_KEY, JSON.stringify(p));
 
 export default function Trading() {
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [totalPnl, setTotalPnl] = useState(0);
-  const [synth, setSynth] = useState<Synth[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [killActive, setKillActive] = useState(false);
-  const [ticks, setTicks] = useState<Tick[]>([]);
-  const [qstate, setQstate] = useState<QState | null>(null);
-  const [mirofish, setMirofish] = useState<Mirofish | null>(null);
-  const [online, setOnline] = useState<boolean | null>(null);
+  // ---------- live state from sockets ----------
+  const [connState, setConnState] = useState<Record<string, ConnState>>({});
+  const [latency, setLatency] = useState<LatencyMsg>({});
+  const [regime, setRegime] = useState<RegimeMsg | null>(null);
+  const [mirofish, setMirofish] = useState<MirofishMsg | null>(null);
+  const [quantum, setQuantum] = useState<QuantumMsg>({});
+  const [hegel, setHegel] = useState<HegelMsg | null>(null);
+  const [portfolio, setPortfolio] = useState<PortfolioMsg | null>(null);
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [synth, setSynth] = useState<SynthMsg | null>(null);
+  const [ticks, setTicks] = useState<Record<string, Tick>>({});
+  const [equityHist, setEquityHist] = useState<{ ts: number; value: number }[]>([]);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [lastConnSeen, setLastConnSeen] = useState<Record<string, number>>({});
 
-  // form state
-  const [instrument, setInstrument] = useState("BTCUSDT");
-  const [side, setSide] = useState<"BUY" | "SELL">("BUY");
-  const [qty, setQty] = useState("0.001");
-  const [price, setPrice] = useState("");
-  const [busy, setBusy] = useState(false);
+  const tickBufRef = useRef<Record<string, Tick[]>>({});
+  const socketRef = useRef<Socket | null>(null);
 
-  async function loadAll() {
-    try {
-      const [t, s, k, m] = await Promise.all([
-        supabase.functions.invoke("vv-trades"),
-        supabase.functions.invoke("vv-synthesis"),
-        supabase.functions.invoke("vv-killswitch"),
-        supabase.functions.invoke("vv-market"),
-      ]);
-      if (t.data) { setTrades(t.data.trades || []); setTotalPnl(t.data.total_pnl || 0); }
-      if (s.data) setSynth(s.data.entries || []);
-      if (k.data) { setAlerts(k.data.alerts || []); setKillActive(!!k.data.active); }
-      if (m.data) setTicks(m.data.ticks || []);
-      setOnline(true);
+  const prefs = useRef<any>(loadPrefs());
+  const [sortBy, setSortBy] = useState<string>(prefs.current.sortBy || "weight");
+  const [filter, setFilter] = useState<string>(prefs.current.filter || "");
+  useEffect(() => { savePrefs({ sortBy, filter }); }, [sortBy, filter]);
 
-      // Quantum + Mirofish (run in sequence: quantum first → mirofish reads its coherence)
-      const q = await supabase.functions.invoke("vv-quantum?signals", { body: { n_qubits: 4, prefer: "auto" } });
-      if (q.data?.ok) setQstate(q.data);
-      const mf = await supabase.functions.invoke("vv-mirofish", { body: {} });
-      if (mf.data?.verdict) setMirofish(mf.data.verdict);
-    } catch {
-      setOnline(false);
-    }
-  }
-
+  // ---------- connect ----------
   useEffect(() => {
-    loadAll();
-    const id = setInterval(loadAll, 30_000);
-    return () => clearInterval(id);
+    // backfill equity history on mount
+    fetch(`${HTTP_URL}/history`)
+      .then(r => r.ok ? r.json() : [])
+      .then((rows: any[]) => {
+        if (Array.isArray(rows)) {
+          setEquityHist(rows.map(r => ({ ts: r.ts ?? r.time ?? Date.now(), value: r.value_usd ?? r.value ?? 0 })));
+        }
+      })
+      .catch(() => {});
+
+    const s = io(WS_URL, { transports: ["websocket"], reconnection: true });
+    socketRef.current = s;
+
+    s.on("connect", () => setSocketConnected(true));
+    s.on("disconnect", () => setSocketConnected(false));
+
+    s.on("ticks", (msg: Tick | Tick[]) => {
+      const arr = Array.isArray(msg) ? msg : [msg];
+      setTicks(prev => {
+        const next = { ...prev };
+        for (const t of arr) {
+          if (!t?.instrument) continue;
+          next[t.instrument] = t;
+          const buf = tickBufRef.current[t.instrument] || [];
+          buf.push(t);
+          if (buf.length > 600) buf.shift();
+          tickBufRef.current[t.instrument] = buf;
+        }
+        return next;
+      });
+    });
+
+    s.on("latency", (msg: LatencyMsg) => setLatency(msg || {}));
+    s.on("regime", (msg: RegimeMsg) => setRegime(msg));
+    s.on("mirofish", (msg: MirofishMsg) => setMirofish(msg));
+    s.on("quantum", (msg: QuantumMsg) => setQuantum(msg || {}));
+    s.on("hegelian", (msg: HegelMsg) => setHegel(msg));
+    s.on("portfolio", (msg: PortfolioMsg) => {
+      setPortfolio(msg);
+      if (msg?.connection_state) {
+        setConnState(msg.connection_state);
+        const now = Date.now();
+        const seen: Record<string, number> = {};
+        for (const k of Object.keys(msg.connection_state)) seen[k] = now;
+        setLastConnSeen(prev => ({ ...prev, ...seen }));
+      }
+      if (typeof msg?.value_usd === "number") {
+        setEquityHist(prev => {
+          const next = [...prev, { ts: msg.ts ?? Date.now(), value: msg.value_usd }];
+          const cutoff = Date.now() - 60 * 60 * 1000;
+          return next.filter(p => p.ts >= cutoff);
+        });
+      }
+    });
+    s.on("news", (msg: NewsItem | NewsItem[]) => {
+      const arr = Array.isArray(msg) ? msg : [msg];
+      setNews(prev => [...arr, ...prev].slice(0, 50));
+    });
+    s.on("synthesis", (msg: SynthMsg) => setSynth(msg));
+
+    return () => { s.removeAllListeners(); s.disconnect(); };
   }, []);
 
-  async function submitTrade(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    const qtyN = parseFloat(qty);
-    const priceN = parseFloat(price);
-    const notional = qtyN * priceN;
-    if (notional < RISK.MIN_ORDER_USD) {
-      toast.error(`Order below MIN_ORDER_USD ($${RISK.MIN_ORDER_USD})`);
-      setBusy(false); return;
-    }
-    if (notional > RISK.MAX_POSITION_SIZE_USD) {
-      toast.error(`Order exceeds MAX_POSITION_SIZE_USD ($${RISK.MAX_POSITION_SIZE_USD})`);
-      setBusy(false); return;
-    }
-    if (killActive) {
-      toast.error("KILL SWITCH ACTIVE — trading halted");
-      setBusy(false); return;
-    }
-    const { error } = await supabase.functions.invoke("vv-trades", {
-      body: { instrument, side, qty: qtyN, price: priceN, mode: "paper", meta: { source: "manual" } },
-    });
-    setBusy(false);
-    if (error) { toast.error("Trade failed: " + error.message); return; }
-    toast.success(`${side} ${qtyN} ${instrument} @ ${priceN}`);
-    setPrice("");
-    loadAll();
-  }
+  const reload = async () => {
+    try {
+      const r = await fetch(`${HTTP_URL}/synthesis`);
+      if (r.ok) setSynth(await r.json());
+    } catch {}
+  };
 
-  async function toggleKill(active: boolean) {
-    const { error } = await supabase.functions.invoke("vv-killswitch", {
-      body: {
-        level: active ? "critical" : "info",
-        reason: active ? "Manual kill-switch engage" : "Manual kill-switch release",
-        source: "trading_ui",
-        set_active: active,
-      },
-    });
-    if (error) { toast.error(error.message); return; }
-    toast(active ? "KILL SWITCH ENGAGED" : "Kill switch released");
-    loadAll();
-  }
+  // ---------- derived presentation ----------
+  const exchPill = (ex: Exch) => {
+    const cs = connState[ex];
+    const seen = lastConnSeen[ex];
+    let color = "#555";
+    let label = "NO KEY";
+    if (cs) {
+      const state = cs.state;
+      if (state === "connected") { color = "#3df58a"; label = "LIVE"; }
+      else if (state === "reconnecting" || state === "connecting") { color = "#f5c84a"; label = state.toUpperCase(); }
+      else { color = "#ff5560"; label = (state || "DOWN").toUpperCase(); }
+    }
+    if (seen && Date.now() - seen > 30_000 && cs?.state !== "connected") {
+      color = "#ff5560"; label = "STALE";
+    }
+    const ageS = cs?.last_msg ? Math.max(0, Math.floor((Date.now() - cs.last_msg) / 1000)) : null;
+    const tooltip = cs
+      ? `${ex} · last_msg ${ageS ?? "?"}s ago · reconnects ${cs.reconnects ?? 0}`
+      : `${ex} · no key configured`;
+    return (
+      <div key={ex} title={tooltip} className="vv-pill" style={{ borderColor: color, color }}>
+        <span className="vv-dot" style={{ background: color }} />
+        {ex.toUpperCase()} · {label}
+      </div>
+    );
+  };
 
-  // metrics
-  const closed = trades.filter(t => t.pnl != null);
-  const wins = closed.filter(t => (t.pnl || 0) > 0).length;
-  const winRate = closed.length ? wins / closed.length : 0;
-  const equity = STARTING_EQUITY + totalPnl;
-  const equityPct = (totalPnl / STARTING_EQUITY) * 100;
-  const grossExposure = trades.reduce((s, t) => s + Math.abs(t.qty * t.price), 0);
-  const exposurePct = grossExposure / Math.max(equity, 1);
+  const latReadout = (label: string, key: string) => {
+    const v = latency[key];
+    return (
+      <div className="vv-lat" key={key}>
+        <span className="vv-lat-label">{label}</span>
+        <span className="vv-lat-val" style={{ color: latencyColor(v) }}>
+          {v != null ? `${Math.round(v)} ms` : "— ms"}
+        </span>
+      </div>
+    );
+  };
 
-  const status = online === null
-    ? { label: "CONNECTING", tone: "gold" as const }
-    : killActive
-      ? { label: "KILL SWITCH ACTIVE", tone: "red" as const }
-      : online
-        ? { label: "PAPER ENGINE LIVE", tone: "green" as const }
-        : { label: "ENGINE OFFLINE", tone: "red" as const };
+  // quantum heatmap layout (squarified-ish: simple weight rows)
+  const quantumEntries = Object.entries(quantum)
+    .filter(([k]) => !filter || k.toLowerCase().includes(filter.toLowerCase()))
+    .sort((a, b) => sortBy === "name" ? a[0].localeCompare(b[0]) : b[1] - a[1]);
+  const totalWeight = quantumEntries.reduce((s, [, w]) => s + w, 0) || 1;
+  const pWinFor = (inst: string) => {
+    const top = synth?.l3_quantum?.top_allocations?.find(a => a.instrument === inst);
+    return top?.p_win ?? 0.5;
+  };
+
+  // coherence gauge
+  const coherence = mirofish?.coherence_score ?? 0;
+  const cArc = Math.PI * 2 * coherence;
+  const cColor = coherenceColor(coherence);
+
+  // agent stress bars
+  const agentKeys = ["institutional_mpt", "retail_momentum", "hft_arbitrage", "crypto_native", "macro_discretionary"];
 
   return (
-    <VVLayout status={status as any}>
-      <div className="scroll-inner">
-        {/* Stat row */}
-        <div className="stat-row">
-          <div className="stat-card panel">
-            <div className="stat-label">EQUITY</div>
-            <div className={`stat-value ${dir(totalPnl)}`}>${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div className="stat-delta">start ${STARTING_EQUITY.toLocaleString()} · {fPct(equityPct)}</div>
+    <VVLayout
+      status={{
+        label: socketConnected ? "LIVE FEED" : "DISCONNECTED",
+        tone: socketConnected ? "green" : "red",
+      }}
+    >
+      <style>{`
+        .vv-grid { display: grid; gap: 12px; padding: 12px 16px 80px; max-width: 1600px; margin: 0 auto; }
+        .vv-strip { display: flex; gap: 8px; align-items: center; height: 32px; flex-wrap: wrap; }
+        .vv-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid; border-radius: 999px; font-size: 11px; font-family: monospace; letter-spacing: .5px; background: rgba(0,0,0,.4); }
+        .vv-dot { width: 6px; height: 6px; border-radius: 50%; }
+        .vv-lat { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-family: monospace; font-size: 11px; border: 1px solid rgba(255,255,255,.1); border-radius: 4px; background: rgba(0,0,0,.4); }
+        .vv-lat-label { color: rgba(255,255,255,.55); }
+        .vv-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .vv-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .vv-panel { background: rgba(8,12,18,.7); border: 1px solid rgba(255,255,255,.08); border-radius: 6px; padding: 14px; backdrop-filter: blur(6px); }
+        .vv-panel h3 { font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,.55); margin: 0 0 10px; font-family: monospace; }
+        .vv-equity { height: 280px; }
+        .vv-halt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,40,40,.18); color: #ff5560; font-family: monospace; font-size: 28px; letter-spacing: 6px; border: 2px solid #ff5560; }
+        .vv-heat { display: flex; flex-wrap: wrap; gap: 4px; min-height: 220px; align-content: flex-start; }
+        .vv-heat-cell { padding: 8px; font-family: monospace; font-size: 11px; color: #000; border-radius: 3px; min-width: 60px; }
+        .vv-bars { display: flex; flex-direction: column; gap: 6px; }
+        .vv-bar-row { display: grid; grid-template-columns: 140px 1fr 40px; gap: 8px; align-items: center; font-family: monospace; font-size: 11px; }
+        .vv-bar-track { height: 8px; background: rgba(255,255,255,.05); border-radius: 2px; overflow: hidden; }
+        .vv-bar-fill { height: 100%; background: linear-gradient(90deg, #3df58a, #f5c84a); }
+        .vv-pulse { animation: vvpulse 1.2s ease-in-out infinite; }
+        @keyframes vvpulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(255,60,60,.6);} 50%{ box-shadow: 0 0 24px 4px rgba(255,60,60,.6);} }
+        .vv-news { max-height: 220px; overflow: auto; font-family: monospace; font-size: 11px; }
+        .vv-news-item { padding: 6px 0; border-bottom: 1px dashed rgba(255,255,255,.08); }
+        .vv-reload { position: fixed; right: 16px; bottom: 16px; padding: 8px 14px; background: rgba(0,0,0,.7); border: 1px solid rgba(255,255,255,.2); color: #fff; font-family: monospace; font-size: 11px; cursor: pointer; border-radius: 4px; letter-spacing: 2px; }
+        .vv-reload:hover { background: rgba(61,245,138,.15); border-color: #3df58a; color: #3df58a; }
+        .vv-input { background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.1); color: #fff; padding: 4px 8px; font-family: monospace; font-size: 11px; border-radius: 3px; }
+        .vv-headline { font-family: monospace; font-size: 22px; letter-spacing: 2px; color: #f5c84a; margin: 4px 0 12px; }
+      `}</style>
+
+      <div className="vv-grid">
+        {/* API status + latency strips */}
+        <div className="vv-strip">
+          {EXCHANGES.map(exchPill)}
+          <div style={{ width: 16 }} />
+          {latReadout("tick(binance)", "tick.binance")}
+          {latReadout("tick(bybit)", "tick.bybit")}
+          {latReadout("tick(oanda)", "tick.oanda")}
+          {latReadout("tick(alpaca)", "tick.alpaca")}
+          {latReadout("qaoa", "qaoa")}
+          {latReadout("mirofish", "mirofish")}
+        </div>
+
+        {/* Equity curve */}
+        <div className="vv-panel" style={{ position: "relative" }}>
+          <h3>EQUITY CURVE · LAST 60 MIN</h3>
+          <div className="vv-equity">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={equityHist}>
+                <XAxis dataKey="ts" tickFormatter={t => new Date(t).toLocaleTimeString().slice(0, 5)} stroke="rgba(255,255,255,.4)" fontSize={10} />
+                <YAxis domain={["auto", "auto"]} stroke="rgba(255,255,255,.4)" fontSize={10} tickFormatter={v => `$${(v / 1000).toFixed(1)}k`} />
+                <Tooltip contentStyle={{ background: "#0a0e14", border: "1px solid rgba(255,255,255,.1)", fontSize: 11 }} labelFormatter={t => new Date(t as number).toLocaleTimeString()} formatter={(v: any) => [`$${Number(v).toLocaleString()}`, "value"]} />
+                <Line type="monotone" dataKey="value" stroke="#3df58a" dot={false} strokeWidth={2} isAnimationActive={false} />
+                {portfolio?.peak_value_usd != null && (
+                  <ReferenceLine y={portfolio.peak_value_usd} stroke="#f5c84a" strokeDasharray="4 4" label={{ value: `peak $${portfolio.peak_value_usd.toLocaleString()}`, fill: "#f5c84a", fontSize: 10, position: "right" }} />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-          <div className="stat-card panel">
-            <div className="stat-label">TOTAL PNL</div>
-            <div className={`stat-value ${dir(totalPnl)}`}>{fUsd(totalPnl)}</div>
-            <div className="stat-delta">{closed.length} closed · {trades.length} total</div>
-          </div>
-          <div className="stat-card panel">
-            <div className="stat-label">WIN RATE</div>
-            <div className={`stat-value ${winRate >= PAPER_GATE.min_win_rate ? "up" : "down"}`}>
-              {(winRate * 100).toFixed(1)}%
-            </div>
-            <div className="stat-delta">gate ≥ {(PAPER_GATE.min_win_rate * 100).toFixed(0)}%</div>
-          </div>
-          <div className="stat-card panel">
-            <div className="stat-label">EXPOSURE</div>
-            <div className="stat-value">{fUsd(grossExposure)}</div>
-            <div className="stat-delta">{(exposurePct * 100).toFixed(2)}% of equity · mode <span className="badge badge-yellow">PAPER</span></div>
-          </div>
-          <div className="stat-card panel">
-            <div className="stat-label">KILL SWITCH</div>
-            <div className="stat-value">
-              <span className={`badge ${killActive ? "badge-red" : "badge-green"}`}>
-                {killActive ? "ENGAGED" : "ARMED"}
-              </span>
-            </div>
-            <div className="stat-delta">{alerts.length} alerts</div>
+          {portfolio?.kill_switch_active && <div className="vv-halt">⛔ HALTED ⛔</div>}
+          <div style={{ marginTop: 8, fontFamily: "monospace", fontSize: 11, color: "rgba(255,255,255,.6)" }}>
+            value: <span style={{ color: "#3df58a" }}>${portfolio?.value_usd?.toLocaleString() ?? "—"}</span>
+            {portfolio?.peak_value_usd != null && <> · peak: ${portfolio.peak_value_usd.toLocaleString()}</>}
+            {regime && <> · regime: <span style={{ color: "#f5c84a" }}>{regime.regime}</span></>}
           </div>
         </div>
 
-        <div className="analytics-wrap">
-          {/* Order ticket + kill switch */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 14 }}>
-            <div className="panel" style={{ padding: 14 }}>
-              <div className="panel-title">PAPER ORDER TICKET — PAPER MODE ONLY</div>
-              <form onSubmit={submitTrade} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto", gap: 10, alignItems: "end" }}>
-                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: ".62rem", letterSpacing: ".14em", color: "var(--dim)" }}>
-                  INSTRUMENT
-                  <select value={instrument} onChange={e => setInstrument(e.target.value)}
-                    style={{ background: "rgba(0,0,0,.4)", border: "1px solid rgba(0,230,118,.2)", color: "var(--text)", padding: "8px 10px", fontSize: ".75rem" }}>
-                    {ticks.length ? ticks.map(t => <option key={t.id} value={t.id}>{t.id}</option>)
-                      : <option value="BTCUSDT">BTCUSDT</option>}
-                  </select>
-                </label>
-                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: ".62rem", letterSpacing: ".14em", color: "var(--dim)" }}>
-                  SIDE
-                  <select value={side} onChange={e => setSide(e.target.value as any)}
-                    style={{ background: "rgba(0,0,0,.4)", border: "1px solid rgba(0,230,118,.2)", color: "var(--text)", padding: "8px 10px", fontSize: ".75rem" }}>
-                    <option value="BUY">BUY</option>
-                    <option value="SELL">SELL</option>
-                  </select>
-                </label>
-                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: ".62rem", letterSpacing: ".14em", color: "var(--dim)" }}>
-                  QTY
-                  <input value={qty} onChange={e => setQty(e.target.value)} type="number" step="any" min="0"
-                    style={{ background: "rgba(0,0,0,.4)", border: "1px solid rgba(0,230,118,.2)", color: "var(--text)", padding: "8px 10px", fontSize: ".75rem" }} />
-                </label>
-                <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: ".62rem", letterSpacing: ".14em", color: "var(--dim)" }}>
-                  PRICE
-                  <input value={price} onChange={e => setPrice(e.target.value)} type="number" step="any" min="0" required
-                    placeholder={ticks.find(t => t.id === instrument)?.mid.toFixed(2) || ""}
-                    style={{ background: "rgba(0,0,0,.4)", border: "1px solid rgba(0,230,118,.2)", color: "var(--text)", padding: "8px 10px", fontSize: ".75rem" }} />
-                </label>
-                <button disabled={busy || killActive} type="submit"
-                  style={{ background: side === "BUY" ? "rgba(0,230,118,.15)" : "rgba(255,34,34,.15)",
-                           border: `1px solid ${side === "BUY" ? "var(--green-bright)" : "var(--red)"}`,
-                           color: side === "BUY" ? "var(--green-bright)" : "var(--red)",
-                           padding: "10px 18px", fontSize: ".7rem", letterSpacing: ".18em", cursor: "pointer",
-                           opacity: busy || killActive ? .4 : 1 }}>
-                  {busy ? "..." : `EXEC ${side}`}
-                </button>
-              </form>
-              <div style={{ marginTop: 10, fontSize: ".62rem", color: "var(--dim)", letterSpacing: ".1em" }}>
-                limits: ${RISK.MIN_ORDER_USD} ≤ notional ≤ ${RISK.MAX_POSITION_SIZE_USD} · stop {RISK.MAX_DRAWDOWN_THRESHOLD * 100}% drawdown
-              </div>
-            </div>
-
-            <div className="panel" style={{ padding: 14 }}>
-              <div className="panel-title">KILL SWITCH CONTROL</div>
-              <div style={{ fontSize: ".72rem", color: "var(--text)", lineHeight: 1.6, marginBottom: 12 }}>
-                Engaging the kill switch immediately blocks all new orders and writes a critical alert. Use only when systems are misbehaving.
-              </div>
-              <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => toggleKill(true)} disabled={killActive}
-                  style={{ flex: 1, background: "rgba(255,34,34,.15)", border: "1px solid var(--red)", color: "var(--red)",
-                           padding: "10px", fontSize: ".7rem", letterSpacing: ".18em", cursor: "pointer", opacity: killActive ? .4 : 1 }}>
-                  ENGAGE
-                </button>
-                <button onClick={() => toggleKill(false)} disabled={!killActive}
-                  style={{ flex: 1, background: "rgba(0,230,118,.15)", border: "1px solid var(--green-bright)", color: "var(--green-bright)",
-                           padding: "10px", fontSize: ".7rem", letterSpacing: ".18em", cursor: "pointer", opacity: !killActive ? .4 : 1 }}>
-                  RELEASE
-                </button>
-              </div>
+        <div className="vv-row">
+          {/* Coherence gauge */}
+          <div className="vv-panel">
+            <h3>COHERENCE</h3>
+            <div style={{ display: "flex", justifyContent: "center", padding: "10px 0" }}>
+              <svg width="200" height="200" viewBox="0 0 200 200">
+                <circle cx="100" cy="100" r="80" stroke="rgba(255,255,255,.08)" strokeWidth="14" fill="none" />
+                <circle
+                  cx="100" cy="100" r="80"
+                  stroke={cColor} strokeWidth="14" fill="none"
+                  strokeDasharray={`${cArc * 80 / Math.PI} ${1000}`}
+                  strokeLinecap="round"
+                  transform="rotate(-90 100 100)"
+                  style={{ transition: "stroke-dasharray .6s, stroke .6s" }}
+                />
+                <text x="100" y="100" textAnchor="middle" dy="6" fontFamily="monospace" fontSize="32" fill={cColor}>
+                  {(coherence * 100).toFixed(0)}
+                </text>
+                <text x="100" y="130" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="rgba(255,255,255,.5)">
+                  COHERENCE
+                </text>
+              </svg>
             </div>
           </div>
 
-          {/* Live ticks */}
-          <div className="panel" style={{ padding: 14, marginTop: 14 }}>
-            <div className="panel-title">LIVE MARKET — BINANCE · {ticks.length} INSTRUMENTS</div>
-            <div style={{ overflowX: "auto" }}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>SYMBOL</th><th>BID</th><th>ASK</th><th>MID</th><th>LAST</th><th>24H</th><th>OFI</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!ticks.length && <tr><td colSpan={7} className="empty-cell">Awaiting market feed...</td></tr>}
-                  {ticks.map(t => (
-                    <tr key={t.id}>
-                      <td>{t.id}</td>
-                      <td>{fNum(t.bid, 4)}</td>
-                      <td>{fNum(t.ask, 4)}</td>
-                      <td>{fNum(t.mid, 4)}</td>
-                      <td>{fNum(t.last, 4)}</td>
-                      <td className={dir(t.change_24h_pct)}>{fPct(t.change_24h_pct)}</td>
-                      <td className={dir(t.ofi)}>{fNum(t.ofi, 3)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* MiroFish verdict */}
+          <div
+            className={`vv-panel ${mirofish?.exfiltration_opportunity ? "vv-pulse" : ""}`}
+            style={mirofish?.exfiltration_opportunity ? { borderColor: "#ff3b3b" } : undefined}
+          >
+            <h3>MIROFISH VERDICT</h3>
+            <div className="vv-headline">{mirofish?.forced_action_signal || mirofish?.verdict || "—"}</div>
+            <div className="vv-bars">
+              {agentKeys.map(k => {
+                const v = mirofish?.agent_stress?.[k] ?? 0;
+                return (
+                  <div className="vv-bar-row" key={k}>
+                    <span style={{ color: "rgba(255,255,255,.6)" }}>{k}</span>
+                    <div className="vv-bar-track"><div className="vv-bar-fill" style={{ width: `${Math.min(100, v * 100)}%` }} /></div>
+                    <span style={{ textAlign: "right", color: "#f5c84a" }}>{(v * 100).toFixed(0)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {mirofish?.exfiltration_opportunity && (
+              <div style={{ marginTop: 10, color: "#ff5560", fontFamily: "monospace", fontSize: 11, letterSpacing: 2 }}>
+                ⚠ EXFILTRATION OPPORTUNITY
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Quantum allocation heatmap */}
+        <div className="vv-panel">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <h3 style={{ margin: 0 }}>QUANTUM ALLOCATION</h3>
+            <div style={{ display: "flex", gap: 6 }}>
+              <input className="vv-input" placeholder="filter" value={filter} onChange={e => setFilter(e.target.value)} />
+              <select className="vv-input" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                <option value="weight">sort: weight</option>
+                <option value="name">sort: name</option>
+              </select>
             </div>
           </div>
-
-          {/* Quantum states + Mirofish verdict */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 14, marginTop: 14 }}>
-            <div className="panel" style={{ padding: 14 }}>
-              <div className="panel-title">
-                QUANTUM STATES — {qstate ? `${qstate.n_qubits}q · ${qstate.backend.toUpperCase()}` : "AWAITING"}
-              </div>
-              {!qstate && <div className="dim-text">⬡ no quantum snapshot yet</div>}
-              {qstate && (
-                <>
-                  <div style={{ display: "flex", gap: 14, marginBottom: 10, fontSize: ".7rem", color: "var(--text)" }}>
-                    <span>COHERENCE <b style={{ color: "var(--gold)" }}>{qstate.coherence.toFixed(3)}</b></span>
-                    <span>DOMINANT |{qstate.dominant.toString(2).padStart(qstate.n_qubits, "0")}⟩</span>
-                    <span style={{ color: "var(--dim)" }}>{new Date(qstate.ts).toLocaleTimeString()}</span>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    {qstate.top.map((s, idx) => {
-                      const label = qstate.labels[s.i] ?? `|${s.i.toString(2).padStart(qstate.n_qubits, "0")}⟩`;
-                      const pct = (s.p * 100);
-                      return (
-                        <div key={idx} style={{ display: "grid", gridTemplateColumns: "90px 1fr 60px", gap: 10, alignItems: "center", fontSize: ".68rem" }}>
-                          <span style={{ color: "var(--dim)", letterSpacing: ".08em" }}>{label}</span>
-                          <div style={{ height: 6, background: "rgba(0,0,0,.4)", border: "1px solid rgba(0,230,118,.15)" }}>
-                            <div style={{ width: `${Math.max(2, pct)}%`, height: "100%", background: "var(--green-bright)", opacity: .7 }} />
-                          </div>
-                          <span style={{ textAlign: "right", color: "var(--text)" }}>{pct.toFixed(2)}%</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="panel" style={{ padding: 14 }}>
-              <div className="panel-title">MIROFISH VERDICT</div>
-              {!mirofish && <div className="dim-text">⬡ no verdict yet</div>}
-              {mirofish && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ fontSize: "1.4rem", letterSpacing: ".18em", color: mirofish.verdict === "RISK_ON" ? "var(--green-bright)" : mirofish.verdict === "RISK_OFF" ? "var(--red)" : "var(--gold)" }}>
-                    {mirofish.verdict}
-                  </div>
-                  <div style={{ fontSize: ".68rem", color: "var(--dim)", letterSpacing: ".12em" }}>
-                    CONFIDENCE {(mirofish.confidence * 100).toFixed(1)}%
-                  </div>
-                  <div style={{ height: 6, background: "rgba(0,0,0,.4)", border: "1px solid rgba(0,230,118,.15)" }}>
-                    <div style={{ width: `${mirofish.confidence * 100}%`, height: "100%", background: "var(--gold)", opacity: .8 }} />
-                  </div>
-                  <div style={{ fontSize: ".64rem", color: "var(--text)", marginTop: 6, lineHeight: 1.6 }}>
-                    drift <b className={dir(mirofish.drift)}>{fPct(mirofish.drift)}</b><br/>
-                    ofi <b className={dir(mirofish.ofi)}>{fNum(mirofish.ofi, 4)}</b><br/>
-                    coherence <b style={{ color: "var(--gold)" }}>{mirofish.coherence.toFixed(3)}</b><br/>
-                    instruments <b>{mirofish.instruments}</b>
-                  </div>
+          <div className="vv-heat">
+            {quantumEntries.length === 0 && <div style={{ color: "rgba(255,255,255,.4)", fontFamily: "monospace", fontSize: 11 }}>awaiting quantum channel…</div>}
+            {quantumEntries.map(([inst, w]) => {
+              const pct = w / totalWeight;
+              const p = pWinFor(inst);
+              const hue = Math.round(p * 130); // red→green
+              return (
+                <div
+                  key={inst}
+                  className="vv-heat-cell"
+                  title={`${inst} · weight ${(pct * 100).toFixed(1)}% · p_win ${p.toFixed(2)}`}
+                  style={{
+                    background: `hsl(${hue} 70% 55%)`,
+                    flexBasis: `${Math.max(60, pct * 800)}px`,
+                    flexGrow: pct,
+                  }}
+                >
+                  <div style={{ fontWeight: 700 }}>{inst}</div>
+                  <div>{(pct * 100).toFixed(1)}%</div>
+                  <div style={{ opacity: .7 }}>p {p.toFixed(2)}</div>
                 </div>
-              )}
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="vv-row3">
+          {/* Live ticks */}
+          <div className="vv-panel">
+            <h3>LIVE TICKS</h3>
+            <div style={{ fontFamily: "monospace", fontSize: 11, maxHeight: 220, overflow: "auto" }}>
+              {Object.values(ticks).length === 0 && <span style={{ color: "rgba(255,255,255,.4)" }}>awaiting ticks…</span>}
+              {Object.values(ticks).map(t => (
+                <div key={t.instrument} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", borderBottom: "1px dashed rgba(255,255,255,.06)" }}>
+                  <span>{t.instrument}</span>
+                  <span style={{ color: "#3df58a" }}>{t.price ?? t.bid ?? "—"}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Trade history */}
-          <div className="panel" style={{ padding: 14, marginTop: 14 }}>
-            <div className="panel-title">TRADE HISTORY — {trades.length} ORDERS</div>
-            <div style={{ overflowX: "auto" }}>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>TS</th><th>INSTRUMENT</th><th>SIDE</th><th>QTY</th><th>PRICE</th><th>NOTIONAL</th><th>PNL</th><th>MODE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!trades.length && <tr><td colSpan={8} className="empty-cell">No trades yet.</td></tr>}
-                  {trades.map(t => (
-                    <tr key={t.id}>
-                      <td>{new Date(t.created_at).toLocaleTimeString()}</td>
-                      <td>{t.instrument}</td>
-                      <td><span className={`badge ${sideBadge(t.side)}`}>{t.side.toUpperCase()}</span></td>
-                      <td>{fNum(t.qty, 6)}</td>
-                      <td>{fNum(t.price, 4)}</td>
-                      <td>{fUsd(t.qty * t.price)}</td>
-                      <td className={dir(t.pnl)}>{fUsd(t.pnl)}</td>
-                      <td><span className="badge badge-dim">{t.mode}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Hegelian */}
+          <div className="vv-panel">
+            <h3>HEGELIAN SYNTHESIS</h3>
+            <div style={{ fontFamily: "monospace", fontSize: 11, color: "rgba(255,255,255,.7)" }}>
+              <div><span style={{ color: "#3df58a" }}>thesis:</span> {hegel?.thesis || "—"}</div>
+              <div style={{ marginTop: 4 }}><span style={{ color: "#ff5560" }}>antithesis:</span> {hegel?.antithesis || "—"}</div>
+              <div style={{ marginTop: 4 }}><span style={{ color: "#f5c84a" }}>synthesis:</span> {hegel?.synthesis || "—"}</div>
             </div>
           </div>
 
-          {/* Synthesis + alerts */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 14, marginTop: 14 }}>
-            <div className="panel" style={{ padding: 14 }}>
-              <div className="panel-title">HEGELIAN SYNTHESIS HISTORY</div>
-              {!synth.length && <div className="dim-text">⬡ no synthesis snapshots yet</div>}
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 360, overflowY: "auto" }}>
-                {synth.map(s => (
-                  <div key={s.id} style={{ borderLeft: "2px solid var(--gold)", padding: "6px 12px", background: "rgba(0,0,0,.25)" }}>
-                    <div style={{ display: "flex", gap: 10, alignItems: "center", fontSize: ".6rem", color: "var(--dim)", letterSpacing: ".14em" }}>
-                      <span>{new Date(s.created_at).toLocaleString()}</span>
-                      {s.score != null && <span className="badge badge-navy">SCORE {s.score.toFixed(3)}</span>}
-                    </div>
-                    {s.narrative && <div style={{ fontSize: ".72rem", color: "var(--text)", marginTop: 6, lineHeight: 1.6 }}>{s.narrative}</div>}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="panel" style={{ padding: 14 }}>
-              <div className="panel-title">KILL SWITCH ALERTS</div>
-              {!alerts.length && <div className="dim-text">⬡ no alerts</div>}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 360, overflowY: "auto" }}>
-                {alerts.map(a => (
-                  <div key={a.id} style={{ padding: "8px 12px", background: "rgba(0,0,0,.3)", borderLeft: `2px solid ${a.level === "critical" ? "var(--red)" : a.level === "warning" ? "#ffcc00" : "var(--blue-accent)"}` }}>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: ".58rem", color: "var(--dim)", letterSpacing: ".14em" }}>
-                      <span className={`badge ${levelBadge(a.level)}`}>{a.level.toUpperCase()}</span>
-                      <span>{new Date(a.created_at).toLocaleTimeString()}</span>
-                      {a.source && <span>· {a.source}</span>}
-                    </div>
-                    <div style={{ fontSize: ".72rem", color: "var(--text)", marginTop: 4 }}>{a.reason}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Paper gate */}
-          <div className="panel" style={{ padding: 14, marginTop: 14 }}>
-            <div className="panel-title">PAPER → LIVE PROMOTION GATE</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
-              {[
-                { label: "WIN RATE", value: `${(winRate * 100).toFixed(1)}%`, target: `≥ ${(PAPER_GATE.min_win_rate * 100).toFixed(0)}%`, ok: winRate >= PAPER_GATE.min_win_rate },
-                { label: "MIN TRADES", value: `${closed.length}`, target: `≥ ${PAPER_GATE.min_trades}`, ok: closed.length >= PAPER_GATE.min_trades },
-                { label: "MAX DRAWDOWN", value: `${(RISK.MAX_DRAWDOWN_THRESHOLD * 100).toFixed(0)}%`, target: `≤ ${(PAPER_GATE.max_drawdown * 100).toFixed(0)}%`, ok: true },
-                { label: "MIN SHARPE", value: "—", target: `≥ ${PAPER_GATE.min_sharpe}`, ok: false },
-                { label: "WEEKS CLEAN", value: "0", target: `≥ ${PAPER_GATE.min_weeks_clean}`, ok: false },
-              ].map(g => (
-                <div key={g.label} style={{ padding: "10px 12px", border: `1px solid ${g.ok ? "rgba(0,230,118,.4)" : "rgba(58,90,74,.4)"}`, background: "rgba(0,0,0,.25)" }}>
-                  <div style={{ fontSize: ".6rem", letterSpacing: ".14em", color: "var(--dim)" }}>{g.label}</div>
-                  <div style={{ fontSize: "1rem", color: g.ok ? "var(--green-bright)" : "var(--text)", margin: "6px 0" }}>{g.value}</div>
-                  <div style={{ fontSize: ".55rem", color: "var(--dim)", letterSpacing: ".1em" }}>{g.target}</div>
+          {/* News */}
+          <div className="vv-panel">
+            <h3>NEWS</h3>
+            <div className="vv-news">
+              {news.length === 0 && <span style={{ color: "rgba(255,255,255,.4)" }}>awaiting news…</span>}
+              {news.map((n, i) => (
+                <div key={n.id || i} className="vv-news-item">
+                  <div style={{ color: "#fff" }}>{n.title}</div>
+                  <div style={{ color: "rgba(255,255,255,.5)", fontSize: 10 }}>{n.source || ""}{n.ts ? ` · ${new Date(n.ts).toLocaleTimeString()}` : ""}</div>
                 </div>
               ))}
             </div>
           </div>
         </div>
+
+        {/* Synthesis raw dump */}
+        <div className="vv-panel">
+          <h3>SYNTHESIS</h3>
+          <pre style={{ margin: 0, fontFamily: "monospace", fontSize: 10, color: "rgba(255,255,255,.55)", maxHeight: 220, overflow: "auto" }}>
+            {synth ? JSON.stringify(synth, null, 2) : "awaiting synthesis…"}
+          </pre>
+        </div>
       </div>
+
+      <button className="vv-reload" onClick={reload}>↻ RELOAD</button>
     </VVLayout>
   );
 }
