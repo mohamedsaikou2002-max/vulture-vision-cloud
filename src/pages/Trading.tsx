@@ -178,8 +178,10 @@ export default function Trading() {
   const closed = trades.filter(t => t.pnl != null);
   const wins = closed.filter(t => (t.pnl || 0) > 0).length;
   const winRate = closed.length ? wins / closed.length : 0;
+  const equity = STARTING_EQUITY + totalPnl;
+  const equityPct = (totalPnl / STARTING_EQUITY) * 100;
   const grossExposure = trades.reduce((s, t) => s + Math.abs(t.qty * t.price), 0);
-  const exposurePct = grossExposure / Math.max(RISK.MAX_POSITION_SIZE_USD * 10, 1);
+  const exposurePct = grossExposure / Math.max(equity, 1);
 
   const status = online === null
     ? { label: "CONNECTING", tone: "gold" as const }
