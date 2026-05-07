@@ -1,6 +1,60 @@
-const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-interface Item { title: string; source: string; time: string; link?: string; }
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface Item {
+  title: string;
+  source: string;
+  time: string;
+  link?: string;
+  sentiment_score?: number;
+  entities?: string[];
+  market_impact?: "high" | "medium" | "low";
+  region?: string;
+  tier?: string;
+}
+
+const POSITIVE = new Set([
+  "surge","rally","bullish","gains","recovery","approval","positive","growth",
+  "strong","soar","boost","breakthrough","upgrade","beat","wins","record",
+]);
+const NEGATIVE = new Set([
+  "crash","ban","bearish","losses","recession","negative","weak","collapse",
+  "fear","plunge","downturn","selloff","hack","breach","lawsuit","arrest",
+]);
+
+function sentiment(text: string): number {
+  if (!text) return 0;
+  const words = text.toLowerCase().match(/[a-z']+/g) || [];
+  if (!words.length) return 0;
+  let pos = 0, neg = 0;
+  for (const w of words) {
+    if (POSITIVE.has(w)) pos++;
+    else if (NEGATIVE.has(w)) neg++;
+  }
+  return (pos - neg) / words.length;
+}
+
+function entities(text: string): string[] {
+  if (!text) return [];
+  const m = text.match(/\b[A-Z][a-zA-Z]{2,}\b/g) || [];
+  return [...new Set(m)].slice(0, 5);
+}
+
+function enrich(it: Item): Item {
+  const score = sentiment(it.title);
+  return {
+    ...it,
+    sentiment_score: score,
+    entities: entities(it.title),
+    market_impact: Math.abs(score) > 0.05 ? "high" : "medium",
+    region: it.region || "global",
+    tier: it.tier || "public",
+  };
+}
 
 const FEEDS = {
   irl: [
@@ -21,6 +75,8 @@ const FEEDS = {
     { url: "https://www.wired.com/feed/rss", source: "Wired" },
   ],
 };
+
+const QUERY_TERMS = ["bitcoin","ethereum","crypto","fed","ecb","pboc","inflation","recession","rate"];
 
 function parseRss(xml: string, source: string): Item[] {
   const out: Item[] = [];
@@ -43,27 +99,97 @@ async function fetchFeeds(feeds: { url: string; source: string }[]): Promise<Ite
   const results = await Promise.allSettled(feeds.map(async f => {
     const r = await fetch(f.url, { headers: { "User-Agent": "VultureVision/1.0" } });
     if (!r.ok) throw new Error(`${f.source} ${r.status}`);
-    const xml = await r.text();
-    return parseRss(xml, f.source);
+    return parseRss(await r.text(), f.source);
   }));
   const items = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
   items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
   return items.slice(0, 15);
 }
 
+async function fetchNewsApi(): Promise<Item[]> {
+  const key = Deno.env.get("NEWS_API_KEY");
+  if (!key) return [];
+  const out: Item[] = [];
+  await Promise.allSettled(QUERY_TERMS.map(async (term) => {
+    const u = new URL("https://newsapi.org/v2/everything");
+    u.searchParams.set("q", term);
+    u.searchParams.set("language", "en");
+    u.searchParams.set("sortBy", "publishedAt");
+    u.searchParams.set("pageSize", "5");
+    u.searchParams.set("apiKey", key);
+    try {
+      const r = await fetch(u.toString());
+      if (!r.ok) return;
+      const data = await r.json();
+      for (const art of (data.articles || []).slice(0, 5)) {
+        const headline = art.title || "";
+        if (!headline) continue;
+        out.push({
+          title: headline.slice(0, 200),
+          source: art.source?.name || "NewsAPI",
+          time: art.publishedAt || new Date().toISOString(),
+          link: art.url,
+        });
+      }
+    } catch {}
+  }));
+  return out;
+}
+
+async function fetchTorFeed(): Promise<Item[]> {
+  try {
+    const supa = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const { data } = await supa
+      .from("tor_entries")
+      .select("name,description,url,created_at,category")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    return (data || []).map((r: any) => ({
+      title: (r.description || r.name || "").slice(0, 200),
+      source: "TOR_FEED",
+      time: r.created_at,
+      link: r.url,
+      region: "darknet",
+      tier: "tor",
+    })).filter(i => i.title);
+  } catch { return []; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const [irl, dark, tech] = await Promise.all([
+    const [irlRss, dark, tech, newsApi, tor] = await Promise.all([
       fetchFeeds(FEEDS.irl),
       fetchFeeds(FEEDS.dark),
       fetchFeeds(FEEDS.tech),
+      fetchNewsApi(),
+      fetchTorFeed(),
     ]);
-    return new Response(JSON.stringify({ irl, dark, tech }), {
+
+    const irl = [...newsApi, ...irlRss]
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 20)
+      .map(enrich);
+
+    const darkOut = [...dark, ...tor]
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 20)
+      .map(enrich);
+
+    const techOut = tech.map(enrich);
+
+    const all = [...irl, ...darkOut, ...techOut]
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 50);
+
+    return new Response(JSON.stringify({ irl, dark: darkOut, tech: techOut, news_feed: all }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String((e as Error).message), irl: [], dark: [], tech: [] }), {
+    return new Response(JSON.stringify({ error: String((e as Error).message), irl: [], dark: [], tech: [], news_feed: [] }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
