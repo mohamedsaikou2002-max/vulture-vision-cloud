@@ -1,16 +1,16 @@
-// MarketWorker — Bybit edition.
-// Polls Bybit v5 public spot tickers (no auth required) and returns a unified
-// snapshot. Authenticated key/secret are reserved for future order endpoints.
+// MarketWorker — Bybit (crypto) + OANDA (forex).
+// Returns a unified snapshot tick set. No long-lived sockets in edge runtime.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const DEFAULT_INSTRUMENTS = [
+const DEFAULT_CRYPTO = [
   "BTCUSDT", "ETHUSDT", "SOLUSDT", "ADAUSDT",
   "XRPUSDT", "DOGEUSDT", "DOTUSDT", "LINKUSDT",
 ];
+const DEFAULT_FOREX = ["EUR_USD", "GBP_USD", "USD_JPY", "AUD_USD", "USD_CAD", "NZD_USD"];
 
 interface Tick {
   id: string;
@@ -26,23 +26,18 @@ interface Tick {
   ts: number;
 }
 
+// ── Bybit ───────────────────────────────────────────────────
 async function fetchBybit(instruments: string[]): Promise<Tick[]> {
-  // Bybit v5 spot tickers. One call returns all spot symbols; we filter.
-  const res = await fetch("https://api-testnet.bybit.com/v5/market/tickers?category=spot");
-  if (!res.ok) {
-    // testnet sometimes empty for low-liquidity pairs — fall back to mainnet read-only
-    const fb = await fetch("https://api.bybit.com/v5/market/tickers?category=spot");
-    if (!fb.ok) return [];
-    return parseBybit(await fb.json(), instruments);
+  const r1 = await fetch("https://api-testnet.bybit.com/v5/market/tickers?category=spot");
+  let payload = r1.ok ? await r1.json() : null;
+  if (!payload?.result?.list?.length) {
+    const r2 = await fetch("https://api.bybit.com/v5/market/tickers?category=spot");
+    payload = r2.ok ? await r2.json() : { result: { list: [] } };
   }
-  return parseBybit(await res.json(), instruments);
-}
-
-function parseBybit(payload: any, instruments: string[]): Tick[] {
   const list: any[] = payload?.result?.list ?? [];
   const want = new Set(instruments.map(s => s.toUpperCase()));
   const ts = Date.now();
-  const out: Tick[] = [];
+  const byId: Record<string, Tick> = {};
   for (const r of list) {
     if (!want.has(r.symbol)) continue;
     const bid = parseFloat(r.bid1Price || "0");
@@ -54,36 +49,70 @@ function parseBybit(payload: any, instruments: string[]): Tick[] {
     const spread_bps = mid > 0 ? ((ask - bid) / mid) * 10000 : 0;
     const total = bidQ + askQ;
     const ofi = total > 0 ? (bidQ - askQ) / total : 0;
-    out.push({
-      id: r.symbol,
-      exchange: "bybit",
-      bid, ask, mid, spread_bps,
-      last,
+    byId[r.symbol] = {
+      id: r.symbol, exchange: "bybit",
+      bid, ask, mid, spread_bps, last,
       change_24h_pct: parseFloat(r.price24hPcnt || "0") * 100,
       volume_24h: parseFloat(r.turnover24h || "0"),
-      ofi,
+      ofi, ts,
+    };
+  }
+  return instruments.map(i => byId[i.toUpperCase()]).filter(Boolean) as Tick[];
+}
+
+// ── OANDA ───────────────────────────────────────────────────
+async function fetchOanda(instruments: string[], token: string, accountId: string): Promise<Tick[]> {
+  if (!token || !accountId) return [];
+  const params = new URLSearchParams({ instruments: instruments.join(",") });
+  const url = `https://api-fxpractice.oanda.com/v3/accounts/${accountId}/pricing?${params}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) return [];
+  const data = await res.json();
+  const ts = Date.now();
+  const out: Tick[] = [];
+  for (const p of data?.prices ?? []) {
+    const bid = parseFloat(p?.bids?.[0]?.price || "0");
+    const ask = parseFloat(p?.asks?.[0]?.price || "0");
+    const mid = bid && ask ? (bid + ask) / 2 : 0;
+    if (!mid) continue;
+    out.push({
+      id: p.instrument, exchange: "oanda",
+      bid, ask, mid,
+      spread_bps: ((ask - bid) / mid) * 10000,
+      last: mid,
+      change_24h_pct: 0,
+      volume_24h: 0,
+      ofi: 0,
       ts,
     });
   }
-  // Preserve requested order
-  const byId: Record<string, Tick> = {};
-  for (const t of out) byId[t.id] = t;
-  return instruments.map(i => byId[i.toUpperCase()]).filter(Boolean) as Tick[];
+  return out;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const url = new URL(req.url);
-    const param = url.searchParams.get("instruments");
-    const instruments = param ? param.split(",").map(s => s.trim().toUpperCase()) : DEFAULT_INSTRUMENTS;
-    const ticks = await fetchBybit(instruments);
+    const cryptoParam = url.searchParams.get("crypto");
+    const fxParam = url.searchParams.get("forex");
+    const crypto = cryptoParam ? cryptoParam.split(",").map(s => s.trim().toUpperCase()) : DEFAULT_CRYPTO;
+    const forex = fxParam ? fxParam.split(",").map(s => s.trim().toUpperCase()) : DEFAULT_FOREX;
+
+    const token = Deno.env.get("OANDA_PRACTICE_TOKEN") || "";
+    const accountId = Deno.env.get("OANDA_ACCOUNT_ID") || "";
+
+    const [cryptoTicks, fxTicks] = await Promise.all([
+      fetchBybit(crypto),
+      fetchOanda(forex, token, accountId),
+    ]);
+    const ticks = [...cryptoTicks, ...fxTicks];
     const ofi: Record<string, number> = {};
     for (const t of ticks) ofi[`ofi_${t.id}`] = t.ofi;
+
     return new Response(JSON.stringify({
-      exchange: "bybit",
-      ticks,
-      ofi,
+      exchanges: ["bybit", "oanda"],
+      ticks, ofi,
+      counts: { crypto: cryptoTicks.length, forex: fxTicks.length },
       ts: new Date().toISOString(),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
