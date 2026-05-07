@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      kill_switch_alerts: {
+        Row: {
+          created_at: string
+          id: string
+          level: string
+          payload: Json
+          reason: string
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level?: string
+          payload?: Json
+          reason: string
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: string
+          payload?: Json
+          reason?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
+      synthesis_history: {
+        Row: {
+          antithesis: Json | null
+          created_at: string
+          id: string
+          narrative: string | null
+          score: number | null
+          synthesis: Json | null
+          thesis: Json | null
+        }
+        Insert: {
+          antithesis?: Json | null
+          created_at?: string
+          id?: string
+          narrative?: string | null
+          score?: number | null
+          synthesis?: Json | null
+          thesis?: Json | null
+        }
+        Update: {
+          antithesis?: Json | null
+          created_at?: string
+          id?: string
+          narrative?: string | null
+          score?: number | null
+          synthesis?: Json | null
+          thesis?: Json | null
+        }
+        Relationships: []
+      }
       tor_entries: {
         Row: {
           category: string
@@ -53,6 +110,42 @@ export type Database = {
           tags?: string[]
           updated_at?: string
           url?: string
+        }
+        Relationships: []
+      }
+      trade_history: {
+        Row: {
+          created_at: string
+          id: string
+          instrument: string
+          meta: Json
+          mode: string
+          pnl: number | null
+          price: number
+          qty: number
+          side: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instrument: string
+          meta?: Json
+          mode?: string
+          pnl?: number | null
+          price: number
+          qty: number
+          side: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instrument?: string
+          meta?: Json
+          mode?: string
+          pnl?: number | null
+          price?: number
+          qty?: number
+          side?: string
         }
         Relationships: []
       }
