@@ -14,7 +14,14 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const db = supa();
   try {
-    if (req.method === "GET") {
+    let body: any = {};
+    try {
+      const text = await req.text();
+      if (text) body = JSON.parse(text);
+    } catch { body = {}; }
+
+    // No thesis => list entries
+    if (!body.thesis && !body.synthesis && !body.narrative) {
       const url = new URL(req.url);
       const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 200);
       const { data, error } = await db.from("synthesis_history")
@@ -24,17 +31,14 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (req.method === "POST") {
-      const body = await req.json();
-      const { thesis, antithesis, synthesis, narrative, score } = body || {};
-      const { data, error } = await db.from("synthesis_history")
-        .insert({ thesis, antithesis, synthesis, narrative, score }).select().single();
-      if (error) throw error;
-      return new Response(JSON.stringify({ entry: data }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+
+    const { thesis, antithesis, synthesis, narrative, score } = body;
+    const { data, error } = await db.from("synthesis_history")
+      .insert({ thesis, antithesis, synthesis, narrative, score }).select().single();
+    if (error) throw error;
+    return new Response(JSON.stringify({ entry: data }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (e) {
     return new Response(JSON.stringify({ error: String((e as Error).message) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },

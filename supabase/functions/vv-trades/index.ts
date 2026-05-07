@@ -14,7 +14,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const db = supa();
   try {
-    if (req.method === "GET") {
+    let body: any = {};
+    try {
+      const text = await req.text();
+      if (text) body = JSON.parse(text);
+    } catch { body = {}; }
+
+    if (!body.instrument) {
       const url = new URL(req.url);
       const limit = Math.min(parseInt(url.searchParams.get("limit") || "100"), 500);
       const { data, error } = await db.from("trade_history")
@@ -25,22 +31,19 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (req.method === "POST") {
-      const body = await req.json();
-      const { instrument, side, qty, price, pnl, mode = "paper", meta = {} } = body || {};
-      if (!instrument || !side || qty == null || price == null) {
-        return new Response(JSON.stringify({ error: "instrument, side, qty, price required" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const { data, error } = await db.from("trade_history")
-        .insert({ instrument, side, qty, price, pnl, mode, meta }).select().single();
-      if (error) throw error;
-      return new Response(JSON.stringify({ trade: data }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+
+    const { instrument, side, qty, price, pnl, mode = "paper", meta = {} } = body;
+    if (!side || qty == null || price == null) {
+      return new Response(JSON.stringify({ error: "instrument, side, qty, price required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+    const { data, error } = await db.from("trade_history")
+      .insert({ instrument, side, qty, price, pnl, mode, meta }).select().single();
+    if (error) throw error;
+    return new Response(JSON.stringify({ trade: data }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (e) {
     return new Response(JSON.stringify({ error: String((e as Error).message) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
