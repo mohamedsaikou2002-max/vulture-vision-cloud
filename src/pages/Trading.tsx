@@ -320,6 +320,64 @@ export default function Trading() {
             </div>
           </div>
 
+          {/* Quantum states + Mirofish verdict */}
+          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 14, marginTop: 14 }}>
+            <div className="panel" style={{ padding: 14 }}>
+              <div className="panel-title">
+                QUANTUM STATES — {qstate ? `${qstate.n_qubits}q · ${qstate.backend.toUpperCase()}` : "AWAITING"}
+              </div>
+              {!qstate && <div className="dim-text">⬡ no quantum snapshot yet</div>}
+              {qstate && (
+                <>
+                  <div style={{ display: "flex", gap: 14, marginBottom: 10, fontSize: ".7rem", color: "var(--text)" }}>
+                    <span>COHERENCE <b style={{ color: "var(--gold)" }}>{qstate.coherence.toFixed(3)}</b></span>
+                    <span>DOMINANT |{qstate.dominant.toString(2).padStart(qstate.n_qubits, "0")}⟩</span>
+                    <span style={{ color: "var(--dim)" }}>{new Date(qstate.ts).toLocaleTimeString()}</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {qstate.top.map((s, idx) => {
+                      const label = qstate.labels[s.i] ?? `|${s.i.toString(2).padStart(qstate.n_qubits, "0")}⟩`;
+                      const pct = (s.p * 100);
+                      return (
+                        <div key={idx} style={{ display: "grid", gridTemplateColumns: "90px 1fr 60px", gap: 10, alignItems: "center", fontSize: ".68rem" }}>
+                          <span style={{ color: "var(--dim)", letterSpacing: ".08em" }}>{label}</span>
+                          <div style={{ height: 6, background: "rgba(0,0,0,.4)", border: "1px solid rgba(0,230,118,.15)" }}>
+                            <div style={{ width: `${Math.max(2, pct)}%`, height: "100%", background: "var(--green-bright)", opacity: .7 }} />
+                          </div>
+                          <span style={{ textAlign: "right", color: "var(--text)" }}>{pct.toFixed(2)}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="panel" style={{ padding: 14 }}>
+              <div className="panel-title">MIROFISH VERDICT</div>
+              {!mirofish && <div className="dim-text">⬡ no verdict yet</div>}
+              {mirofish && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ fontSize: "1.4rem", letterSpacing: ".18em", color: mirofish.verdict === "RISK_ON" ? "var(--green-bright)" : mirofish.verdict === "RISK_OFF" ? "var(--red)" : "var(--gold)" }}>
+                    {mirofish.verdict}
+                  </div>
+                  <div style={{ fontSize: ".68rem", color: "var(--dim)", letterSpacing: ".12em" }}>
+                    CONFIDENCE {(mirofish.confidence * 100).toFixed(1)}%
+                  </div>
+                  <div style={{ height: 6, background: "rgba(0,0,0,.4)", border: "1px solid rgba(0,230,118,.15)" }}>
+                    <div style={{ width: `${mirofish.confidence * 100}%`, height: "100%", background: "var(--gold)", opacity: .8 }} />
+                  </div>
+                  <div style={{ fontSize: ".64rem", color: "var(--text)", marginTop: 6, lineHeight: 1.6 }}>
+                    drift <b className={dir(mirofish.drift)}>{fPct(mirofish.drift)}</b><br/>
+                    ofi <b className={dir(mirofish.ofi)}>{fNum(mirofish.ofi, 4)}</b><br/>
+                    coherence <b style={{ color: "var(--gold)" }}>{mirofish.coherence.toFixed(3)}</b><br/>
+                    instruments <b>{mirofish.instruments}</b>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Trade history */}
           <div className="panel" style={{ padding: 14, marginTop: 14 }}>
             <div className="panel-title">TRADE HISTORY — {trades.length} ORDERS</div>
