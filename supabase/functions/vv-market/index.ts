@@ -1,7 +1,6 @@
-// MarketWorker port — edge functions can't hold long-lived WS, so this is a
-// stateless snapshot endpoint. Polls Binance public REST for bookTicker +
-// 24hr stats across a default instrument set, normalizes, and returns an
-// OFI proxy from bid/ask imbalance.
+// MarketWorker — Bybit edition.
+// Polls Bybit v5 public spot tickers (no auth required) and returns a unified
+// snapshot. Authenticated key/secret are reserved for future order endpoints.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,43 +22,53 @@ interface Tick {
   last: number;
   change_24h_pct: number;
   volume_24h: number;
-  ofi: number; // bid/ask size imbalance in [-1, 1]
+  ofi: number;
   ts: number;
 }
 
-async function fetchBinance(instruments: string[]): Promise<Tick[]> {
-  const symbolsParam = encodeURIComponent(JSON.stringify(instruments));
-  const [bookRes, statsRes] = await Promise.all([
-    fetch(`https://api.binance.com/api/v3/ticker/bookTicker?symbols=${symbolsParam}`),
-    fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${symbolsParam}`),
-  ]);
-  if (!bookRes.ok || !statsRes.ok) return [];
-  const book = await bookRes.json() as any[];
-  const stats = await statsRes.json() as any[];
-  const statsBy: Record<string, any> = {};
-  for (const s of stats) statsBy[s.symbol] = s;
+async function fetchBybit(instruments: string[]): Promise<Tick[]> {
+  // Bybit v5 spot tickers. One call returns all spot symbols; we filter.
+  const res = await fetch("https://api-testnet.bybit.com/v5/market/tickers?category=spot");
+  if (!res.ok) {
+    // testnet sometimes empty for low-liquidity pairs — fall back to mainnet read-only
+    const fb = await fetch("https://api.bybit.com/v5/market/tickers?category=spot");
+    if (!fb.ok) return [];
+    return parseBybit(await fb.json(), instruments);
+  }
+  return parseBybit(await res.json(), instruments);
+}
+
+function parseBybit(payload: any, instruments: string[]): Tick[] {
+  const list: any[] = payload?.result?.list ?? [];
+  const want = new Set(instruments.map(s => s.toUpperCase()));
   const ts = Date.now();
-  return book.map(b => {
-    const bid = parseFloat(b.bidPrice);
-    const ask = parseFloat(b.askPrice);
-    const bidQ = parseFloat(b.bidQty);
-    const askQ = parseFloat(b.askQty);
-    const mid = (bid + ask) / 2;
+  const out: Tick[] = [];
+  for (const r of list) {
+    if (!want.has(r.symbol)) continue;
+    const bid = parseFloat(r.bid1Price || "0");
+    const ask = parseFloat(r.ask1Price || "0");
+    const bidQ = parseFloat(r.bid1Size || "0");
+    const askQ = parseFloat(r.ask1Size || "0");
+    const last = parseFloat(r.lastPrice || "0");
+    const mid = bid && ask ? (bid + ask) / 2 : last;
     const spread_bps = mid > 0 ? ((ask - bid) / mid) * 10000 : 0;
     const total = bidQ + askQ;
     const ofi = total > 0 ? (bidQ - askQ) / total : 0;
-    const s = statsBy[b.symbol] || {};
-    return {
-      id: b.symbol,
-      exchange: "binance",
+    out.push({
+      id: r.symbol,
+      exchange: "bybit",
       bid, ask, mid, spread_bps,
-      last: parseFloat(s.lastPrice || `${mid}`),
-      change_24h_pct: parseFloat(s.priceChangePercent || "0"),
-      volume_24h: parseFloat(s.quoteVolume || "0"),
+      last,
+      change_24h_pct: parseFloat(r.price24hPcnt || "0") * 100,
+      volume_24h: parseFloat(r.turnover24h || "0"),
       ofi,
       ts,
-    } as Tick;
-  });
+    });
+  }
+  // Preserve requested order
+  const byId: Record<string, Tick> = {};
+  for (const t of out) byId[t.id] = t;
+  return instruments.map(i => byId[i.toUpperCase()]).filter(Boolean) as Tick[];
 }
 
 Deno.serve(async (req) => {
@@ -68,11 +77,11 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const param = url.searchParams.get("instruments");
     const instruments = param ? param.split(",").map(s => s.trim().toUpperCase()) : DEFAULT_INSTRUMENTS;
-    const ticks = await fetchBinance(instruments);
+    const ticks = await fetchBybit(instruments);
     const ofi: Record<string, number> = {};
     for (const t of ticks) ofi[`ofi_${t.id}`] = t.ofi;
     return new Response(JSON.stringify({
-      exchange: "binance",
+      exchange: "bybit",
       ticks,
       ofi,
       ts: new Date().toISOString(),
