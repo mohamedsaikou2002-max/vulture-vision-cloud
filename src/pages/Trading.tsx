@@ -59,6 +59,8 @@ interface Mirofish {
   ts: string;
 }
 
+const STARTING_EQUITY = 100_000;
+
 const PAPER_GATE = {
   min_win_rate: 0.55,
   min_sharpe: 1.5,
