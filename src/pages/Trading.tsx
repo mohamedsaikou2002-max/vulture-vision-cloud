@@ -89,6 +89,8 @@ export default function Trading() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [killActive, setKillActive] = useState(false);
   const [ticks, setTicks] = useState<Tick[]>([]);
+  const [qstate, setQstate] = useState<QState | null>(null);
+  const [mirofish, setMirofish] = useState<Mirofish | null>(null);
   const [online, setOnline] = useState<boolean | null>(null);
 
   // form state
