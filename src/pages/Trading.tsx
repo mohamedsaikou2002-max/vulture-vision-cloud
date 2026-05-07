@@ -113,6 +113,12 @@ export default function Trading() {
       if (k.data) { setAlerts(k.data.alerts || []); setKillActive(!!k.data.active); }
       if (m.data) setTicks(m.data.ticks || []);
       setOnline(true);
+
+      // Quantum + Mirofish (run in sequence: quantum first → mirofish reads its coherence)
+      const q = await supabase.functions.invoke("vv-quantum?signals", { body: { n_qubits: 4, prefer: "auto" } });
+      if (q.data?.ok) setQstate(q.data);
+      const mf = await supabase.functions.invoke("vv-mirofish", { body: {} });
+      if (mf.data?.verdict) setMirofish(mf.data.verdict);
     } catch {
       setOnline(false);
     }
