@@ -29,14 +29,29 @@ Deno.serve(async (req) => {
         count: data?.length || 0,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    if (req.method === "POST") {
-      const body = await req.json();
-      const { level = "warning", reason, source, payload = {}, set_active } = body || {};
-      if (!reason) {
-        return new Response(JSON.stringify({ error: "reason required" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    // Safely parse body (may be empty when used as a GET-like fetch)
+    let body: any = {};
+    try {
+      const text = await req.text();
+      if (text) body = JSON.parse(text);
+    } catch { body = {}; }
+
+    // No reason => treat as a read request
+    if (!body.reason) {
+      const { data, error } = await db.from("kill_switch_alerts")
+        .select("*").order("created_at", { ascending: false }).limit(100);
+      if (error) throw error;
+      const { data: ks } = await db.from("warm_state")
+        .select("value").eq("key", "kill_switch_active").maybeSingle();
+      return new Response(JSON.stringify({
+        active: ks?.value === true,
+        alerts: data,
+        count: data?.length || 0,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (req.method === "POST" || req.method === "GET") {
+      const { level = "warning", reason, source, payload = {}, set_active } = body;
       const { data, error } = await db.from("kill_switch_alerts")
         .insert({ level, reason, source, payload }).select().single();
       if (error) throw error;
