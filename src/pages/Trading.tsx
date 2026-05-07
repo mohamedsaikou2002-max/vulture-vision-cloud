@@ -59,6 +59,8 @@ interface Mirofish {
   ts: string;
 }
 
+const STARTING_EQUITY = 100_000;
+
 const PAPER_GATE = {
   min_win_rate: 0.55,
   min_sharpe: 1.5,
@@ -176,8 +178,10 @@ export default function Trading() {
   const closed = trades.filter(t => t.pnl != null);
   const wins = closed.filter(t => (t.pnl || 0) > 0).length;
   const winRate = closed.length ? wins / closed.length : 0;
+  const equity = STARTING_EQUITY + totalPnl;
+  const equityPct = (totalPnl / STARTING_EQUITY) * 100;
   const grossExposure = trades.reduce((s, t) => s + Math.abs(t.qty * t.price), 0);
-  const exposurePct = grossExposure / Math.max(RISK.MAX_POSITION_SIZE_USD * 10, 1);
+  const exposurePct = grossExposure / Math.max(equity, 1);
 
   const status = online === null
     ? { label: "CONNECTING", tone: "gold" as const }
@@ -193,9 +197,9 @@ export default function Trading() {
         {/* Stat row */}
         <div className="stat-row">
           <div className="stat-card panel">
-            <div className="stat-label">TRADING MODE</div>
-            <div className="stat-value"><span className="badge badge-yellow">PAPER</span></div>
-            <div className="stat-delta">live gate locked</div>
+            <div className="stat-label">EQUITY</div>
+            <div className={`stat-value ${dir(totalPnl)}`}>${equity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="stat-delta">start ${STARTING_EQUITY.toLocaleString()} · {fPct(equityPct)}</div>
           </div>
           <div className="stat-card panel">
             <div className="stat-label">TOTAL PNL</div>
@@ -212,7 +216,7 @@ export default function Trading() {
           <div className="stat-card panel">
             <div className="stat-label">EXPOSURE</div>
             <div className="stat-value">{fUsd(grossExposure)}</div>
-            <div className="stat-delta">cap ${RISK.MAX_POSITION_SIZE_USD * 10}</div>
+            <div className="stat-delta">{(exposurePct * 100).toFixed(2)}% of equity · mode <span className="badge badge-yellow">PAPER</span></div>
           </div>
           <div className="stat-card panel">
             <div className="stat-label">KILL SWITCH</div>

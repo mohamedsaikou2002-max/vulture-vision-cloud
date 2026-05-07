@@ -28,11 +28,17 @@ interface Tick {
 
 // ── Bybit ───────────────────────────────────────────────────
 async function fetchBybit(instruments: string[]): Promise<Tick[]> {
-  const r1 = await fetch("https://api-testnet.bybit.com/v5/market/tickers?category=spot");
-  let payload = r1.ok ? await r1.json() : null;
+  // Prod first — testnet often returns empty bid/ask. Fall back to testnet only on hard failure.
+  let payload: any = null;
+  try {
+    const r1 = await fetch("https://api.bybit.com/v5/market/tickers?category=spot");
+    if (r1.ok) payload = await r1.json();
+  } catch { /* fall through */ }
   if (!payload?.result?.list?.length) {
-    const r2 = await fetch("https://api.bybit.com/v5/market/tickers?category=spot");
-    payload = r2.ok ? await r2.json() : { result: { list: [] } };
+    try {
+      const r2 = await fetch("https://api-testnet.bybit.com/v5/market/tickers?category=spot");
+      if (r2.ok) payload = await r2.json();
+    } catch { /* ignore */ }
   }
   const list: any[] = payload?.result?.list ?? [];
   const want = new Set(instruments.map(s => s.toUpperCase()));
