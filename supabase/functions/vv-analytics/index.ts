@@ -290,9 +290,11 @@ Deno.serve(async (req) => {
     };
 
     const narrative = await aiNarrative(crypto, assets, portfolio);
+    const ethUsd = crypto.find(c => c.symbol === "ETH")?.price || 3000;
+    const onchain = await fetchOnchain(ethUsd);
 
     return new Response(JSON.stringify({
-      crypto, assets, portfolio, narrative, ts: new Date().toISOString(),
+      crypto, assets, portfolio, narrative, onchain, ts: new Date().toISOString(),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String((e as Error).message) }), {
