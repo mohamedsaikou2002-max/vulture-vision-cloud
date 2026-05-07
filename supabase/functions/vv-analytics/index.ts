@@ -209,6 +209,44 @@ Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, k
   }
 }
 
+// ===== OnChain (Etherscan Sepolia) =====
+const ETHERSCAN_URL = "https://api-sepolia.etherscan.io/api";
+const WHALE_THRESHOLD_USD = 50_000;
+
+async function fetchOnchain(ethUsd: number) {
+  const key = Deno.env.get("ETHERSCAN_API_KEY");
+  if (!key) return { gas: null, whales: [] as any[] };
+  const gasP = fetch(`${ETHERSCAN_URL}?module=gastracker&action=gasoracle&apikey=${key}`).then(r => r.json()).catch(() => null);
+  const txP = fetch(`${ETHERSCAN_URL}?module=account&action=txlist&address=0x0000000000000000000000000000000000000000&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${key}`).then(r => r.json()).catch(() => null);
+  const [gasRes, txRes] = await Promise.all([gasP, txP]);
+  let gas = null;
+  if (gasRes?.status === "1") {
+    const r = gasRes.result;
+    gas = {
+      fast: parseFloat(r.FastGasPrice || "0"),
+      average: parseFloat(r.ProposeGasPrice || "0"),
+      slow: parseFloat(r.SafeGasPrice || "0"),
+      ts_us: Date.now() * 1000,
+    };
+  }
+  const whales: any[] = [];
+  if (txRes?.status === "1") {
+    for (const tx of (txRes.result || [])) {
+      const eth = Number(tx.value || 0) / 1e18;
+      const usd = eth * ethUsd;
+      if (usd >= WHALE_THRESHOLD_USD) {
+        whales.push({
+          tx_hash: tx.hash, value_usd: usd,
+          from_addr: tx.from, to_addr: tx.to,
+          ts: Number(tx.timeStamp || 0),
+        });
+      }
+      if (whales.length >= 50) break;
+    }
+  }
+  return { gas, whales };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -252,9 +290,11 @@ Deno.serve(async (req) => {
     };
 
     const narrative = await aiNarrative(crypto, assets, portfolio);
+    const ethUsd = crypto.find(c => c.symbol === "ETH")?.price || 3000;
+    const onchain = await fetchOnchain(ethUsd);
 
     return new Response(JSON.stringify({
-      crypto, assets, portfolio, narrative, ts: new Date().toISOString(),
+      crypto, assets, portfolio, narrative, onchain, ts: new Date().toISOString(),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String((e as Error).message) }), {
