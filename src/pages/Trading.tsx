@@ -40,6 +40,24 @@ interface Tick {
   change_24h_pct: number;
   ofi: number;
 }
+interface QState {
+  n_qubits: number;
+  labels: string[];
+  coherence: number;
+  dominant: number;
+  top: { i: number; p: number }[];
+  backend: string;
+  ts: string;
+}
+interface Mirofish {
+  verdict: string;
+  confidence: number;
+  drift: number;
+  ofi: number;
+  coherence: number;
+  instruments: number;
+  ts: string;
+}
 
 const PAPER_GATE = {
   min_win_rate: 0.55,
