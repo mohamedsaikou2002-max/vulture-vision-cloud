@@ -13,6 +13,7 @@ const links = [
   { to: "/trading", label: "TRADING" },
   { to: "/onion", label: "ONION SEARCH" },
   { to: "/news", label: "NEWS FEED" },
+  { to: "/worldview", label: "EARTH INTEL" },
 ];
 
 export default function VVLayout({ children, status, blurred = true }: Props) {

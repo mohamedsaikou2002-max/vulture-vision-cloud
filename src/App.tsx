@@ -9,6 +9,7 @@ import Analytics from "./pages/Analytics";
 import Onion from "./pages/Onion";
 import News from "./pages/News";
 import Trading from "./pages/Trading";
+import WorldviewPage from "./pages/WorldviewPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/onion" element={<Onion />} />
           <Route path="/news" element={<News />} />
           <Route path="/trading" element={<Trading />} />
+          <Route path="/worldview" element={<WorldviewPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
