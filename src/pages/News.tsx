@@ -2,7 +2,15 @@ import { useEffect, useState } from "react";
 import VVLayout from "@/components/VVLayout";
 import { supabase } from "@/integrations/supabase/client";
 
-interface Item { title: string; source?: string; time?: string; }
+interface Item {
+  title: string;
+  source?: string;
+  time?: string;
+  link?: string;
+  journalist?: string;
+  journalist_url?: string;
+  source_url?: string;
+}
 interface NewsData { irl: Item[]; dark: Item[]; tech: Item[]; }
 
 const tickerItems = [
@@ -78,16 +86,40 @@ function Column({ title, tone, items, badge, badgeText }: {
       </div>
       <div className="col-body">
         {items.length === 0 && <div className="news-item"><div className="news-title dim-text">Loading feed…</div></div>}
-        {items.slice(0, 20).map((it, i) => (
-          <div className="news-item" key={i}>
-            {i === 0 && <span className={`badge ${badge}`}>{badgeText}</span>}
-            <div className="news-title">{it.title}</div>
-            <div className="news-meta">
-              <span className="news-source">{it.source || "Web"}</span>
-              <span>{timeAgo(it.time)}</span>
+        {items.slice(0, 20).map((it, i) => {
+          const sourceHref = it.source_url || (it.link ? new URL(it.link).origin : undefined);
+          return (
+            <div className="news-item" key={i}>
+              {i === 0 && <span className={`badge ${badge}`}>{badgeText}</span>}
+              <div className="news-title">
+                {it.link ? (
+                  <a href={it.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                    {it.title}
+                  </a>
+                ) : it.title}
+              </div>
+              <div className="news-meta" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {sourceHref ? (
+                  <a href={sourceHref} target="_blank" rel="noopener noreferrer" className="news-source" style={{ color: "var(--gold)", textDecoration: "underline" }}>
+                    {it.source || "Web"}
+                  </a>
+                ) : (
+                  <span className="news-source">{it.source || "Web"}</span>
+                )}
+                {it.journalist && (
+                  it.journalist_url ? (
+                    <a href={it.journalist_url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--cyan)", textDecoration: "underline" }}>
+                      ✎ {it.journalist}
+                    </a>
+                  ) : (
+                    <span style={{ color: "var(--cyan)" }}>✎ {it.journalist}</span>
+                  )
+                )}
+                <span style={{ marginLeft: "auto" }}>{timeAgo(it.time)}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -10,6 +10,9 @@ interface Item {
   source: string;
   time: string;
   link?: string;
+  journalist?: string;
+  journalist_url?: string;
+  source_url?: string;
   sentiment_score?: number;
   entities?: string[];
   market_impact?: "high" | "medium" | "low";
@@ -78,7 +81,7 @@ const FEEDS = {
 
 const QUERY_TERMS = ["bitcoin","ethereum","crypto","fed","ecb","pboc","inflation","recession","rate"];
 
-function parseRss(xml: string, source: string): Item[] {
+function parseRss(xml: string, source: string, sourceUrl?: string): Item[] {
   const out: Item[] = [];
   const entryRe = /<(?:item|entry)[^>]*>([\s\S]*?)<\/(?:item|entry)>/g;
   let m: RegExpExecArray | null;
@@ -87,10 +90,27 @@ function parseRss(xml: string, source: string): Item[] {
     const t = block.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
     const d = block.match(/<(?:pubDate|published|updated)[^>]*>([\s\S]*?)<\/(?:pubDate|published|updated)>/);
     const l = block.match(/<link[^>]*?>([\s\S]*?)<\/link>/) || block.match(/<link[^>]*href="([^"]+)"/);
+    const a = block.match(/<dc:creator[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/dc:creator>/)
+           || block.match(/<author[^>]*>([\s\S]*?)<\/author>/);
     const title = t ? t[1].replace(/<[^>]+>/g, "").trim() : "";
     if (!title) continue;
     const time = d ? new Date(d[1]).toISOString() : new Date().toISOString();
-    out.push({ title, source, time, link: l ? l[1].trim() : undefined });
+    let journalist: string | undefined;
+    if (a) {
+      const raw = a[1].replace(/<[^>]+>/g, "").trim();
+      const nameMatch = raw.match(/<name[^>]*>([\s\S]*?)<\/name>/);
+      journalist = (nameMatch ? nameMatch[1] : raw).replace(/.*?\(([^)]+)\).*/, "$1").trim() || undefined;
+      if (journalist && journalist.length > 80) journalist = journalist.slice(0, 80);
+    }
+    const link = l ? l[1].trim() : undefined;
+    let journalist_url: string | undefined;
+    if (journalist && link) {
+      try {
+        const origin = new URL(link).origin;
+        journalist_url = `${origin}/search?q=${encodeURIComponent(journalist)}`;
+      } catch {}
+    }
+    out.push({ title, source, time, link, journalist, journalist_url, source_url: sourceUrl });
   }
   return out;
 }
@@ -99,7 +119,9 @@ async function fetchFeeds(feeds: { url: string; source: string }[]): Promise<Ite
   const results = await Promise.allSettled(feeds.map(async f => {
     const r = await fetch(f.url, { headers: { "User-Agent": "VultureVision/1.0" } });
     if (!r.ok) throw new Error(`${f.source} ${r.status}`);
-    return parseRss(await r.text(), f.source);
+    let sourceUrl: string | undefined;
+    try { sourceUrl = new URL(f.url).origin; } catch {}
+    return parseRss(await r.text(), f.source, sourceUrl);
   }));
   const items = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
   items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
@@ -124,11 +146,16 @@ async function fetchNewsApi(): Promise<Item[]> {
       for (const art of (data.articles || []).slice(0, 5)) {
         const headline = art.title || "";
         if (!headline) continue;
+        const link = art.url;
+        let source_url: string | undefined;
+        try { source_url = link ? new URL(link).origin : undefined; } catch {}
         out.push({
           title: headline.slice(0, 200),
           source: art.source?.name || "NewsAPI",
           time: art.publishedAt || new Date().toISOString(),
-          link: art.url,
+          link,
+          journalist: art.author || undefined,
+          source_url,
         });
       }
     } catch {}
