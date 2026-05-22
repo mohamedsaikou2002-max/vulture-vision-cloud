@@ -2,7 +2,15 @@ import { useEffect, useState } from "react";
 import VVLayout from "@/components/VVLayout";
 import { supabase } from "@/integrations/supabase/client";
 
-interface Item { title: string; source?: string; time?: string; }
+interface Item {
+  title: string;
+  source?: string;
+  time?: string;
+  link?: string;
+  journalist?: string;
+  journalist_url?: string;
+  source_url?: string;
+}
 interface NewsData { irl: Item[]; dark: Item[]; tech: Item[]; }
 
 const tickerItems = [
