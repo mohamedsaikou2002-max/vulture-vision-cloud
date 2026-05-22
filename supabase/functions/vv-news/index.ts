@@ -152,7 +152,7 @@ async function fetchFeeds(feeds: { url: string; source: string }[]): Promise<Ite
   }));
   const items = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
   items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-  return items.slice(0, 15);
+  return items.slice(0, 40);
 }
 
 async function fetchNewsApi(): Promise<Item[]> {
