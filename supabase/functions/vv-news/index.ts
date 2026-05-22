@@ -64,18 +64,45 @@ const FEEDS = {
     { url: "https://feeds.reuters.com/reuters/topNews", source: "Reuters" },
     { url: "https://feeds.bbci.co.uk/news/world/rss.xml", source: "BBC" },
     { url: "https://feeds.npr.org/1001/rss.xml", source: "NPR" },
+    { url: "https://www.ft.com/?format=rss", source: "Financial Times" },
+    { url: "https://www.economist.com/finance-and-economics/rss.xml", source: "The Economist" },
+    { url: "https://feeds.bloomberg.com/markets/news.rss", source: "Bloomberg Markets" },
+    { url: "https://www.aljazeera.com/xml/rss/all.xml", source: "Al Jazeera" },
+    // Independent journalists / Substack bloggers
+    { url: "https://mattstoller.substack.com/feed", source: "Matt Stoller (BIG)" },
+    { url: "https://doomberg.substack.com/feed", source: "Doomberg" },
+    { url: "https://bariweiss.substack.com/feed", source: "Bari Weiss (Free Press)" },
+    { url: "https://www.racket.news/feed", source: "Matt Taibbi (Racket)" },
+    { url: "https://greenwald.substack.com/feed", source: "Glenn Greenwald" },
+    { url: "https://andrewsullivan.substack.com/feed", source: "Andrew Sullivan" },
+    { url: "https://noahpinion.substack.com/feed", source: "Noah Smith" },
   ],
   dark: [
-    { url: "https://krebsonsecurity.com/feed/", source: "Krebs" },
+    { url: "https://krebsonsecurity.com/feed/", source: "Krebs on Security" },
     { url: "https://www.bleepingcomputer.com/feed/", source: "BleepingComputer" },
     { url: "https://therecord.media/feed/", source: "The Record" },
     { url: "https://www.darkreading.com/rss.xml", source: "Dark Reading" },
+    { url: "https://www.schneier.com/feed/atom/", source: "Bruce Schneier" },
+    { url: "https://grahamcluley.com/feed/", source: "Graham Cluley" },
+    { url: "https://www.troyhunt.com/rss/", source: "Troy Hunt" },
+    { url: "https://taosecurity.blogspot.com/feeds/posts/default", source: "Richard Bejtlich (TaoSecurity)" },
+    { url: "https://www.databreaches.net/feed/", source: "DataBreaches.net" },
+    { url: "https://www.404media.co/rss/", source: "404 Media" },
   ],
   tech: [
-    { url: "https://hnrss.org/frontpage", source: "HN" },
+    { url: "https://hnrss.org/frontpage", source: "Hacker News" },
     { url: "https://www.theverge.com/rss/index.xml", source: "The Verge" },
     { url: "https://techcrunch.com/feed/", source: "TechCrunch" },
     { url: "https://www.wired.com/feed/rss", source: "Wired" },
+    { url: "https://arstechnica.com/feed/", source: "Ars Technica" },
+    { url: "https://stratechery.com/feed/", source: "Ben Thompson (Stratechery)" },
+    { url: "https://www.platformer.news/feed", source: "Casey Newton (Platformer)" },
+    { url: "https://daringfireball.net/feeds/main", source: "John Gruber (Daring Fireball)" },
+    { url: "https://simonwillison.net/atom/everything/", source: "Simon Willison" },
+    { url: "https://garymarcus.substack.com/feed", source: "Gary Marcus" },
+    { url: "https://www.oneusefulthing.org/feed", source: "Ethan Mollick" },
+    { url: "https://www.interconnects.ai/feed", source: "Nathan Lambert (Interconnects)" },
+    { url: "https://thezvi.substack.com/feed", source: "Zvi Mowshowitz" },
   ],
 };
 
@@ -125,7 +152,7 @@ async function fetchFeeds(feeds: { url: string; source: string }[]): Promise<Ite
   }));
   const items = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
   items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-  return items.slice(0, 15);
+  return items.slice(0, 40);
 }
 
 async function fetchNewsApi(): Promise<Item[]> {
