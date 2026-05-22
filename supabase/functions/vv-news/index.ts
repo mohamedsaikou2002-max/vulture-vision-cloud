@@ -10,6 +10,9 @@ interface Item {
   source: string;
   time: string;
   link?: string;
+  journalist?: string;
+  journalist_url?: string;
+  source_url?: string;
   sentiment_score?: number;
   entities?: string[];
   market_impact?: "high" | "medium" | "low";
