@@ -146,11 +146,16 @@ async function fetchNewsApi(): Promise<Item[]> {
       for (const art of (data.articles || []).slice(0, 5)) {
         const headline = art.title || "";
         if (!headline) continue;
+        const link = art.url;
+        let source_url: string | undefined;
+        try { source_url = link ? new URL(link).origin : undefined; } catch {}
         out.push({
           title: headline.slice(0, 200),
           source: art.source?.name || "NewsAPI",
           time: art.publishedAt || new Date().toISOString(),
-          link: art.url,
+          link,
+          journalist: art.author || undefined,
+          source_url,
         });
       }
     } catch {}
