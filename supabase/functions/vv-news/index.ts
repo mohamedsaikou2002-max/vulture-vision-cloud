@@ -106,6 +106,45 @@ const FEEDS = {
   ],
 };
 
+// Tracked journalist Twitter/X handles — scraped via Nitter RSS (no API key).
+// column: which news column to merge into. name: display label.
+const TWITTER_JOURNALISTS: { handle: string; name: string; column: "irl" | "dark" | "tech" }[] = [
+  // Crypto / markets
+  { handle: "WuBlockchain",    name: "Wu Blockchain",     column: "irl" },
+  { handle: "ianallison",      name: "Ian Allison",       column: "irl" },
+  { handle: "laurashin",       name: "Laura Shin",        column: "irl" },
+  { handle: "NickTimiraos",    name: "Nick Timiraos",     column: "irl" },
+  { handle: "tracyalloway",    name: "Tracy Alloway",     column: "irl" },
+  { handle: "lisaabramowicz1", name: "Lisa Abramowicz",   column: "irl" },
+  { handle: "zerohedge",       name: "ZeroHedge",         column: "irl" },
+  { handle: "DiMartinoBooth",  name: "Danielle DiMartino",column: "irl" },
+  { handle: "Frances_Coppola", name: "Frances Coppola",   column: "irl" },
+  { handle: "biancoresearch",  name: "Jim Bianco",        column: "irl" },
+  // Geopolitics / IRL
+  { handle: "MaxBlumenthal",   name: "Max Blumenthal",    column: "irl" },
+  { handle: "aaronjmate",      name: "Aaron Maté",        column: "irl" },
+  // Security / darknet intel
+  { handle: "briankrebs",      name: "Brian Krebs",       column: "dark" },
+  { handle: "campuscodi",      name: "Catalin Cimpanu",   column: "dark" },
+  { handle: "vxunderground",   name: "vx-underground",    column: "dark" },
+  { handle: "malwrhunterteam", name: "MalwareHunterTeam", column: "dark" },
+  { handle: "GossiTheDog",     name: "Kevin Beaumont",    column: "dark" },
+  // Tech / AI
+  { handle: "swyx",            name: "swyx",              column: "tech" },
+  { handle: "simonw",          name: "Simon Willison",    column: "tech" },
+  { handle: "GaryMarcus",      name: "Gary Marcus",       column: "tech" },
+  { handle: "emollick",        name: "Ethan Mollick",     column: "tech" },
+  { handle: "karpathy",        name: "Andrej Karpathy",   column: "tech" },
+];
+
+const NITTER_INSTANCES = [
+  "https://nitter.privacydev.net",
+  "https://nitter.net",
+  "https://nitter.poast.org",
+  "https://nitter.cz",
+  "https://nitter.tiekoetter.com",
+];
+
 const QUERY_TERMS = ["bitcoin","ethereum","crypto","fed","ecb","pboc","inflation","recession","rate"];
 
 function parseRss(xml: string, source: string, sourceUrl?: string): Item[] {
@@ -212,28 +251,79 @@ async function fetchTorFeed(): Promise<Item[]> {
   } catch { return []; }
 }
 
+async function fetchJournalistTweets(): Promise<{ irl: Item[]; dark: Item[]; tech: Item[] }> {
+  const out = { irl: [] as Item[], dark: [] as Item[], tech: [] as Item[] };
+  await Promise.allSettled(TWITTER_JOURNALISTS.map(async (j, idx) => {
+    // Rotate starting instance per handle to spread load
+    const order = NITTER_INSTANCES.map((_, i) => NITTER_INSTANCES[(i + idx) % NITTER_INSTANCES.length]);
+    for (const base of order) {
+      try {
+        const url = `${base}/${j.handle}/rss`;
+        const r = await fetch(url, {
+          headers: { "User-Agent": "VultureVision/1.0 (+journalist-scraper)" },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!r.ok) continue;
+        const xml = await r.text();
+        if (!xml.includes("<item") && !xml.includes("<entry")) continue;
+        const items = parseRss(xml, `${j.name} (@${j.handle})`, `https://twitter.com/${j.handle}`)
+          .slice(0, 5)
+          .map(it => ({
+            ...it,
+            // Rewrite nitter links → twitter.com
+            link: it.link?.replace(/^https?:\/\/[^/]+/, "https://twitter.com"),
+            journalist: j.name,
+            journalist_url: `https://twitter.com/${j.handle}`,
+            source_url: `https://twitter.com/${j.handle}`,
+          }));
+        out[j.column].push(...items);
+        return; // success for this handle
+      } catch { /* try next nitter instance */ }
+    }
+  }));
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const [irlRss, dark, tech, newsApi, tor] = await Promise.all([
+    const [irlRss, dark, tech, newsApi, tor, journalists] = await Promise.all([
       fetchFeeds(FEEDS.irl),
       fetchFeeds(FEEDS.dark),
       fetchFeeds(FEEDS.tech),
       fetchNewsApi(),
       fetchTorFeed(),
+      fetchJournalistTweets(),
     ]);
 
-    const irl = [...newsApi, ...irlRss]
+    const irl = [...newsApi, ...irlRss, ...journalists.irl]
       .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-      .slice(0, 20)
+      .slice(0, 30)
       .map(enrich);
 
-    const darkOut = [...dark, ...tor]
+    const darkOut = [...dark, ...tor, ...journalists.dark]
       .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-      .slice(0, 20)
+      .slice(0, 30)
       .map(enrich);
 
-    const techOut = tech.map(enrich);
+    const techOut = [...tech, ...journalists.tech]
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 30)
+      .map(enrich);
+
+    const all = [...irl, ...darkOut, ...techOut]
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 80);
+
+    return new Response(JSON.stringify({ irl, dark: darkOut, tech: techOut, news_feed: all }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String((e as Error).message), irl: [], dark: [], tech: [], news_feed: [] }), {
+      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
 
     const all = [...irl, ...darkOut, ...techOut]
       .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
