@@ -87,7 +87,10 @@ function Column({ title, tone, items, badge, badgeText }: {
       <div className="col-body">
         {items.length === 0 && <div className="news-item"><div className="news-title dim-text">Loading feed…</div></div>}
         {items.slice(0, 20).map((it, i) => {
-          const sourceHref = it.source_url || (it.link ? new URL(it.link).origin : undefined);
+          let sourceHref = it.source_url;
+          if (!sourceHref && it.link) {
+            try { sourceHref = new URL(it.link).origin; } catch {}
+          }
           return (
             <div className="news-item" key={i}>
               {i === 0 && <span className={`badge ${badge}`}>{badgeText}</span>}
