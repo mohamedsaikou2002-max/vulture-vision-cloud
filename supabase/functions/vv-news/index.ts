@@ -106,6 +106,45 @@ const FEEDS = {
   ],
 };
 
+// Tracked journalist Twitter/X handles — scraped via Nitter RSS (no API key).
+// column: which news column to merge into. name: display label.
+const TWITTER_JOURNALISTS: { handle: string; name: string; column: "irl" | "dark" | "tech" }[] = [
+  // Crypto / markets
+  { handle: "WuBlockchain",    name: "Wu Blockchain",     column: "irl" },
+  { handle: "ianallison",      name: "Ian Allison",       column: "irl" },
+  { handle: "laurashin",       name: "Laura Shin",        column: "irl" },
+  { handle: "NickTimiraos",    name: "Nick Timiraos",     column: "irl" },
+  { handle: "tracyalloway",    name: "Tracy Alloway",     column: "irl" },
+  { handle: "lisaabramowicz1", name: "Lisa Abramowicz",   column: "irl" },
+  { handle: "zerohedge",       name: "ZeroHedge",         column: "irl" },
+  { handle: "DiMartinoBooth",  name: "Danielle DiMartino",column: "irl" },
+  { handle: "Frances_Coppola", name: "Frances Coppola",   column: "irl" },
+  { handle: "biancoresearch",  name: "Jim Bianco",        column: "irl" },
+  // Geopolitics / IRL
+  { handle: "MaxBlumenthal",   name: "Max Blumenthal",    column: "irl" },
+  { handle: "aaronjmate",      name: "Aaron Maté",        column: "irl" },
+  // Security / darknet intel
+  { handle: "briankrebs",      name: "Brian Krebs",       column: "dark" },
+  { handle: "campuscodi",      name: "Catalin Cimpanu",   column: "dark" },
+  { handle: "vxunderground",   name: "vx-underground",    column: "dark" },
+  { handle: "malwrhunterteam", name: "MalwareHunterTeam", column: "dark" },
+  { handle: "GossiTheDog",     name: "Kevin Beaumont",    column: "dark" },
+  // Tech / AI
+  { handle: "swyx",            name: "swyx",              column: "tech" },
+  { handle: "simonw",          name: "Simon Willison",    column: "tech" },
+  { handle: "GaryMarcus",      name: "Gary Marcus",       column: "tech" },
+  { handle: "emollick",        name: "Ethan Mollick",     column: "tech" },
+  { handle: "karpathy",        name: "Andrej Karpathy",   column: "tech" },
+];
+
+const NITTER_INSTANCES = [
+  "https://nitter.privacydev.net",
+  "https://nitter.net",
+  "https://nitter.poast.org",
+  "https://nitter.cz",
+  "https://nitter.tiekoetter.com",
+];
+
 const QUERY_TERMS = ["bitcoin","ethereum","crypto","fed","ecb","pboc","inflation","recession","rate"];
 
 function parseRss(xml: string, source: string, sourceUrl?: string): Item[] {
