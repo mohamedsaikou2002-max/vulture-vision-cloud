@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 
 interface Props {
@@ -17,7 +17,21 @@ const links = [
 ];
 
 export default function VVLayout({ children, status, blurred = true }: Props) {
+  const [newIntel, setNewIntel] = useState(false);
+
+  useEffect(() => {
+    const onIntel = () => {
+      setNewIntel(true);
+      const t = setTimeout(() => setNewIntel(false), 30000);
+      return () => clearTimeout(t);
+    };
+    window.addEventListener("vv-new-intel", onIntel);
+    return () => window.removeEventListener("vv-new-intel", onIntel);
+  }, []);
+
   const dotClass = status?.tone && status.tone !== "green" ? `status-dot ${status.tone}` : "status-dot";
+  const statusLabel = newIntel ? "NEW INTEL" : (status?.label || "SYSTEM ONLINE");
+
   return (
     <>
       <div className={`video-bg${blurred ? " blurred" : ""}`}>
@@ -43,9 +57,9 @@ export default function VVLayout({ children, status, blurred = true }: Props) {
             </NavLink>
           ))}
         </div>
-        <div className="nav-status">
-          <div className={dotClass} />
-          {status?.label || "SYSTEM ONLINE"}
+        <div className={`nav-status${newIntel ? " new-intel" : ""}`}>
+          <div className={newIntel ? "status-dot gold" : dotClass} />
+          {statusLabel}
         </div>
       </nav>
 
