@@ -387,6 +387,16 @@ export default function Trading() {
                 fill={cohOk ? "var(--up-2)" : "var(--down-2)"}>{(coh*100).toFixed(0)}</text>
               <text x="60" y="84" textAnchor="middle" fontFamily="var(--mono)" fontSize="8" fill="var(--fg-2)">COH</text>
             </svg>
+            {intelRegime && (() => {
+              const col = REGIME_COLORS[intelRegime.current_state] || "var(--fg-1)";
+              const next = intelRegime.most_likely_next;
+              const nextProb = intelRegime.transition_probs_next_session?.[next] ?? 0;
+              return (
+                <div style={{ position: "absolute", left: 6, bottom: 4, fontFamily: "var(--mono)", fontSize: 9, color: col, letterSpacing: 1 }}>
+                  REGIME: {REGIME_LABELS[intelRegime.current_state]} ({Math.round(nextProb * 100)}% → {REGIME_LABELS[next] || next})
+                </div>
+              );
+            })()}
             <div className="vv-mf">
               <div className="vv-mf-head" style={{ color: mirofish?.exfiltration_opportunity ? "var(--down-2)" : "var(--warn)" }}>
                 {mirofish?.forced_action_signal || "—"}
