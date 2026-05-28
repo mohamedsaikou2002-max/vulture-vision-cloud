@@ -153,6 +153,55 @@ export default function Analytics() {
           </div>
         </div>
 
+        {/* MARKOV REGIME ENGINE */}
+        {regime && (
+          <div className="panel markov-panel" style={{ marginTop: 14 }}>
+            <div>
+              <div className="panel-title" style={{ fontSize: 10 }}>MARKOV REGIME ENGINE</div>
+              <div className="markov-regime-big" style={{ color: REGIME_COLORS[regime.current_state] }}>
+                {REGIME_LABELS[regime.current_state]}
+              </div>
+              <div className="markov-duration">DURATION: {regime.current_duration_sessions} SESSIONS</div>
+              <div className="markov-summary">{regime.regime_summary}</div>
+              <div className="markov-duration" style={{ marginTop: 8 }}>
+                MOST LIKELY NEXT: <span style={{ color: REGIME_COLORS[regime.most_likely_next] || "var(--gold)" }}>
+                  {REGIME_LABELS[regime.most_likely_next] || regime.most_likely_next}
+                </span>
+              </div>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div className="panel-title" style={{ fontSize: 10 }}>TRANSITION PROBABILITIES</div>
+              <div style={{ width: "100%", height: 180 }}>
+                <ResponsiveContainer>
+                  <BarChart data={markovChartData}>
+                    <CartesianGrid stroke="rgba(201,168,76,.08)" />
+                    <XAxis dataKey="state" stroke="#7a5f28" fontSize={9} />
+                    <YAxis stroke="#7a5f28" fontSize={9} domain={[0, 100]} unit="%" />
+                    <Tooltip contentStyle={{ background: "#000", border: "1px solid #c9a84c", fontSize: 11 }} />
+                    <Legend wrapperStyle={{ fontSize: 9 }} />
+                    <Bar dataKey="next" name="NEXT SESSION" fill="#c9a84c" />
+                    <Bar dataKey="nSession" name={`${regime.n_sessions}-SESSION`} fill="#1e88e5" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="transition-watch-box">
+              <div className="transition-watch-label">TRANSITION WATCH</div>
+              <div className="transition-watch-text">
+                {brief?.regime_assessment?.transition_watch || "Monitoring transitions…"}
+              </div>
+              <div className="transition-watch-label" style={{ marginTop: 10 }}>STATIONARY EQUILIBRIUM</div>
+              <div className="equilibrium-pills">
+                {Object.entries(regime.stationary_distribution || {}).map(([s, p]) => (
+                  <span key={s} className="eq-pill" style={{ color: REGIME_COLORS[s], borderColor: REGIME_COLORS[s] }}>
+                    {REGIME_LABELS[s] || s}: {(p * 100).toFixed(0)}%
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="analytics-wrap">
           <div className="panel" style={{ padding: 14 }}>
             <div className="panel-title">QUANTUM AMPLITUDE SCORES — Born Rule · Interference · Entanglement</div>
