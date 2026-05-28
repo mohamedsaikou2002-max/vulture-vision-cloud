@@ -240,11 +240,26 @@ export default function Analytics() {
                   {!data?.assets.length && <tr><td colSpan={10} className="empty-cell">Loading asset data...</td></tr>}
                   {data?.assets.map(a => {
                     const r = regimeBadge(a.regime);
+                    const ti = tickerImpl(a.symbol);
                     return (
                       <tr key={a.symbol}>
-                        <td>{a.symbol}</td>
+                        <td>
+                          {a.symbol}
+                          {ti && (
+                            <span className={`vv-ticker-tag ${dirClass(ti.direction)}`} style={{ marginLeft: 6 }}>
+                              VV {dirArrow(ti.direction)} {confidenceLabel(ti.confidence)}
+                            </span>
+                          )}
+                        </td>
                         <td>{a.type}</td>
-                        <td><span className={`badge ${r.cls}`}>{r.label}</span></td>
+                        <td>
+                          <span className={`badge ${r.cls}`}>{r.label}</span>
+                          {regime && (
+                            <div style={{ fontSize: 9, color: "var(--dim)", marginTop: 2 }}>
+                              MARKOV: {REGIME_LABELS[regime.most_likely_next] || regime.most_likely_next}
+                            </div>
+                          )}
+                        </td>
                         <td>{f2(a.rsi)}</td>
                         <td className={dir(a.macd_hist)}>{f4(a.macd_hist)}</td>
                         <td>{f4(a.quantum.score)}</td>
