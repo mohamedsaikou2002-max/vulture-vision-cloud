@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import VVLayout from "@/components/VVLayout";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchLatestBrief, fetchRegime, subscribeToIntelBriefs,
+  IntelBrief, RegimeState, REGIME_COLORS, REGIME_LABELS, dirArrow, dirClass, confidenceLabel,
+} from "@/lib/intelApi";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from "recharts";
 
 interface Crypto {
   symbol: string;
