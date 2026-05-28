@@ -302,6 +302,13 @@ export default function Analytics() {
             </div>
           </div>
 
+          {brief && (
+            <div className="panel intel-thesis-block" style={{ marginTop: 14 }}>
+              <div className="morning-brief-label">// VULTURE VISION SYNTHESIS · {brief.overall_confidence}% CONFIDENCE</div>
+              <div className="intel-thesis-text" style={{ marginTop: 6 }}>{brief.thesis}</div>
+            </div>
+          )}
+
           <div className="panel narrative-panel" style={{ marginTop: 14 }}>
             <div className="narrative-header">
               <div className="status-dot" style={{ background: data?.narrative ? "var(--green)" : "var(--dim)" }} />
