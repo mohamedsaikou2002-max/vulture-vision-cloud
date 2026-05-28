@@ -75,6 +75,25 @@ export default function Analytics() {
     return () => { alive = false; clearInterval(id); };
   }, []);
 
+  // Intel Backend state
+  const [brief, setBrief] = useState<IntelBrief | null>(null);
+  const [regime, setRegime] = useState<RegimeState | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetchLatestBrief().then(b => alive && b && setBrief(b));
+    fetchRegime().then(r => alive && r && setRegime(r));
+    const bId = setInterval(() => fetchLatestBrief().then(b => alive && b && setBrief(b)), 15 * 60 * 1000);
+    const rId = setInterval(() => fetchRegime().then(r => alive && r && setRegime(r)), 2 * 60 * 1000);
+    const unsub = subscribeToIntelBriefs(
+      b => { if (alive) setBrief(b); },
+      r => { if (alive) setRegime(r); },
+    );
+    return () => { alive = false; clearInterval(bId); clearInterval(rId); unsub(); };
+  }, []);
+
+  const tickerImpl = (sym: string) =>
+    brief?.ticker_implications?.find(t => t.ticker?.toUpperCase() === sym.toUpperCase());
+
   const status = online === null
     ? { label: "CONNECTING", tone: "gold" as const }
     : online
@@ -86,6 +105,16 @@ export default function Analytics() {
   const spy = data?.assets.find(a => a.symbol === "SPY");
   const port = data?.portfolio;
   const reg = regimeBadge(port?.dominant_regime);
+
+  // Markov chart data
+  const markovStates = ["risk_on", "risk_off", "neutral", "volatile", "trending"];
+  const markovChartData = regime ? markovStates.map(s => ({
+    state: REGIME_LABELS[s] || s,
+    rawState: s,
+    next: Math.round((regime.transition_probs_next_session?.[s] || 0) * 100),
+    nSession: Math.round((regime.transition_probs_n_sessions?.[s] || 0) * 100),
+    fill: REGIME_COLORS[s],
+  })) : [];
 
   return (
     <VVLayout status={status as any}>
