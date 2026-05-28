@@ -4,6 +4,10 @@ import {
   LineChart, Line, XAxis, YAxis, ReferenceLine, ResponsiveContainer, Tooltip,
 } from "recharts";
 import { NavLink } from "react-router-dom";
+import {
+  fetchLatestBrief, fetchRegime, subscribeToIntelBriefs,
+  IntelBrief, RegimeState, REGIME_COLORS, REGIME_LABELS, dirArrow, dirClass,
+} from "@/lib/intelApi";
 
 const VV_HOST = (import.meta.env.VITE_VV_HOST as string) || "localhost:5000";
 const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${VV_HOST}`;
@@ -85,6 +89,22 @@ export default function Trading() {
   const [socketConnected, setSocketConnected] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [showHelp, setShowHelp] = useState(false);
+  const [intelBrief, setIntelBrief] = useState<IntelBrief | null>(null);
+  const [intelRegime, setIntelRegime] = useState<RegimeState | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetchLatestBrief().then(b => alive && b && setIntelBrief(b));
+    fetchRegime().then(r => alive && r && setIntelRegime(r));
+    const bId = setInterval(() => fetchLatestBrief().then(b => alive && b && setIntelBrief(b)), 15 * 60 * 1000);
+    const rId = setInterval(() => fetchRegime().then(r => alive && r && setIntelRegime(r)), 2 * 60 * 1000);
+    const unsub = subscribeToIntelBriefs(
+      b => { if (alive) setIntelBrief(b); },
+      r => { if (alive) setIntelRegime(r); },
+    );
+    return () => { alive = false; clearInterval(bId); clearInterval(rId); unsub(); };
+  }, []);
+
 
   const tickBufRef = useRef<Record<string, Tick[]>>({});
   const socketRef = useRef<Socket | null>(null);
@@ -367,6 +387,16 @@ export default function Trading() {
                 fill={cohOk ? "var(--up-2)" : "var(--down-2)"}>{(coh*100).toFixed(0)}</text>
               <text x="60" y="84" textAnchor="middle" fontFamily="var(--mono)" fontSize="8" fill="var(--fg-2)">COH</text>
             </svg>
+            {intelRegime && (() => {
+              const col = REGIME_COLORS[intelRegime.current_state] || "var(--fg-1)";
+              const next = intelRegime.most_likely_next;
+              const nextProb = intelRegime.transition_probs_next_session?.[next] ?? 0;
+              return (
+                <div style={{ position: "absolute", left: 6, bottom: 4, fontFamily: "var(--mono)", fontSize: 9, color: col, letterSpacing: 1 }}>
+                  REGIME: {REGIME_LABELS[intelRegime.current_state]} ({Math.round(nextProb * 100)}% → {REGIME_LABELS[next] || next})
+                </div>
+              );
+            })()}
             <div className="vv-mf">
               <div className="vv-mf-head" style={{ color: mirofish?.exfiltration_opportunity ? "var(--down-2)" : "var(--warn)" }}>
                 {mirofish?.forced_action_signal || "—"}
@@ -437,8 +467,47 @@ export default function Trading() {
               ))}
             </div>
           </div>
+
+          <div className="vv-h vv-h-bar" style={{ marginTop: 1 }}>VV INTEL BRIEF</div>
+          <div style={{ padding: 6, fontFamily: "var(--mono)", fontSize: 10, color: "var(--fg-1)", overflow: "auto", maxHeight: 180 }}>
+            {!intelBrief && <div className="vv-empty">awaiting synthesis…</div>}
+            {intelBrief && (
+              <>
+                <div style={{ color: "var(--warn)", fontWeight: 700, marginBottom: 4 }}>
+                  {intelBrief.morning_brief_headline}
+                </div>
+                {(intelBrief.alpha_alerts || []).slice(0, 3).map((a, i) => (
+                  <div key={i} style={{ marginTop: 4, paddingLeft: 4, borderLeft: `2px solid ${a.urgency === "high" ? "var(--down-2)" : a.urgency === "medium" ? "var(--warn)" : "var(--fg-2)"}` }}>
+                    <div style={{ color: "var(--fg-0)" }}>⚡ {a.alert}</div>
+                    <div style={{ color: "var(--fg-2)", fontSize: 9 }}>{a.why_it_matters}</div>
+                  </div>
+                ))}
+                {(() => {
+                  const tracked = new Set(Object.keys(ticks).map(s => s.toUpperCase()));
+                  const rel = (intelBrief.ticker_implications || []).filter(t =>
+                    Array.from(tracked).some(s => s.includes(t.ticker.toUpperCase()))
+                  ).slice(0, 3);
+                  return rel.length > 0 && (
+                    <div style={{ marginTop: 6 }}>
+                      <div style={{ color: "var(--fg-2)", letterSpacing: 1, fontSize: 9 }}>TICKER IMPL</div>
+                      {rel.map((t, i) => {
+                        const c = t.direction === "bullish" ? "var(--up-2)" : t.direction === "bearish" ? "var(--down-2)" : "var(--warn)";
+                        return (
+                          <div key={i} style={{ display: "flex", gap: 6, fontSize: 10 }}>
+                            <span style={{ color: c }}>{dirArrow(t.direction)} {t.ticker}</span>
+                            <span style={{ color: "var(--fg-2)" }}>{t.time_horizon} · {t.confidence}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+          </div>
         </section>
       </div>
+
 
       {/* NEWS TICKER */}
       <div className="vv-news-tick">
