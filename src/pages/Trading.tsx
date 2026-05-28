@@ -4,6 +4,10 @@ import {
   LineChart, Line, XAxis, YAxis, ReferenceLine, ResponsiveContainer, Tooltip,
 } from "recharts";
 import { NavLink } from "react-router-dom";
+import {
+  fetchLatestBrief, fetchRegime, subscribeToIntelBriefs,
+  IntelBrief, RegimeState, REGIME_COLORS, REGIME_LABELS, dirArrow, dirClass,
+} from "@/lib/intelApi";
 
 const VV_HOST = (import.meta.env.VITE_VV_HOST as string) || "localhost:5000";
 const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${VV_HOST}`;
