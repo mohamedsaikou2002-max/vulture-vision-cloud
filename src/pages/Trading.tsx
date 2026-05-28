@@ -89,6 +89,22 @@ export default function Trading() {
   const [socketConnected, setSocketConnected] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [showHelp, setShowHelp] = useState(false);
+  const [intelBrief, setIntelBrief] = useState<IntelBrief | null>(null);
+  const [intelRegime, setIntelRegime] = useState<RegimeState | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetchLatestBrief().then(b => alive && b && setIntelBrief(b));
+    fetchRegime().then(r => alive && r && setIntelRegime(r));
+    const bId = setInterval(() => fetchLatestBrief().then(b => alive && b && setIntelBrief(b)), 15 * 60 * 1000);
+    const rId = setInterval(() => fetchRegime().then(r => alive && r && setIntelRegime(r)), 2 * 60 * 1000);
+    const unsub = subscribeToIntelBriefs(
+      b => { if (alive) setIntelBrief(b); },
+      r => { if (alive) setIntelRegime(r); },
+    );
+    return () => { alive = false; clearInterval(bId); clearInterval(rId); unsub(); };
+  }, []);
+
 
   const tickBufRef = useRef<Record<string, Tick[]>>({});
   const socketRef = useRef<Socket | null>(null);
