@@ -10,6 +10,7 @@ interface Props {
 const links = [
   { to: "/dashboard", label: "INTEL" },
   { to: "/analytics", label: "ANALYTICS" },
+  { to: "/socioeconomics", label: "SOCIO-ECONOMICS" },
   { to: "/news", label: "NEWS FEED" },
 ];
 
