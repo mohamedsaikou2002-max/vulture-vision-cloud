@@ -171,8 +171,8 @@ async function buildAsset(symbol: string, type: "CRYPTO" | "EQUITY", price: numb
 }
 
 async function aiNarrative(crypto: Crypto[], assets: Asset[], port: any): Promise<string> {
-  const ANTHROPIC = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!ANTHROPIC) return "AI synthesis offline — ANTHROPIC_API_KEY not configured.";
+  const GEMINI = Deno.env.get("GEMINI_API_KEY");
+  if (!GEMINI) return "AI synthesis offline — GEMINI_API_KEY not configured.";
 
   const prompt = `VULTURE VISION INTEL BRIEF — ${new Date().toISOString()}
 
@@ -187,27 +187,30 @@ Portfolio: regime=${port.dominant_regime} avgQ=${port.avg_quantum_score.toFixed(
 Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, key risks, conviction. Tight clipped operational tone.`;
 
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": ANTHROPIC, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 400,
-        system: "You are Vulture Vision. Be concise, analytical, operational.",
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: "You are Vulture Vision. Be concise, analytical, operational." }] },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 400, temperature: 0.6 },
+        }),
+      },
+    );
     const j = await r.json();
     if (!r.ok) {
-      console.error("Claude narrative error:", r.status, j);
+      console.error("Gemini narrative error:", r.status, j);
       return `AI synthesis error: ${j?.error?.message || r.status}`;
     }
-    return j?.content?.[0]?.text || "";
+    return j?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") || "";
   } catch (e) {
-    console.error("Claude narrative threw:", e);
+    console.error("Gemini narrative threw:", e);
     return "AI synthesis offline — engine running on raw quantitative signals only.";
   }
 }
+
 
 // ===== OnChain (Etherscan Sepolia) =====
 const ETHERSCAN_URL = "https://api-sepolia.etherscan.io/api";

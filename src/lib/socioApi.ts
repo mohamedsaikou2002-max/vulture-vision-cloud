@@ -49,14 +49,36 @@ export interface SocioFull {
   metadata?: { timestamp?: string; lookback_hours?: number; sources?: string[] };
 }
 
-export async function fetchSocioFull(): Promise<SocioFull | null> {
+export type SocioErrorKind = "offline" | "http" | "malformed" | "timeout";
+export interface SocioResult {
+  data: SocioFull | null;
+  error?: { kind: SocioErrorKind; message: string; status?: number };
+}
+
+export async function fetchSocioFull(): Promise<SocioResult> {
   try {
     const res = await fetch(`${BASE_URL}/api/socioeconomics/full`, { signal: AbortSignal.timeout(60000) });
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (json.status !== "ok") return null;
-    return json.data as SocioFull;
-  } catch { return null; }
+    if (!res.ok) {
+      return { data: null, error: { kind: "http", status: res.status, message: `HTTP ${res.status} ${res.statusText}` } };
+    }
+    let json: any;
+    try {
+      json = await res.json();
+    } catch (e: any) {
+      return { data: null, error: { kind: "malformed", message: `Invalid JSON: ${e?.message || e}` } };
+    }
+    if (!json || typeof json !== "object") {
+      return { data: null, error: { kind: "malformed", message: "Response was not a JSON object" } };
+    }
+    if (json.status !== "ok" || !json.data || typeof json.data !== "object") {
+      return { data: null, error: { kind: "malformed", message: `Unexpected payload shape (status="${json.status}")` } };
+    }
+    return { data: json.data as SocioFull };
+  } catch (e: any) {
+    const msg = String(e?.message || e);
+    const kind: SocioErrorKind = /timeout|abort/i.test(msg) ? "timeout" : "offline";
+    return { data: null, error: { kind, message: msg || "Network error" } };
+  }
 }
 
 export async function fetchSocioHealth(): Promise<boolean> {
@@ -67,6 +89,8 @@ export async function fetchSocioHealth(): Promise<boolean> {
     return d.status === "ok";
   } catch { return false; }
 }
+
+export function socioBaseUrl() { return BASE_URL; }
 
 export function colorForDim(dim: string, val: number): string {
   const badHigh = ["fear", "volatility", "inflation", "default"];

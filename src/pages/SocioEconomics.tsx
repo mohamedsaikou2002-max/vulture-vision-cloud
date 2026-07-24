@@ -19,14 +19,21 @@ function stanceClass(stance: string) {
 export default function SocioEconomics() {
   const [data, setData] = useState<SocioFull | null>(null);
   const [online, setOnline] = useState<boolean | null>(null);
+  const [err, setErr] = useState<{ kind: string; message: string; status?: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [lastFetch, setLastFetch] = useState<Date | null>(null);
+
+  async function loadAll() {
+    setLoading(true);
+    const r = await fetchSocioFull();
+    setLastFetch(new Date());
+    if (r.data) { setData(r.data); setErr(null); setOnline(true); }
+    else { setErr(r.error || { kind: "offline", message: "Unknown error" }); setOnline(false); }
+    setLoading(false);
+  }
 
   useEffect(() => {
     let alive = true;
-    async function loadAll() {
-      const d = await fetchSocioFull();
-      if (!alive) return;
-      if (d) { setData(d); setOnline(true); } else { setOnline(false); }
-    }
     async function ping() {
       const ok = await fetchSocioHealth();
       if (alive) setOnline(ok);
@@ -41,6 +48,7 @@ export default function SocioEconomics() {
     label: online === null ? "CONNECTING" : online ? "SYSTEM ONLINE" : "BACKEND OFFLINE",
     tone: (online ? "green" : "red") as "green" | "red",
   };
+
 
   const signals = data?.signals || {};
   const confidence = data?.confidence || {};
@@ -65,6 +73,57 @@ export default function SocioEconomics() {
   return (
     <VVLayout status={status}>
       <div className="scroll-inner">
+
+        {err && (
+          <div
+            className="panel"
+            role="alert"
+            style={{
+              margin: "14px 24px 0",
+              borderColor: "#ff2222",
+              background: "rgba(255,34,34,0.06)",
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 260 }}>
+              <div style={{ color: "#ff2222", fontSize: ".7rem", letterSpacing: ".14em", marginBottom: 4 }}>
+                ⬢ SOCIOECONOMICS BACKEND {err.kind === "malformed" ? "RETURNED MALFORMED DATA" : "OFFLINE"}
+                {err.status ? ` · ${err.status}` : ""}
+              </div>
+              <div style={{ color: "#c9a84c", fontSize: ".62rem", fontFamily: "monospace", opacity: .85 }}>
+                {err.message}
+              </div>
+              <div style={{ color: "#8a7a55", fontSize: ".55rem", marginTop: 4, letterSpacing: ".08em" }}>
+                {err.kind === "malformed"
+                  ? "Check socioeconomics_backend.py logs — response shape did not match expected schema."
+                  : "Start socioeconomics_backend.py on port 5002 (VITE_SOCIO_HOST to override)."}
+                {lastFetch && ` · last attempt ${lastFetch.toLocaleTimeString()}`}
+              </div>
+            </div>
+            <button
+              onClick={loadAll}
+              disabled={loading}
+              style={{
+                padding: "8px 18px",
+                background: loading ? "#2a2416" : "#c9a84c",
+                color: loading ? "#8a7a55" : "#000",
+                border: "1px solid #c9a84c",
+                fontFamily: "monospace",
+                fontSize: ".65rem",
+                letterSpacing: ".14em",
+                cursor: loading ? "wait" : "pointer",
+                fontWeight: 700,
+              }}
+            >
+              {loading ? "RETRYING…" : "↻ RETRY"}
+            </button>
+          </div>
+        )}
+
+
 
         {/* PRIMARY GAUGES */}
         <div className="se-stat-row">
