@@ -11,31 +11,30 @@ Deno.serve(async (req) => {
       });
     }
 
-    const ANTHROPIC = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC) throw new Error("ANTHROPIC_API_KEY not configured");
+    const GEMINI = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI) throw new Error("GEMINI_API_KEY not configured");
 
     const system = "You are Vulture Vision, an elite intelligence synthesis AI. Analyze market data, news, and OSINT intel with precision. Be concise, analytical, and actionable. Speak in clipped operational tone.";
 
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: "user", parts: [{ text: message }] }],
+          generationConfig: { maxOutputTokens: 1000, temperature: 0.7 },
+        }),
       },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1000,
-        system,
-        messages: [{ role: "user", content: message }],
-      }),
-    });
+    );
     const j = await r.json();
     if (!r.ok) {
-      console.error("Claude error:", r.status, j);
-      throw new Error(j?.error?.message || `Claude ${r.status}`);
+      console.error("Gemini error:", r.status, j);
+      throw new Error(j?.error?.message || `Gemini ${r.status}`);
     }
-    const reply = j?.content?.[0]?.text || "[no response]";
+    const reply = j?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") || "[no response]";
+
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
