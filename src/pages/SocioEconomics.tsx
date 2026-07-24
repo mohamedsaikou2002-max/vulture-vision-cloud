@@ -74,6 +74,57 @@ export default function SocioEconomics() {
     <VVLayout status={status}>
       <div className="scroll-inner">
 
+        {err && (
+          <div
+            className="panel"
+            role="alert"
+            style={{
+              margin: "14px 24px 0",
+              borderColor: "#ff2222",
+              background: "rgba(255,34,34,0.06)",
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 260 }}>
+              <div style={{ color: "#ff2222", fontSize: ".7rem", letterSpacing: ".14em", marginBottom: 4 }}>
+                ⬢ SOCIOECONOMICS BACKEND {err.kind === "malformed" ? "RETURNED MALFORMED DATA" : "OFFLINE"}
+                {err.status ? ` · ${err.status}` : ""}
+              </div>
+              <div style={{ color: "#c9a84c", fontSize: ".62rem", fontFamily: "monospace", opacity: .85 }}>
+                {err.message}
+              </div>
+              <div style={{ color: "#8a7a55", fontSize: ".55rem", marginTop: 4, letterSpacing: ".08em" }}>
+                {err.kind === "malformed"
+                  ? "Check socioeconomics_backend.py logs — response shape did not match expected schema."
+                  : "Start socioeconomics_backend.py on port 5002 (VITE_SOCIO_HOST to override)."}
+                {lastFetch && ` · last attempt ${lastFetch.toLocaleTimeString()}`}
+              </div>
+            </div>
+            <button
+              onClick={loadAll}
+              disabled={loading}
+              style={{
+                padding: "8px 18px",
+                background: loading ? "#2a2416" : "#c9a84c",
+                color: loading ? "#8a7a55" : "#000",
+                border: "1px solid #c9a84c",
+                fontFamily: "monospace",
+                fontSize: ".65rem",
+                letterSpacing: ".14em",
+                cursor: loading ? "wait" : "pointer",
+                fontWeight: 700,
+              }}
+            >
+              {loading ? "RETRYING…" : "↻ RETRY"}
+            </button>
+          </div>
+        )}
+
+
+
         {/* PRIMARY GAUGES */}
         <div className="se-stat-row">
           {["fear", "trust", "liquidity", "volatility"].map(dim => {
