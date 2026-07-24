@@ -19,14 +19,21 @@ function stanceClass(stance: string) {
 export default function SocioEconomics() {
   const [data, setData] = useState<SocioFull | null>(null);
   const [online, setOnline] = useState<boolean | null>(null);
+  const [err, setErr] = useState<{ kind: string; message: string; status?: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [lastFetch, setLastFetch] = useState<Date | null>(null);
+
+  async function loadAll() {
+    setLoading(true);
+    const r = await fetchSocioFull();
+    setLastFetch(new Date());
+    if (r.data) { setData(r.data); setErr(null); setOnline(true); }
+    else { setErr(r.error || { kind: "offline", message: "Unknown error" }); setOnline(false); }
+    setLoading(false);
+  }
 
   useEffect(() => {
     let alive = true;
-    async function loadAll() {
-      const d = await fetchSocioFull();
-      if (!alive) return;
-      if (d) { setData(d); setOnline(true); } else { setOnline(false); }
-    }
     async function ping() {
       const ok = await fetchSocioHealth();
       if (alive) setOnline(ok);
@@ -41,6 +48,7 @@ export default function SocioEconomics() {
     label: online === null ? "CONNECTING" : online ? "SYSTEM ONLINE" : "BACKEND OFFLINE",
     tone: (online ? "green" : "red") as "green" | "red",
   };
+
 
   const signals = data?.signals || {};
   const confidence = data?.confidence || {};
