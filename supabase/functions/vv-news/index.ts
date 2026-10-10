@@ -324,17 +324,3 @@ Deno.serve(async (req) => {
     });
   }
 });
-
-    const all = [...irl, ...darkOut, ...techOut]
-      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-      .slice(0, 50);
-
-    return new Response(JSON.stringify({ irl, dark: darkOut, tech: techOut, news_feed: all }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: String((e as Error).message), irl: [], dark: [], tech: [], news_feed: [] }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-});
