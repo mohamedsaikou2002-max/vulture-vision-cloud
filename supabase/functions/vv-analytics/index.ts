@@ -197,7 +197,7 @@ Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, k
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: "You are Vulture Vision. Be concise, analytical, operational." }] },
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 400, temperature: 0.6 },
+          generationConfig: { maxOutputTokens: 2048, temperature: 0.6 },
         }),
       },
     );
@@ -206,7 +206,7 @@ Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, k
       console.error("Gemini narrative error:", r.status, j);
       return `AI synthesis error: ${j?.error?.message || r.status}`;
     }
-    return j?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") || "";
+    return j?.candidates?.[0]?.content?.parts?.map((p: any) => p.thought ? "" : (p.text || "")).join("") || "";
   } catch (e) {
     console.error("Gemini narrative threw:", e);
     return "AI synthesis offline — engine running on raw quantitative signals only.";
