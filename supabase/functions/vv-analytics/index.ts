@@ -1,3 +1,5 @@
+const __origFetch = globalThis.fetch;
+globalThis.fetch = ((input: any, init: any = {}) => __origFetch(input, { ...init, signal: init.signal ?? AbortSignal.timeout(12000) })) as typeof fetch;
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 // Live market analytics. CoinGecko for crypto, Stooq for SPY/equities (no key).
@@ -188,14 +190,14 @@ Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, k
 
   try {
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${GEMINI}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: "You are Vulture Vision. Be concise, analytical, operational." }] },
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 400, temperature: 0.6 },
+          generationConfig: { maxOutputTokens: 2048, temperature: 0.6 },
         }),
       },
     );
@@ -204,7 +206,7 @@ Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, k
       console.error("Gemini narrative error:", r.status, j);
       return `AI synthesis error: ${j?.error?.message || r.status}`;
     }
-    return j?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") || "";
+    return j?.candidates?.[0]?.content?.parts?.map((p: any) => p.thought ? "" : (p.text || "")).join("") || "";
   } catch (e) {
     console.error("Gemini narrative threw:", e);
     return "AI synthesis offline — engine running on raw quantitative signals only.";
