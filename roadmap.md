@@ -1,0 +1,2 @@
+- [ ] Simulations page (/simulations) powered by MiroFish
+- [ ] Seed simulations from socio-economics corpus (events, agents, scenario blends)
