@@ -11,6 +11,7 @@ const links = [
   { to: "/dashboard", label: "INTEL" },
   { to: "/analytics", label: "ANALYTICS" },
   { to: "/socioeconomics", label: "SOCIO-ECONOMICS" },
+  { to: "/simulations", label: "SIMULATIONS" },
   { to: "/news", label: "NEWS FEED" },
 ];
 

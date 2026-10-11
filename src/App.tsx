@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
 import News from "./pages/News";
 import SocioEconomics from "./pages/SocioEconomics";
+import Simulations from "./pages/Simulations";
 import NotFound from "./pages/NotFound";
 import AuthGate from "./components/AuthGate";
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/news" element={<News />} />
           <Route path="/socioeconomics" element={<SocioEconomics />} />
+          <Route path="/simulations" element={<Simulations />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
