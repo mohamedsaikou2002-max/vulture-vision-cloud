@@ -14,6 +14,25 @@ CREATE TABLE public.forecast_targets (
   UNIQUE (target_key, version)
 );
 
+INSERT INTO public.forecast_targets
+  (target_key, version, horizon_sessions, outcome_type, definition)
+VALUES
+  (
+    'asset_20_session_log_return',
+    1,
+    20,
+    'continuous',
+    '{"measure":"log_total_return","formula":"ln(total_return_index[t+20] / total_return_index[t])","price_reference":"as_of_close","label_available_after":"20 trading sessions"}'::jsonb
+  ),
+  (
+    'asset_20_session_10pct_loss',
+    1,
+    20,
+    'binary',
+    '{"event":"min(total_return_index[t+k] / total_return_index[t] - 1) <= -0.10 for k=1..20","price_reference":"as_of_close","label_available_after":"20 trading sessions"}'::jsonb
+  )
+ON CONFLICT (target_key, version) DO NOTHING;
+
 CREATE TABLE public.forecast_sources (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   source_key text NOT NULL UNIQUE,
