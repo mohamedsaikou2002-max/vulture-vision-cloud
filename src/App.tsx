@@ -9,6 +9,7 @@ import Analytics from "./pages/Analytics";
 import News from "./pages/News";
 import SocioEconomics from "./pages/SocioEconomics";
 import NotFound from "./pages/NotFound";
+import AuthGate from "./components/AuthGate";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <AuthGate>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -27,6 +29,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      </AuthGate>
     </TooltipProvider>
   </QueryClientProvider>
 );
