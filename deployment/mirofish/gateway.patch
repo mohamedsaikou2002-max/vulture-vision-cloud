@@ -1,0 +1,29 @@
+diff --git a/backend/app/__init__.py b/backend/app/__init__.py
+index aba624b..bab353e 100644
+--- a/backend/app/__init__.py
++++ b/backend/app/__init__.py
+@@ -4,6 +4,7 @@ MiroFish Backend - Flask应用工厂
+ 
+ import os
+ import warnings
++import hmac
+ 
+ # 抑制 multiprocessing resource_tracker 的警告（来自第三方库如 transformers）
+ # 需要在所有其他导入之前设置
+@@ -20,6 +21,16 @@ def create_app(config_class=Config):
+     """Flask应用工厂函数"""
+     app = Flask(__name__)
+     app.config.from_object(config_class)
++
++    # Vulture Vision deployment: private engine, reached through the authenticated gateway.
++    @app.before_request
++    def require_vulture_gateway():
++        if os.environ.get("VULTURE_GATEWAY_REQUIRED", "false").lower() != "true":
++            return None
++        expected = os.environ.get("MIROFISH_GATEWAY_TOKEN", "")
++        supplied = request.headers.get("X-Vulture-Gateway-Token", "")
++        if not expected or not hmac.compare_digest(expected, supplied):
++            return {"error": "Unauthorized"}, 401
+     
+     # 设置JSON编码：确保中文直接显示（而不是 \uXXXX 格式）
+     # Flask >= 2.3 使用 app.json.ensure_ascii，旧版本使用 JSON_AS_ASCII 配置
