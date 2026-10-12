@@ -10,7 +10,7 @@ Migration checks locally require: npm install --no-save --package-lock=false @el
 ## Connected database
 The five October migrations were executed together in a transaction and verified afterward. All ten expected tables exist. Anonymous direct reads were removed; authenticated direct reads are restricted to news_articles, news_prompt_versions and tor_entries. Worker status is waiting, with zero attempts. No live news or prompt exists yet.
 
-Migration-history reconciliation is pending: automatic approval review rejected empty statement-list records. Compare the exact executed SQL and deployed definitions before recording migration versions through the supported Supabase workflow. Do not blindly replay non-idempotent CREATE TABLE or policy statements on this project.
+Migration history is reconciled and verified for all five October versions using the exact executed SQL. Automatic approval review rejected empty statement-list records; the corrected request included actual statements after deployed objects and permissions were checked. Do not blindly replay non-idempotent CREATE TABLE or policy statements on this project.
 
 ## Deployment still required
 After approved merge and Lovable synchronization, deploy all changed Edge Functions. Configure MIROFISH_ALLOWED_USER_IDS before operator use. Do not publish until unauthenticated and non-operator requests return 401/403 and the operator health check succeeds.
