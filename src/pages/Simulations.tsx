@@ -36,7 +36,7 @@ export default function Simulations() {
   const simulationId = useRef<string | null>(null);
   const mounted = useRef(true);
   const storageKey=useRef<string|null>(null);
-  const saved=useRef<{checkpoint:RunCheckpoint;seed:string;requirement:string;rounds:number}|null>(null);
+  const saved=useRef<{checkpoint:RunCheckpoint;seed:string;requirement:string;rounds:number;contextLabel?:string}|null>(null);
   const [recoverable,setRecoverable]=useState(false);
   const event = corpus.find(e => e.event_id === selected);
   useEffect(() => {
@@ -61,12 +61,13 @@ export default function Simulations() {
     const controller = new AbortController(); run.current = controller;
     if(!resume)simulationId.current = null;
     setBusy(true); setError(''); setState(null); setReport('');
-    setRunContext(mode === 'current' && brief ? 'Frozen context version ' + contextVersion + ': ' + new Date(brief.as_of).toLocaleString() : 'Historical-context run');
+    const contextLabel=resume && saved.current ? saved.current.contextLabel || 'Saved run · original context metadata unavailable' : mode === 'current' && brief ? 'Frozen context version ' + contextVersion + ': ' + new Date(brief.as_of).toLocaleString() : 'Historical-context run';
+    setRunContext(contextLabel);
     const updatePhase = (p: string) => { if (mounted.current && !controller.signal.aborted) setPhase(p); };
     try {
       const seed = resume && saved.current ? saved.current.seed : mode === 'current' ? buildCurrentSeed(scenario, brief!) : buildSeed(scenario, event);
       const requirement = resume && saved.current ? saved.current.requirement : mode === 'current' ? buildEvaluationRequirement(scenario, brief!) : scenario;
-      const snapshot=resume && saved.current ? saved.current : {checkpoint:{},seed,requirement,rounds};
+      const snapshot=resume && saved.current ? saved.current : {checkpoint:{},seed,requirement,rounds,contextLabel};
       const save=(checkpoint:RunCheckpoint)=>{snapshot.checkpoint=checkpoint;saved.current=snapshot;if(storageKey.current)sessionStorage.setItem(storageKey.current,JSON.stringify(snapshot));if(mounted.current)setRecoverable(true);};
       const id = await prepareAndStart(requirement, seed, snapshot.rounds, updatePhase, id => { simulationId.current = id; }, controller.signal,snapshot.checkpoint,save);
       updatePhase('Swarm running');

@@ -27,14 +27,16 @@ def context_loop(stop):
 
 
 def crawl_source(source):
-    db=open_cache(os.environ.get('NEWS_CRAWLER_CACHE','crawler-cache.sqlite'))
+    db=None
     try:
+        db=open_cache(os.environ.get('NEWS_CRAWLER_CACHE','crawler-cache.sqlite'))
         items,report=Crawler(source,db).crawl(limit=20)
         upload(items)
         print(json.dumps({'source':source['id'],'items':len(items),'status':report['status']}),flush=True)
     except Exception as e:
         print(json.dumps({'source':source['id'],'status':'skipped','error':str(e)}),flush=True)
-    finally:db.close()
+    finally:
+        if db is not None:db.close()
 
 
 def ingest_loop(stop):
@@ -48,8 +50,12 @@ def ingest_loop(stop):
         while not stop.is_set():
             for source_id,future in list(pending.items()):
                 if future.done():
-                    future.result()
-                    del pending[source_id]
+                    try:future.result()
+                    except Exception as e:
+                        print(json.dumps({'source':source_id,'status':'retrying','error':str(e)}),flush=True)
+                        due[source_id]=time.monotonic()+interval
+                    finally:del pending[source_id]
+            # Oldest due source first; one slow publisher cannot stall the global sweep.
             for source in sorted(sources,key=lambda s:due[s['id']]):
                 if len(pending)>=workers:break
                 source_id=source['id']
