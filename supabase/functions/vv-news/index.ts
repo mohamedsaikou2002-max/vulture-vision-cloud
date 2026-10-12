@@ -289,14 +289,14 @@ async function fetchPublisherNews(req: Request, country?: string) {
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authorization } } });
   const { data: { user }, error: authError } = await db.auth.getUser();
   if (authError || !user) return { items: [], status: "sign_in_required" };
-  let query = db.from("news_articles").select("title,source,canonical_url,published_at,fetched_at,source_country,language,source_id")
+  let query = db.from("news_articles").select("id,title,source,canonical_url,published_at,fetched_at,source_country,language,source_id")
     .gte("fetched_at", new Date(Date.now() - 48 * 3600_000).toISOString())
     .or("published_at.is.null,published_at.gte." + new Date(Date.now() - 72 * 3600_000).toISOString())
     .order("published_at", { ascending: false, nullsFirst: false }).limit(100);
   if (country) query = query.eq("source_country", country);
   const { data, error } = await query;
   if (error) return { items: [], status: "ingestion_not_available" };
-  return { items: (data || []).map(row => ({ title: row.title, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
+  return { items: (data || []).map(row => ({ id: row.id, title: row.title, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
 }
 
 Deno.serve(async (req) => {

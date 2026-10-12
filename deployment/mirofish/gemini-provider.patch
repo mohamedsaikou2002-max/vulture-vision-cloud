@@ -1,0 +1,17 @@
+diff --git a/backend/app/config.py b/backend/app/config.py
+index 02aed9a..1f39988 100644
+--- a/backend/app/config.py
++++ b/backend/app/config.py
+@@ -25,9 +25,9 @@ class Config:
+     JSON_AS_ASCII = False
+     
+     # LLM配置（统一使用OpenAI格式）
+-    LLM_API_KEY = os.environ.get('LLM_API_KEY')
+-    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
+-    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
++    LLM_API_KEY = os.environ.get('LLM_API_KEY') or os.environ.get('GEMINI_API_KEY')
++    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai/' if os.environ.get('GEMINI_API_KEY') and not os.environ.get('LLM_API_KEY') else 'https://api.openai.com/v1')
++    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gemini-2.5-flash' if os.environ.get('GEMINI_API_KEY') and not os.environ.get('LLM_API_KEY') else 'gpt-4o-mini')
+     
+     # Zep配置
+     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
