@@ -284,16 +284,35 @@ async function fetchJournalistTweets(): Promise<{ irl: Item[]; dark: Item[]; tec
   return out;
 }
 
+async function fetchPublisherNews(req: Request, country?: string) {
+  const authorization = req.headers.get("authorization") || "";
+  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authorization } } });
+  const { data: { user }, error: authError } = await db.auth.getUser();
+  if (authError || !user) return { items: [], status: "sign_in_required" };
+  let query = db.from("news_articles").select("id,title,source,canonical_url,published_at,fetched_at,source_country,language,source_id")
+    .gte("fetched_at", new Date(Date.now() - 48 * 3600_000).toISOString())
+    .or("published_at.is.null,published_at.gte." + new Date(Date.now() - 72 * 3600_000).toISOString())
+    .order("published_at", { ascending: false, nullsFirst: false }).limit(100);
+  if (country) query = query.eq("source_country", country);
+  const { data, error } = await query;
+  if (error) return { items: [], status: "ingestion_not_available" };
+  return { items: (data || []).map(row => ({ id: row.id, title: row.title, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const [irlRss, dark, tech, newsApi, tor, journalists] = await Promise.all([
+    const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
+    const selectedCountry = body.country || new URL(req.url).searchParams.get("country");
+    const country = typeof selectedCountry === "string" && /^[A-Z]{2}$/.test(selectedCountry) ? selectedCountry : undefined;
+    const [irlRss, dark, tech, newsApi, tor, journalists, publisher] = await Promise.all([
       fetchFeeds(FEEDS.irl),
       fetchFeeds(FEEDS.dark),
       fetchFeeds(FEEDS.tech),
       fetchNewsApi(),
       fetchTorFeed(),
       fetchJournalistTweets(),
+      fetchPublisherNews(req, country),
     ]);
 
     const irl = [...newsApi, ...irlRss, ...journalists.irl]
@@ -311,11 +330,11 @@ Deno.serve(async (req) => {
       .slice(0, 30)
       .map(enrich);
 
-    const all = [...irl, ...darkOut, ...techOut]
+    const all = [...irl, ...darkOut, ...techOut, ...publisher.items]
       .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
       .slice(0, 80);
 
-    return new Response(JSON.stringify({ irl, dark: darkOut, tech: techOut, news_feed: all }), {
+    return new Response(JSON.stringify({ irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
