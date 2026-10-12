@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import VVLayout from "@/components/VVLayout";
+import marketRegistry from "@/data/newsMarkets.json";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchLatestBrief, subscribeToIntelBriefs, triggerSynthesis,
@@ -7,6 +8,9 @@ import {
 } from "@/lib/intelApi";
 
 interface Item {
+  source_country?: string;
+  language?: string;
+  fetched_at?: string;
   title: string;
   source?: string;
   time?: string;
@@ -38,6 +42,9 @@ function timeAgo(iso?: string) {
 }
 
 export default function News() {
+  const [country, setCountry] = useState("");
+  const [publisherItems, setPublisherItems] = useState<Item[]>([]);
+  const [publisherStatus, setPublisherStatus] = useState("loading");
   const [data, setData] = useState<NewsData>({ irl: [], dark: [], tech: [] });
   const [brief, setBrief] = useState<IntelBrief | null>(null);
   const [synthBusy, setSynthBusy] = useState(false);
@@ -46,17 +53,23 @@ export default function News() {
     let alive = true;
     async function load() {
       try {
-        const { data: res } = await supabase.functions.invoke("vv-news");
-        if (alive && res) setData({ irl: res.irl || [], dark: res.dark || [], tech: res.tech || [] });
-      } catch {}
+        const { data: res, error } = await supabase.functions.invoke("vv-news", { body: { country } });
+        if (error && alive) setPublisherStatus("ingestion_not_available");
+        if (alive && res) {
+          setData({ irl: res.irl || [], dark: res.dark || [], tech: res.tech || [] });
+          setPublisherItems(res.publisher_news || []);
+          setPublisherStatus(res.publisher_status || "ingestion_not_available");
+        }
+      } catch { if (alive) setPublisherStatus("ingestion_not_available"); }
     }
+    setPublisherStatus("loading"); setPublisherItems([]);
     load();
     fetchLatestBrief().then(b => alive && b && setBrief(b));
     const id = setInterval(load, 5 * 60 * 1000);
     const bId = setInterval(() => fetchLatestBrief().then(b => alive && b && setBrief(b)), 15 * 60 * 1000);
     const unsub = subscribeToIntelBriefs(b => { if (alive) setBrief(b); });
     return () => { alive = false; clearInterval(id); clearInterval(bId); unsub(); };
-  }, []);
+  }, [country]);
 
   async function onSynthesize() {
     if (synthBusy) return;
@@ -75,6 +88,10 @@ export default function News() {
 
   return (
     <VVLayout>
+      <section className="mx-4 my-6 rounded-xl border border-border bg-background/90 p-5 md:mx-8">
+        <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">Global publisher desk</h2><p className="mt-1 text-xs text-muted-foreground">Local reporting across {marketRegistry.length} office markets · country tags identify the publisher, not the subject of the story.</p></div><div><label htmlFor="news-country" className="sr-only">Publisher country or market</label><select id="news-country" value={country} onChange={e => setCountry(e.target.value)} className="rounded-lg border border-border bg-background p-2 text-sm"><option value="">All markets</option>{marketRegistry.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select></div></div>
+        {publisherItems.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{publisherItems.map(it => <a key={it.link} href={it.link} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border p-4 hover:border-primary"><p className="mb-2 text-xs text-primary">{it.source_country} · {it.source} · {it.language}</p><p className="text-sm leading-relaxed">{it.title}</p><p className="mt-3 text-xs text-muted-foreground">{it.time ? timeAgo(it.time) : "Publication time unavailable"}</p></a>)}</div> : <p role="status" className="mt-5 text-sm text-muted-foreground">{publisherStatus === "loading" ? "Loading publisher headlines…" : publisherStatus === "no_recent_articles" ? "No recent publisher headlines for this market." : "Publisher ingestion is not available yet."}</p>}
+      </section>
       <div className="news-grid">
         <Column title="Live IRL News" tone="red" items={data.irl} badge="badge-red" badgeText="LIVE" />
         <Column title="Dark Web Intel" tone="gold" items={data.dark} badge="badge-dark" badgeText="ALERT" />
@@ -109,7 +126,7 @@ function Column({ title, tone, items, badge, badgeText }: {
         {items.slice(0, 20).map((it, i) => {
           let sourceHref = it.source_url;
           if (!sourceHref && it.link) {
-            try { sourceHref = new URL(it.link).origin; } catch {}
+            try { sourceHref = new URL(it.link).origin; } catch { sourceHref = undefined; }
           }
           return (
             <div className="news-item" key={i}>

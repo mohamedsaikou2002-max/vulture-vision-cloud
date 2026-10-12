@@ -1,0 +1,482 @@
+[
+  {
+    "url": "https://www.npr.org",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn10view0"
+  },
+  {
+    "url": "https://apnews.com",
+    "title": "Associated Press News: Breaking News, Latest Headlines and Videos | AP News (https://apnews.com/)",
+    "status": "retrieved",
+    "ref": "turn10view1"
+  },
+  {
+    "url": "https://www.cbc.ca",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn10view2"
+  },
+  {
+    "url": "https://www.bnnbloomberg.ca",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn10view3"
+  },
+  {
+    "url": "https://www.elfinanciero.com.mx",
+    "title": "El Financiero | Las noticias de finanzas, economía y política más importantes del país. (https://www.elfinanciero.com.mx/)",
+    "status": "retrieved",
+    "ref": "turn10view4"
+  },
+  {
+    "url": "https://www.eleconomista.com.mx",
+    "title": "El Economista | Periódico especializado en economía, finanzas y negocios (https://www.eleconomista.com.mx/)",
+    "status": "retrieved",
+    "ref": "turn10view5"
+  },
+  {
+    "url": "https://www.portafolio.co",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn10view6"
+  },
+  {
+    "url": "https://www.eltiempo.com",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn10view7"
+  },
+  {
+    "url": "https://gestion.pe",
+    "title": "Gestión | El diario de Economía, Finanzas y Negocios | GESTIÓN (https://gestion.pe/)",
+    "status": "retrieved",
+    "ref": "turn10view8"
+  },
+  {
+    "url": "https://elcomercio.pe",
+    "title": "Noticias del Perú y el Mundo de último minuto | EL COMERCIO PERÚ (https://elcomercio.pe/)",
+    "status": "retrieved",
+    "ref": "turn10view9"
+  },
+  {
+    "url": "https://www.df.cl",
+    "title": "Diario Financiero Noticias de negocios, financieras y económicas de Chile y el mundo | Diario Financiero (https://www.df.cl/)",
+    "status": "retrieved",
+    "ref": "turn11view0"
+  },
+  {
+    "url": "https://www.latercera.com",
+    "title": "La Tercera - Noticias de Chile y el Mundo (https://www.latercera.com/)",
+    "status": "retrieved",
+    "ref": "turn11view1"
+  },
+  {
+    "url": "https://valor.globo.com",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn11view2"
+  },
+  {
+    "url": "https://agenciabrasil.ebc.com.br",
+    "title": "Agência Brasil | Últimas notícias do Brasil e do mundo (https://agenciabrasil.ebc.com.br/)",
+    "status": "retrieved",
+    "ref": "turn11view3"
+  },
+  {
+    "url": "https://nos.nl",
+    "title": "NOS.nl - Nieuws, Sport en Evenementen | Nederlandse Omroep Stichting (https://nos.nl/)",
+    "status": "retrieved",
+    "ref": "turn11view4"
+  },
+  {
+    "url": "https://fd.nl",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn11view5"
+  },
+  {
+    "url": "https://n1info.rs",
+    "title": "Vesti iz Srbije, regiona i sveta | N1 (https://n1info.rs/)",
+    "status": "retrieved",
+    "ref": "turn11view6"
+  },
+  {
+    "url": "https://www.rts.rs",
+    "title": "Насловна | РТС (https://www.rts.rs/)",
+    "status": "retrieved",
+    "ref": "turn11view7"
+  },
+  {
+    "url": "https://www.vrt.be/vrtnws",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn11view8"
+  },
+  {
+    "url": "https://www.rtbf.be",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn11view9"
+  },
+  {
+    "url": "https://www.portfolio.hu",
+    "title": "Portfolio.hu - Online gazdasági újság (https://www.portfolio.hu/)",
+    "status": "retrieved",
+    "ref": "turn12view0"
+  },
+  {
+    "url": "https://hvg.hu",
+    "title": "| hvg.hu (https://hvg.hu/)",
+    "status": "retrieved",
+    "ref": "turn12view1"
+  },
+  {
+    "url": "https://www.dr.dk",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn12view2"
+  },
+  {
+    "url": "https://borsen.dk",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn12view3"
+  },
+  {
+    "url": "https://www.rte.ie/news",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn12view4"
+  },
+  {
+    "url": "https://www.irishtimes.com",
+    "title": "The Irish Times | Latest news and headlines - Irish news, world news, video and podcasts (https://www.irishtimes.com/)",
+    "status": "retrieved",
+    "ref": "turn12view5"
+  },
+  {
+    "url": "https://www.bbc.com/news",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn12view6"
+  },
+  {
+    "url": "https://www.ft.com",
+    "title": "Home - Financial Times (https://www.ft.com/)",
+    "status": "retrieved",
+    "ref": "turn12view7"
+  },
+  {
+    "url": "https://www.dw.com",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn12view8"
+  },
+  {
+    "url": "https://www.handelsblatt.com",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn12view9"
+  },
+  {
+    "url": "https://www.swissinfo.ch/eng",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn13view0"
+  },
+  {
+    "url": "https://www.nzz.ch",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn13view1"
+  },
+  {
+    "url": "https://yle.fi",
+    "title": "Yle.fi | Uutiset, urheilu, ilmiöt (https://yle.fi/)",
+    "status": "retrieved",
+    "ref": "turn13view2"
+  },
+  {
+    "url": "https://www.hs.fi",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn13view3"
+  },
+  {
+    "url": "https://today.rtl.lu",
+    "title": "English-language news for Luxembourg's international community (https://today.rtl.lu/)",
+    "status": "retrieved",
+    "ref": "turn13view4"
+  },
+  {
+    "url": "https://www.luxtimes.lu",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn13view5"
+  },
+  {
+    "url": "https://www.rtve.es/noticias",
+    "title": "Noticias, la última hora de España y el mundo - RTVE.es (https://www.rtve.es/noticias)",
+    "status": "retrieved",
+    "ref": "turn13view6"
+  },
+  {
+    "url": "https://www.eleconomista.es",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn13view7"
+  },
+  {
+    "url": "https://www.ansa.it",
+    "title": "Agenzia ANSA: ultime notizie di cronaca, politica e sport - ANSA (https://www.ansa.it/)",
+    "status": "retrieved",
+    "ref": "turn13view8"
+  },
+  {
+    "url": "https://www.ilsole24ore.com",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn13view9"
+  },
+  {
+    "url": "https://www.france24.com/fr",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn14view0"
+  },
+  {
+    "url": "https://www.lesechos.fr",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn14view1"
+  },
+  {
+    "url": "https://www.svt.se/nyheter",
+    "title": "SVT Nyheter (https://www.svt.se/nyheter)",
+    "status": "retrieved",
+    "ref": "turn14view2"
+  },
+  {
+    "url": "https://www.di.se",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn14view3"
+  },
+  {
+    "url": "https://orf.at",
+    "title": "news.ORF.at (https://orf.at/)",
+    "status": "retrieved",
+    "ref": "turn14view4"
+  },
+  {
+    "url": "https://www.derstandard.at",
+    "title": "derStandard.at | Nachrichten, Kommentare & Community (https://www.derstandard.at/)",
+    "status": "retrieved",
+    "ref": "turn14view5"
+  },
+  {
+    "url": "https://www.thenationalnews.com",
+    "title": "The National - Latest world news, sport & opinion (https://www.thenationalnews.com/)",
+    "status": "retrieved",
+    "ref": "turn14view6"
+  },
+  {
+    "url": "https://gulfnews.com",
+    "title": "Gulf News: Latest UAE news, Dubai news, Business, travel news, Dubai Gold rate, prayer time, cinema (https://gulfnews.com/)",
+    "status": "retrieved",
+    "ref": "turn14view7"
+  },
+  {
+    "url": "https://kuwaittimes.com",
+    "title": "Kuwait Times Newspaper - The Leading Independent Daily Kuwait News (https://kuwaittimes.com/)",
+    "status": "retrieved",
+    "ref": "turn14view8"
+  },
+  {
+    "url": "https://www.kuna.net.kw",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn14view9"
+  },
+  {
+    "url": "https://www.arabnews.com",
+    "title": "Arab News | Worldwide News, Latest Breaking News & Updates (https://www.arabnews.com/)",
+    "status": "retrieved",
+    "ref": "turn15view0"
+  },
+  {
+    "url": "https://saudigazette.com.sa",
+    "title": "Home - Latest News from Saudi Arabia and the World (https://saudigazette.com.sa/)",
+    "status": "retrieved",
+    "ref": "turn15view1"
+  },
+  {
+    "url": "https://www.timesofisrael.com",
+    "title": "The Times of Israel | News from Israel, the Middle East and the Jewish World (https://www.timesofisrael.com/)",
+    "status": "retrieved",
+    "ref": "turn15view2"
+  },
+  {
+    "url": "https://en.globes.co.il",
+    "title": "Globes - Israel Business News (https://en.globes.co.il/)",
+    "status": "retrieved",
+    "ref": "turn15view3"
+  },
+  {
+    "url": "https://www.dailymaverick.co.za",
+    "title": "Daily Maverick — Defend Truth (https://www.dailymaverick.co.za/)",
+    "status": "retrieved",
+    "ref": "turn15view4"
+  },
+  {
+    "url": "https://www.businesslive.co.za/bd",
+    "title": "Business Day - Latest news and analysis from SA’s business sector (https://www.businesslive.co.za/bd)",
+    "status": "retrieved",
+    "ref": "turn15view5"
+  },
+  {
+    "url": "https://www.rnz.co.nz",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn15view6"
+  },
+  {
+    "url": "https://www.nzherald.co.nz",
+    "title": "NZ Herald: Breaking & Latest New Zealand News - NZ Herald (https://www.nzherald.co.nz/)",
+    "status": "retrieved",
+    "ref": "turn15view7"
+  },
+  {
+    "url": "https://economictimes.indiatimes.com",
+    "title": "Business News Live, Share Market News - Read Latest Finance News, IPO, Mutual Funds News - The Economic Times (https://economictimes.indiatimes.com/)",
+    "status": "retrieved",
+    "ref": "turn15view8"
+  },
+  {
+    "url": "https://www.business-standard.com",
+    "title": "Business News, Finance News, India News, Stock Markets BSE/NSE News, SENSEX, NIFTY, Personal Finance News (https://www.business-standard.com/)",
+    "status": "retrieved",
+    "ref": "turn15view9"
+  },
+  {
+    "url": "https://www.caixinglobal.com",
+    "title": "Caixin Global - Latest Business and Financial News on China, U.S. Trade War and Negotiations, Breaking News, Headlines and Developments (https://www.caixinglobal.com/)",
+    "status": "retrieved",
+    "ref": "turn16view0"
+  },
+  {
+    "url": "https://www.cgtn.com",
+    "title": "CGTN | Breaking News, China News, World News and Video (https://www.cgtn.com/)",
+    "status": "retrieved",
+    "ref": "turn16view1"
+  },
+  {
+    "url": "https://www.scmp.com",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn16view2"
+  },
+  {
+    "url": "https://news.rthk.hk",
+    "title": "香港電台新聞網 - RTHK (https://news.rthk.hk/)",
+    "status": "retrieved",
+    "ref": "turn16view3"
+  },
+  {
+    "url": "https://en.yna.co.kr",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn16view4"
+  },
+  {
+    "url": "https://www.koreaherald.com",
+    "title": "The Korea Herald (https://www.koreaherald.com/)",
+    "status": "retrieved",
+    "ref": "turn16view5"
+  },
+  {
+    "url": "https://www.channelnewsasia.com",
+    "title": "Breaking News and Analysis on Asia and the World | Real-Time Coverage out of Asia and Singapore - CNA (https://www.channelnewsasia.com/)",
+    "status": "retrieved",
+    "ref": "turn16view6"
+  },
+  {
+    "url": "https://www.businesstimes.com.sg",
+    "title": "The Business Times - Singapore Business News (https://www.businesstimes.com.sg/)",
+    "status": "retrieved",
+    "ref": "turn16view7"
+  },
+  {
+    "url": "https://www.abc.net.au/news",
+    "title": "ABC News & Headlines – Australian Broadcasting Corporation (https://www.abc.net.au/news)",
+    "status": "retrieved",
+    "ref": "turn16view8"
+  },
+  {
+    "url": "https://www.afr.com",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn16view9"
+  },
+  {
+    "url": "https://focustaiwan.tw",
+    "title": "Focus Taiwan - CNA English News (https://focustaiwan.tw/)",
+    "status": "retrieved",
+    "ref": "turn17view0"
+  },
+  {
+    "url": "https://www.taipeitimes.com",
+    "title": "Taipei Times (https://www.taipeitimes.com/)",
+    "status": "retrieved",
+    "ref": "turn17view1"
+  },
+  {
+    "url": "https://www3.nhk.or.jp/nhkworld",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn17view2"
+  },
+  {
+    "url": "https://asia.nikkei.com",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn17view3"
+  },
+  {
+    "url": "https://www.diariolibre.com",
+    "title": "Estados Unidos - Noticias al momento - Diario Libre (https://www.diariolibre.com/)",
+    "status": "retrieved",
+    "ref": "turn17view4"
+  },
+  {
+    "url": "https://listindiario.com",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn17view5"
+  },
+  {
+    "url": "https://www.ekathimerini.com",
+    "title": "Internal Error ()",
+    "status": "unverified",
+    "ref": "turn17view6"
+  },
+  {
+    "url": "https://www.naftemporiki.gr",
+    "title": "Ειδήσεις από την Ελλάδα και τον Κόσμο | Η ΝΑΥΤΕΜΠΟΡΙΚΗ (https://www.naftemporiki.gr/)",
+    "status": "retrieved",
+    "ref": "turn17view7"
+  },
+  {
+    "url": "https://www.lanacion.com.ar",
+    "title": "Últimas noticias de Argentina y el mundo - LA NACION (https://www.lanacion.com.ar/)",
+    "status": "retrieved",
+    "ref": "turn17view8"
+  },
+  {
+    "url": "https://www.ambito.com",
+    "title": "Ámbito Financiero, líder en noticias económicas (https://www.ambito.com/)",
+    "status": "retrieved",
+    "ref": "turn17view9"
+  }
+]

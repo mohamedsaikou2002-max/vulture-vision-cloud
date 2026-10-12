@@ -1,0 +1,242 @@
+[
+  {
+    "code": "US",
+    "name": "United States",
+    "office_city": "New York",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "CA",
+    "name": "Canada",
+    "office_city": "Toronto",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "MX",
+    "name": "Mexico",
+    "office_city": "Mexico City",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "CO",
+    "name": "Colombia",
+    "office_city": "Bogotá",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "PE",
+    "name": "Peru",
+    "office_city": "Lima",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "CL",
+    "name": "Chile",
+    "office_city": "Santiago",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "BR",
+    "name": "Brazil",
+    "office_city": "São Paulo",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "NL",
+    "name": "Netherlands",
+    "office_city": "Amsterdam",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "RS",
+    "name": "Serbia",
+    "office_city": "Belgrade",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "BE",
+    "name": "Belgium",
+    "office_city": "Brussels",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "HU",
+    "name": "Hungary",
+    "office_city": "Budapest",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "DK",
+    "name": "Denmark",
+    "office_city": "Copenhagen",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "IE",
+    "name": "Ireland",
+    "office_city": "Dublin",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "GB",
+    "name": "United Kingdom",
+    "office_city": "London",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "DE",
+    "name": "Germany",
+    "office_city": "Frankfurt",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "CH",
+    "name": "Switzerland",
+    "office_city": "Zurich",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "FI",
+    "name": "Finland",
+    "office_city": "Helsinki",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "LU",
+    "name": "Luxembourg",
+    "office_city": "Luxembourg",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "ES",
+    "name": "Spain",
+    "office_city": "Madrid",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "IT",
+    "name": "Italy",
+    "office_city": "Milan",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "FR",
+    "name": "France",
+    "office_city": "Paris",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "SE",
+    "name": "Sweden",
+    "office_city": "Stockholm",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "AT",
+    "name": "Austria",
+    "office_city": "Vienna",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "AE",
+    "name": "United Arab Emirates",
+    "office_city": "Dubai",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "KW",
+    "name": "Kuwait",
+    "office_city": "Kuwait City",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "SA",
+    "name": "Saudi Arabia",
+    "office_city": "Riyadh",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "IL",
+    "name": "Israel",
+    "office_city": "Tel Aviv",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "ZA",
+    "name": "South Africa",
+    "office_city": "Cape Town",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "NZ",
+    "name": "New Zealand",
+    "office_city": "Auckland",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "IN",
+    "name": "India",
+    "office_city": "Mumbai",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "CN",
+    "name": "China",
+    "office_city": "Beijing",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "HK",
+    "name": "Hong Kong",
+    "office_city": "Hong Kong",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "KR",
+    "name": "South Korea",
+    "office_city": "Seoul",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "SG",
+    "name": "Singapore",
+    "office_city": "Singapore",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "AU",
+    "name": "Australia",
+    "office_city": "Sydney",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "TW",
+    "name": "Taiwan",
+    "office_city": "Taipei",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "JP",
+    "name": "Japan",
+    "office_city": "Tokyo",
+    "office_evidence_url": "https://www.blackrock.com/corporate/about-us/who-we-are/contacts-and-locations"
+  },
+  {
+    "code": "DO",
+    "name": "Dominican Republic",
+    "office_city": "Santiago de los Caballeros",
+    "office_evidence_url": "https://careers.blackrock.com/locations/"
+  },
+  {
+    "code": "GR",
+    "name": "Greece",
+    "office_city": "Athens",
+    "office_evidence_url": "https://careers.blackrock.com/locations/"
+  },
+  {
+    "code": "AR",
+    "name": "Argentina",
+    "office_city": "Buenos Aires",
+    "office_evidence_url": "https://careers.blackrock.com/locations/"
+  }
+]

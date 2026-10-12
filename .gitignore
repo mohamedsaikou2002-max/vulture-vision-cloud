@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Publisher crawler runtime state
+news-crawler/.venv/
+news-crawler/__pycache__/
+news-crawler/tests/__pycache__/
+news-crawler/*.sqlite
+news-crawler/crawl-result.json

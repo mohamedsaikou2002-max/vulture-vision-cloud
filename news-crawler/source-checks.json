@@ -1,0 +1,562 @@
+[
+  {
+    "source_id": "us-1",
+    "source": "NPR",
+    "homepage": "https://www.npr.org",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "us-2",
+    "source": "Associated Press",
+    "homepage": "https://apnews.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "ca-1",
+    "source": "CBC",
+    "homepage": "https://www.cbc.ca",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "ca-2",
+    "source": "BNN Bloomberg",
+    "homepage": "https://www.bnnbloomberg.ca",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "mx-1",
+    "source": "El Financiero",
+    "homepage": "https://www.elfinanciero.com.mx",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "mx-2",
+    "source": "El Economista",
+    "homepage": "https://www.eleconomista.com.mx",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "co-1",
+    "source": "Portafolio",
+    "homepage": "https://www.portafolio.co",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "co-2",
+    "source": "El Tiempo",
+    "homepage": "https://www.eltiempo.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "pe-1",
+    "source": "Gestión",
+    "homepage": "https://gestion.pe",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "pe-2",
+    "source": "El Comercio",
+    "homepage": "https://elcomercio.pe",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "cl-1",
+    "source": "Diario Financiero",
+    "homepage": "https://www.df.cl",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "cl-2",
+    "source": "La Tercera",
+    "homepage": "https://www.latercera.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "br-1",
+    "source": "Valor Econômico",
+    "homepage": "https://valor.globo.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "br-2",
+    "source": "Agência Brasil",
+    "homepage": "https://agenciabrasil.ebc.com.br",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "nl-1",
+    "source": "NOS",
+    "homepage": "https://nos.nl",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "nl-2",
+    "source": "Het Financieele Dagblad",
+    "homepage": "https://fd.nl",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "rs-1",
+    "source": "N1 Serbia",
+    "homepage": "https://n1info.rs",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "rs-2",
+    "source": "RTS",
+    "homepage": "https://www.rts.rs",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "be-1",
+    "source": "VRT NWS",
+    "homepage": "https://www.vrt.be/vrtnws",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "be-2",
+    "source": "RTBF",
+    "homepage": "https://www.rtbf.be",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "hu-1",
+    "source": "Portfolio",
+    "homepage": "https://www.portfolio.hu",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "hu-2",
+    "source": "HVG",
+    "homepage": "https://hvg.hu",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "dk-1",
+    "source": "DR",
+    "homepage": "https://www.dr.dk",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "dk-2",
+    "source": "Børsen",
+    "homepage": "https://borsen.dk",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "ie-1",
+    "source": "RTÉ",
+    "homepage": "https://www.rte.ie/news",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "ie-2",
+    "source": "The Irish Times",
+    "homepage": "https://www.irishtimes.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "gb-1",
+    "source": "BBC",
+    "homepage": "https://www.bbc.com/news",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "gb-2",
+    "source": "Financial Times",
+    "homepage": "https://www.ft.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "de-1",
+    "source": "Deutsche Welle",
+    "homepage": "https://www.dw.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "de-2",
+    "source": "Handelsblatt",
+    "homepage": "https://www.handelsblatt.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "ch-1",
+    "source": "SWI swissinfo.ch",
+    "homepage": "https://www.swissinfo.ch/eng",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "ch-2",
+    "source": "Neue Zürcher Zeitung",
+    "homepage": "https://www.nzz.ch",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "fi-1",
+    "source": "Yle",
+    "homepage": "https://yle.fi",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "fi-2",
+    "source": "Helsingin Sanomat",
+    "homepage": "https://www.hs.fi",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "lu-1",
+    "source": "RTL Today",
+    "homepage": "https://today.rtl.lu",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "lu-2",
+    "source": "Luxembourg Times",
+    "homepage": "https://www.luxtimes.lu",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "es-1",
+    "source": "RTVE",
+    "homepage": "https://www.rtve.es/noticias",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "es-2",
+    "source": "elEconomista",
+    "homepage": "https://www.eleconomista.es",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "it-1",
+    "source": "ANSA",
+    "homepage": "https://www.ansa.it",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "it-2",
+    "source": "Il Sole 24 Ore",
+    "homepage": "https://www.ilsole24ore.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "fr-1",
+    "source": "France 24",
+    "homepage": "https://www.france24.com/fr",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "fr-2",
+    "source": "Les Echos",
+    "homepage": "https://www.lesechos.fr",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "se-1",
+    "source": "SVT Nyheter",
+    "homepage": "https://www.svt.se/nyheter",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "se-2",
+    "source": "Dagens industri",
+    "homepage": "https://www.di.se",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "at-1",
+    "source": "ORF",
+    "homepage": "https://orf.at",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "at-2",
+    "source": "Der Standard",
+    "homepage": "https://www.derstandard.at",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "ae-1",
+    "source": "The National",
+    "homepage": "https://www.thenationalnews.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "ae-2",
+    "source": "Gulf News",
+    "homepage": "https://gulfnews.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "kw-1",
+    "source": "Kuwait Times",
+    "homepage": "https://kuwaittimes.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "kw-2",
+    "source": "KUNA",
+    "homepage": "https://www.kuna.net.kw",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "sa-1",
+    "source": "Arab News",
+    "homepage": "https://www.arabnews.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "sa-2",
+    "source": "Saudi Gazette",
+    "homepage": "https://saudigazette.com.sa",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "il-1",
+    "source": "The Times of Israel",
+    "homepage": "https://www.timesofisrael.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "il-2",
+    "source": "Globes",
+    "homepage": "https://en.globes.co.il",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "za-1",
+    "source": "Daily Maverick",
+    "homepage": "https://www.dailymaverick.co.za",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "za-2",
+    "source": "Business Day",
+    "homepage": "https://www.businesslive.co.za/bd",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "nz-1",
+    "source": "RNZ",
+    "homepage": "https://www.rnz.co.nz",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "nz-2",
+    "source": "The New Zealand Herald",
+    "homepage": "https://www.nzherald.co.nz",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "in-1",
+    "source": "The Economic Times",
+    "homepage": "https://economictimes.indiatimes.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "in-2",
+    "source": "Business Standard",
+    "homepage": "https://www.business-standard.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "cn-1",
+    "source": "Caixin Global",
+    "homepage": "https://www.caixinglobal.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "cn-2",
+    "source": "CGTN",
+    "homepage": "https://www.cgtn.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "hk-1",
+    "source": "South China Morning Post",
+    "homepage": "https://www.scmp.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "hk-2",
+    "source": "RTHK",
+    "homepage": "https://news.rthk.hk",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "kr-1",
+    "source": "Yonhap",
+    "homepage": "https://en.yna.co.kr",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "kr-2",
+    "source": "The Korea Herald",
+    "homepage": "https://www.koreaherald.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "sg-1",
+    "source": "CNA",
+    "homepage": "https://www.channelnewsasia.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "sg-2",
+    "source": "The Business Times",
+    "homepage": "https://www.businesstimes.com.sg",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "au-1",
+    "source": "ABC News",
+    "homepage": "https://www.abc.net.au/news",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "au-2",
+    "source": "Australian Financial Review",
+    "homepage": "https://www.afr.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "tw-1",
+    "source": "Focus Taiwan",
+    "homepage": "https://focustaiwan.tw",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "tw-2",
+    "source": "Taipei Times",
+    "homepage": "https://www.taipeitimes.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "jp-1",
+    "source": "NHK World",
+    "homepage": "https://www3.nhk.or.jp/nhkworld",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "jp-2",
+    "source": "Nikkei Asia",
+    "homepage": "https://asia.nikkei.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "do-1",
+    "source": "Diario Libre",
+    "homepage": "https://www.diariolibre.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "do-2",
+    "source": "Listín Diario",
+    "homepage": "https://listindiario.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "gr-1",
+    "source": "eKathimerini",
+    "homepage": "https://www.ekathimerini.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "gr-2",
+    "source": "Naftemporiki",
+    "homepage": "https://www.naftemporiki.gr",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "ar-1",
+    "source": "La Nación",
+    "homepage": "https://www.lanacion.com.ar",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  },
+  {
+    "source_id": "ar-2",
+    "source": "Ámbito",
+    "homepage": "https://www.ambito.com",
+    "status": "skipped",
+    "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+  }
+]
