@@ -240,7 +240,7 @@ async function fetchTorFeed(): Promise<Item[]> {
       .select("name,description,url,created_at,category")
       .order("created_at", { ascending: false })
       .limit(20);
-    return (data || []).map((r: {name:string;url:string;description?:string;category?:string;created_at?:string;source?:string}) => ({
+    return (data || []).map((r: {name:string;url:string;description?:string;category?:string;created_at:string;source?:string}) => ({
       title: (r.description || r.name || "").slice(0, 200),
       source: "TOR_FEED",
       time: r.created_at,
