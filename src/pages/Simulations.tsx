@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import CurrentScenarioInputs from '@/components/CurrentScenarioInputs';
-import { DEFAULT_CAPITAL_INPUTS, buildCurrentSeed, buildEvaluationRequirement, requestCurrentBrief, type ScenarioBrief } from '@/lib/currentScenario';
+import { DEFAULT_CAPITAL_INPUTS, buildCurrentSeed, buildEvaluationRequirement } from '@/lib/currentScenario';
+import { useLiveNewsContext } from '@/hooks/useLiveNewsContext';
+import { personalizeContext } from '../../supabase/functions/_shared/live_context';
 import VVLayout from '@/components/VVLayout';
 import corpus from '@/data/historicalCorpus.json';
 import { buildSeed, checkAbort, engineCall, generateReport, prepareAndStart, type EngineState } from '@/lib/mirofishWorkflow';
@@ -11,8 +13,11 @@ export default function Simulations() {
   const articleIds = (params.get('articles') || '').split(',').filter(Boolean).slice(0,8);
   const [mode, setMode] = useState<'current' | 'historical'>('current');
   const [inputs, setInputs] = useState(DEFAULT_CAPITAL_INPUTS);
-  const [brief, setBrief] = useState<ScenarioBrief | null>(null);
-  const [synthBusy, setSynthBusy] = useState(false);
+  const {context, status:contextStatus, version:contextVersion} = useLiveNewsContext();
+  const brief = useMemo(() => {
+    if(!context)return null;
+    try { return personalizeContext(context,inputs); } catch { return null; }
+  },[context,inputs]);
   const [selected, setSelected] = useState('');
   const [scenario, setScenario] = useState(params.get('scenario') || 'Compare the effects of current global events on liquidity, risk and the decisions I am considering.');
   const [rounds, setRounds] = useState(8);
@@ -40,20 +45,14 @@ export default function Simulations() {
       catch { setError('Stop could not be confirmed. The server job may still be running.'); }
     } else setPhase('Monitoring stopped · preparation may continue on the server');
   };
-  const synthesize = async () => {
-    setSynthBusy(true); setError(''); setBrief(null);
-    try { const next = await requestCurrentBrief(inputs, articleIds); if (mounted.current) setBrief(next); }
-    catch (e) { if (mounted.current) setError(e instanceof Error ? e.message : 'Synthesis failed'); }
-    finally { if (mounted.current) setSynthBusy(false); }
-  };
   const launch = async () => {
     const controller = new AbortController(); run.current = controller;
     simulationId.current = null;
     setBusy(true); setError(''); setState(null); setReport('');
-    setRunContext(mode === 'current' && brief ? 'News snapshot: ' + new Date(brief.as_of).toLocaleString() : 'Historical-context run');
+    setRunContext(mode === 'current' && brief ? 'Frozen context version ' + contextVersion + ': ' + new Date(brief.as_of).toLocaleString() : 'Historical-context run');
     const updatePhase = (p: string) => { if (mounted.current && !controller.signal.aborted) setPhase(p); };
     try {
-      const seed = mode === 'current' ? buildCurrentSeed(scenario, brief!) : buildSeed(scenario, event);
+      const seed = mode === 'current' ? context!.background_prompt + '\n\n' + buildCurrentSeed(scenario, brief!) : buildSeed(scenario, event);
       const requirement = mode === 'current' ? buildEvaluationRequirement(scenario, brief!) : scenario;
       const id = await prepareAndStart(requirement, seed, rounds, updatePhase, id => { simulationId.current = id; }, controller.signal);
       updatePhase('Swarm running');
@@ -97,17 +96,17 @@ export default function Simulations() {
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
         <section className="space-y-5 rounded-2xl border border-border bg-background/90 p-6">
           <h2 className="text-lg font-semibold">Build a scenario</h2>
-          <div className="flex gap-2"><button disabled={busy || synthBusy} className={'rounded-lg border px-4 py-2 text-sm ' + (mode === 'current' ? 'border-primary text-primary' : 'border-border')} onClick={() => setMode('current')}>Current events</button><button disabled={busy || synthBusy} className={'rounded-lg border px-4 py-2 text-sm ' + (mode === 'historical' ? 'border-primary text-primary' : 'border-border')} onClick={() => setMode('historical')}>Historical context</button></div>
-          {mode === 'current' && <><CurrentScenarioInputs value={inputs} disabled={busy || synthBusy} onChange={v => { setInputs(v); setBrief(null); }}/>{articleIds.length > 0 && <p className="text-xs text-primary">{articleIds.length} selected news item(s) will be included alongside the global snapshot.</p>}<button disabled={busy || synthBusy || !inputs.objective.trim()} className="w-full rounded-lg border border-primary px-4 py-3 text-sm text-primary disabled:opacity-40" onClick={synthesize}>{synthBusy ? 'Gemini is synthesizing recent news…' : 'Synthesize current global events'}</button>
-          {brief && <div className="rounded-xl border border-primary/30 p-4"><p className="text-xs text-primary">As of {new Date(brief.as_of).toLocaleString()} · {brief.coverage.articles} headlines · {brief.coverage.markets.length} markets</p><p className="mt-3 text-sm leading-relaxed">{brief.summary}</p><h3 className="mt-4 text-sm font-semibold">Suggested scenario inputs</h3><div className="mt-3 space-y-2">{brief.suggestions.map((suggestion,i) => <button key={i} disabled={busy || synthBusy} className="w-full rounded-lg border border-border p-3 text-left text-sm hover:border-primary" onClick={() => setScenario(suggestion.prompt)}>{suggestion.title}</button>)}</div><h3 className="mt-4 text-sm font-semibold">Options to compare</h3><ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">{brief.comparison_options.map((option,i) => <li key={i}>{option}</li>)}</ul><details className="mt-4 text-xs"><summary className="cursor-pointer text-primary">Sources and assumptions</summary><ul className="mt-3 space-y-2">{brief.news.map(n => <li key={n.id}><a className="underline" href={n.canonical_url} target="_blank" rel="noopener noreferrer">{n.source_country} · {n.source}: {n.title}</a></li>)}</ul><p className="mt-3">{brief.assumptions.join(' · ')}</p></details><p className="mt-4 text-xs text-muted-foreground">Refresh after 15 minutes or when your decision inputs change. Prices and portfolio valuations are not part of this headline snapshot.</p></div>}</>}
+          <div className="flex gap-2"><button disabled={busy} className={'rounded-lg border px-4 py-2 text-sm ' + (mode === 'current' ? 'border-primary text-primary' : 'border-border')} onClick={() => setMode('current')}>Current events</button><button disabled={busy} className={'rounded-lg border px-4 py-2 text-sm ' + (mode === 'historical' ? 'border-primary text-primary' : 'border-border')} onClick={() => setMode('historical')}>Historical context</button></div>
+          {mode === 'current' && <><CurrentScenarioInputs value={inputs} disabled={busy} onChange={setInputs}/>{articleIds.length > 0 && <p className="text-xs text-primary">{articleIds.length} selected news item(s) will be included alongside the global snapshot.</p>}<p role="status" className="rounded-lg border border-primary/30 p-3 text-sm">{context ? (Date.parse(context.expires_at)<=Date.now() ? 'Context is stale; waiting for an automatic refresh · version ' : 'Background prompt updated automatically · version ') + contextVersion + ' · ' + new Date(context.as_of).toLocaleString() : contextStatus === 'loading' ? 'Loading prepared news context…' : contextStatus === 'waiting' ? 'Waiting for ingested news to produce the first background prompt.' : 'Live context service is unavailable.'}</p>
+          {brief && <div className="rounded-xl border border-primary/30 p-4"><p className="text-xs text-primary">As of {new Date(brief.as_of).toLocaleString()} · {brief.coverage.articles} headlines · {brief.coverage.markets.length} markets</p><p className="mt-3 text-sm leading-relaxed">{brief.summary}</p><h3 className="mt-4 text-sm font-semibold">Suggested scenario inputs</h3><div className="mt-3 space-y-2">{brief.suggestions.map((suggestion,i) => <button key={i} disabled={busy} className="w-full rounded-lg border border-border p-3 text-left text-sm hover:border-primary" onClick={() => setScenario(suggestion.prompt)}>{suggestion.title}</button>)}</div><h3 className="mt-4 text-sm font-semibold">Options to compare</h3><ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">{brief.comparison_options.map((option,i) => <li key={i}>{option}</li>)}</ul><details className="mt-4 text-xs"><summary className="cursor-pointer text-primary">Sources and assumptions</summary><ul className="mt-3 space-y-2">{brief.news.map(n => <li key={n.id}><a className="underline" href={n.canonical_url} target="_blank" rel="noopener noreferrer">{n.source_country} · {n.source}: {n.title}</a></li>)}</ul><p className="mt-3">{brief.assumptions.join(' · ')}</p></details><p className="mt-4 text-xs text-muted-foreground">New reporting updates this context automatically. Each launch freezes its own version; background updates do not rewrite an active run. Prices and portfolio valuations are not part of this news snapshot.</p></div>}</>}
           {mode === 'historical' && <>
 
           <div><label htmlFor="historical-event" className="mb-2 block text-sm">Historical context</label><select id="historical-event" className="w-full rounded-lg border border-border bg-background p-3 text-sm" value={selected} disabled={busy} onChange={e => setSelected(e.target.value)}><option value="">Custom scenario · no historical context</option>{corpus.map(e => <option key={e.event_id} value={e.event_id}>{e.name} ({e.start_date})</option>)}</select></div>
           {event && <div className="rounded-xl border border-border p-4 text-sm"><div className="flex flex-wrap gap-2"><span className="text-primary">{event.category.replace(/_/g,' ')}</span><span className="text-muted-foreground">{event.region} · {event.asset_class}</span></div><p className="mt-3">{event.trigger}</p><p className="mt-3 text-muted-foreground">Transmission: {event.contagion_channels}</p><p className="mt-3 text-xs text-primary">Unverified historical context · qualitative use only. Outcomes and subsequent policy responses are withheld from the seed.</p></div>}
           </>}
-          <div><label htmlFor="scenario" className="mb-2 block text-sm">What should the swarm explore?</label><textarea id="scenario" rows={5} maxLength={4000} className="w-full rounded-lg border border-border bg-background p-3 text-sm leading-relaxed" value={scenario} onChange={e => setScenario(e.target.value)} disabled={busy || synthBusy}/></div>
+          <div><label htmlFor="scenario" className="mb-2 block text-sm">What should the swarm explore?</label><textarea id="scenario" rows={5} maxLength={4000} className="w-full rounded-lg border border-border bg-background p-3 text-sm leading-relaxed" value={scenario} onChange={e => setScenario(e.target.value)} disabled={busy}/></div>
           <div><label htmlFor="rounds" className="mb-2 block text-sm">Rounds · {rounds}</label><input id="rounds" className="w-full accent-yellow-500" type="range" min={1} max={24} value={rounds} disabled={busy} onChange={e => setRounds(Number(e.target.value))}/><p className="mt-2 text-xs text-muted-foreground">Agent count is generated from the memory graph. More rounds increase API usage.</p></div>
-          <button className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground disabled:opacity-40" disabled={busy || synthBusy || health !== 'available' || !scenario.trim() || (mode === 'current' && !brief)} onClick={launch}>Start simulation</button>
+          <button className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground disabled:opacity-40" disabled={busy || health !== 'available' || !scenario.trim() || (mode === 'current' && (!brief || Date.parse(brief.expires_at)<=Date.now()))} onClick={launch}>Start simulation</button>
           {busy && <button className="w-full rounded-lg border border-border px-4 py-3 text-sm" onClick={stop}>Stop run</button>}
           {error && <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">{error}</p>}
         </section>

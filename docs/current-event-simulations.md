@@ -1,3 +1,5 @@
+> Updated: the default workflow now prepares prompts automatically before user input. See [automatic-news-prompts.md](automatic-news-prompts.md). The optional vv-scenario-brief endpoint remains available for explicit requests; its button is no longer required in the UI.
+
 # Current-event, objective-driven simulations
 
 ## User workflow
