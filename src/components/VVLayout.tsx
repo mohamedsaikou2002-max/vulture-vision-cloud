@@ -28,8 +28,8 @@ export default function VVLayout({ children, status, blurred = true }: Props) {
     return () => window.removeEventListener("vv-new-intel", onIntel);
   }, []);
 
-  const dotClass = status?.tone && status.tone !== "green" ? `status-dot ${status.tone}` : "status-dot";
-  const statusLabel = newIntel ? "NEW INTEL" : (status?.label || "SYSTEM ONLINE");
+  const dotClass = status?.tone && status.tone !== "green" ? `status-dot ${status.tone}` : "status-dot gold";
+  const statusLabel = newIntel ? "NEW INTEL" : (status?.label || "STATUS UNVERIFIED");
 
   return (
     <>

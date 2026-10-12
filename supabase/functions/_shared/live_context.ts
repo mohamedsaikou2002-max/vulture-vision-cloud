@@ -26,6 +26,17 @@ export function compileBackgroundPrompt(context: ScenarioBrief): string {
 export function personalizeContext(context: LiveNewsContext, inputs: CapitalInputs): ScenarioBrief {
   const parsed=parseCapitalInputs(inputs);
   const alternatives=parsed.alternatives.split(/\n|;/).map(s=>s.trim()).filter(Boolean).slice(0,6);
-  return { ...context, inputs:parsed, comparison_options:alternatives.length>=2 ? alternatives : context.comparison_options,
+  return { ...context, inputs:parsed, comparison_options:alternatives.length ? ['Maintain current approach (baseline)',...alternatives] : ['Maintain current approach (baseline)','Evaluate a change against the stated objective'],
     evaluation_metrics:['Fit to stated objective: '+parsed.objective,'Liquidity needs and constraints: '+parsed.constraints,'Risk tolerance: '+parsed.risk_tolerance,'Horizon: '+parsed.horizon_days+' days',...context.evaluation_metrics].slice(0,8) };
+}
+
+export function includeSelectedEvidence(context: LiveNewsContext, requested: string[], selected: NewsEvidence[], now=Date.now()): LiveNewsContext {
+  const unique=[...new Set(requested)];
+  if(unique.length>8 || unique.some(id=>!/^[a-f0-9]{64}$/.test(id)))throw new Error('Invalid news selection');
+  const cutoff=now-24*3600_000;
+  const recent=selected.filter(n=>n.published_at && Date.parse(n.published_at)>=cutoff && Date.parse(n.published_at)<=now+5*60_000 && Date.parse(n.fetched_at)>=cutoff && Date.parse(n.fetched_at)<=now+5*60_000);
+  if(unique.some(id=>!recent.some(n=>n.id===id)))throw new Error('A selected story is missing, undated or stale. Select recent news.');
+  const merged=[...recent.filter(n=>unique.includes(n.id)),...context.news];
+  const seen=new Set<string>();const news=merged.filter(n=>{if(seen.has(n.id))return false;seen.add(n.id);return true;});
+  return {...context,news,coverage:{...context.coverage,articles:news.length,markets:[...new Set(news.map(n=>n.source_country))]}};
 }

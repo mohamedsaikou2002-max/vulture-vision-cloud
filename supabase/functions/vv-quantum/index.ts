@@ -1,3 +1,5 @@
+interface AmplitudeTick {id?:string;ofi?:number;change_24h_pct?:number;}
+import { authorize } from '../_shared/access.ts';
 // vv-quantum — quantum backend selector, status, signals, structured logs.
 // - GET            → backend status + last cached quantum state (warm_state)
 // - POST           → run amplitudes through analytic Born-rule or BlueQubit cloud
@@ -74,7 +76,7 @@ async function bluequbitRun(amps: number[], nQubits: number, key: string) {
 
 // Build a 2^n amplitude vector from market ticks.
 // Each instrument contributes one amplitude proportional to |ofi| + vol.
-function ampsFromTicks(ticks: any[], nQubits: number): { amps: number[]; labels: string[] } {
+function ampsFromTicks(ticks: AmplitudeTick[], nQubits: number): { amps: number[]; labels: string[] } {
   const dim = 2 ** nQubits;
   const labels: string[] = [];
   const amps = new Array(dim).fill(0);
@@ -92,6 +94,8 @@ function ampsFromTicks(ticks: any[], nQubits: number): { amps: number[]; labels:
 Deno.serve(async (req) => {
   const t0 = Date.now();
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await authorize(req, true);
+  if (denied) return denied;
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const rl = rateLimit(ip);
@@ -114,7 +118,7 @@ Deno.serve(async (req) => {
   if (req.method === "GET") {
     const url = new URL(req.url);
     const includeState = url.searchParams.get("state") !== "0";
-    let last: any = null;
+    let last: unknown = null;
     if (includeState) {
       const { data } = await sb.from("warm_state").select("value").eq("key", QSTATE_KEY).maybeSingle();
       last = data?.value ?? null;
@@ -135,7 +139,7 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const wantSignals = url.searchParams.has("signals");
-    const body = (await req.json().catch(() => ({}))) as any;
+    const body = (await req.json().catch(() => ({}))) as {prefer?:"analytic"|"cloud"|"auto";n_qubits?:number;amplitudes?:number[]};
     const prefer: "analytic" | "cloud" | "auto" = body.prefer ?? "auto";
     let nQubits: number = body.n_qubits ?? 4;
     let amps: number[];
@@ -145,7 +149,8 @@ Deno.serve(async (req) => {
       // Pull live market snapshot from sibling edge function.
       nQubits = Math.max(2, Math.min(LOCAL_QUBIT_CAP, body.n_qubits ?? 4));
       const m = await sb.functions.invoke("vv-market");
-      const ticks = (m.data?.ticks ?? []) as any[];
+      const ticks = (m.data?.ticks ?? []) as AmplitudeTick[];
+      if(!ticks.length)throw new Error('No market data available for quantum signals');
       const built = ampsFromTicks(ticks, nQubits);
       amps = built.amps; labels = built.labels;
       log("signals_input", { instruments: ticks.length, n_qubits: nQubits });
@@ -154,16 +159,20 @@ Deno.serve(async (req) => {
       nQubits = body.n_qubits ?? Math.max(1, Math.round(Math.log2(amps.length)));
     }
 
+    if(!Number.isInteger(nQubits) || nQubits<1 || nQubits>14 || !Array.isArray(amps) || amps.length!==2**nQubits || amps.some(a=>!Number.isFinite(a)) || amps.every(a=>a===0))return new Response(JSON.stringify({ok:false,error:"Invalid nonzero amplitude vector/dimension"}),{status:400,headers:corsHeaders});
+    if(!["analytic","cloud","auto"].includes(prefer))return new Response(JSON.stringify({ok:false,error:"Invalid backend preference"}),{status:400,headers:corsHeaders});
+    if(prefer==="cloud" && !cloudAvailable)return new Response(JSON.stringify({ok:false,error:"Cloud backend unavailable"}),{status:503,headers:corsHeaders});
     const useCloud = prefer === "cloud" ||
       (prefer === "auto" && cloudAvailable && nQubits > LOCAL_QUBIT_CAP);
 
-    let out: any;
+    let out: ReturnType<typeof analyticBornRule> | ({backend:"bluequbit"} & Record<string,unknown>);
     if (useCloud && cloudAvailable) {
       try {
         out = await bluequbitRun(amps, nQubits, key);
         log("cloud_ok", { n_qubits: nQubits });
       } catch (e) {
         log("cloud_fallback", { reason: (e as Error).message, n_qubits: nQubits });
+        if(prefer==='cloud')throw e;
         out = analyticBornRule(amps);
       }
     } else {
@@ -186,7 +195,7 @@ Deno.serve(async (req) => {
     if (wantSignals) {
       const { data: prev } = await sb.from("warm_state").select("value").eq("key", QHIST_KEY).maybeSingle();
       const hist = Array.isArray(prev?.value) ? prev!.value : [];
-      hist.push({ ts: result.ts, coherence: result.coherence, dominant: result.dominant, backend: result.backend });
+      hist.push({ ts: result.ts, coherence: out.coherence ?? null, dominant: out.dominant ?? null, backend: result.backend });
       await sb.from("warm_state").upsert(
         { key: QHIST_KEY, value: hist.slice(-50), expires_at: null },
         { onConflict: "key" },

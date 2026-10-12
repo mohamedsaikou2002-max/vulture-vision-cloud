@@ -1,7 +1,10 @@
+import { authorize } from '../_shared/access.ts';
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await authorize(req, true);
+  if (denied) return denied;
 
   try {
     const { message } = await req.json();
@@ -33,7 +36,7 @@ Deno.serve(async (req) => {
       console.error("Gemini error:", r.status, j);
       throw new Error(j?.error?.message || `Gemini ${r.status}`);
     }
-    const reply = j?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") || "[no response]";
+    const reply = j?.candidates?.[0]?.content?.parts?.map((p: {text?:string}) => p.text).join("") || "[no response]";
 
 
     return new Response(JSON.stringify({ reply }), {

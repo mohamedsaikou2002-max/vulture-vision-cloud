@@ -1,3 +1,4 @@
+import { authorize } from '../_shared/access.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -12,9 +13,11 @@ const supa = () => createClient(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await authorize(req, true);
+  if (denied) return denied;
   const db = supa();
   try {
-    let body: any = {};
+    let body: {thesis?:unknown;antithesis?:unknown;synthesis?:unknown;narrative?:string;score?:number} = {};
     try {
       const text = await req.text();
       if (text) body = JSON.parse(text);

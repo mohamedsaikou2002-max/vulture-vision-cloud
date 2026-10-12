@@ -174,7 +174,7 @@ function parseRss(xml: string, source: string, sourceUrl?: string): Item[] {
       try {
         const origin = new URL(link).origin;
         journalist_url = `${origin}/search?q=${encodeURIComponent(journalist)}`;
-      } catch {}
+      } catch { /* Retain last successful state on transient failure. */ }
     }
     out.push({ title, source, time, link, journalist, journalist_url, source_url: sourceUrl });
   }
@@ -186,7 +186,7 @@ async function fetchFeeds(feeds: { url: string; source: string }[]): Promise<Ite
     const r = await fetch(f.url, { headers: { "User-Agent": "VultureVision/1.0" } });
     if (!r.ok) throw new Error(`${f.source} ${r.status}`);
     let sourceUrl: string | undefined;
-    try { sourceUrl = new URL(f.url).origin; } catch {}
+    try { sourceUrl = new URL(f.url).origin; } catch { /* Retain last successful state on transient failure. */ }
     return parseRss(await r.text(), f.source, sourceUrl);
   }));
   const items = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
@@ -214,7 +214,7 @@ async function fetchNewsApi(): Promise<Item[]> {
         if (!headline) continue;
         const link = art.url;
         let source_url: string | undefined;
-        try { source_url = link ? new URL(link).origin : undefined; } catch {}
+        try { source_url = link ? new URL(link).origin : undefined; } catch { /* Retain last successful state on transient failure. */ }
         out.push({
           title: headline.slice(0, 200),
           source: art.source?.name || "NewsAPI",
@@ -224,7 +224,7 @@ async function fetchNewsApi(): Promise<Item[]> {
           source_url,
         });
       }
-    } catch {}
+    } catch { /* Retain last successful state on transient failure. */ }
   }));
   return out;
 }
@@ -240,7 +240,7 @@ async function fetchTorFeed(): Promise<Item[]> {
       .select("name,description,url,created_at,category")
       .order("created_at", { ascending: false })
       .limit(20);
-    return (data || []).map((r: any) => ({
+    return (data || []).map((r: {name:string;url:string;description?:string;category?:string;created_at?:string;source?:string}) => ({
       title: (r.description || r.name || "").slice(0, 200),
       source: "TOR_FEED",
       time: r.created_at,

@@ -49,7 +49,7 @@ const f4 = (n?: number) => (n == null || isNaN(n) ? "—" : n.toFixed(4));
 const dir = (n?: number) => (n != null && n >= 0 ? "up" : "down");
 
 const regimeBadge = (r?: string) => {
-  const cls = ({ BULL: "badge-green", BEAR: "badge-red", VOLATILE: "badge-yellow", SIDEWAYS: "badge-navy" } as any)[r || ""] || "badge-dim";
+  const cls = ({ BULL: "badge-green", BEAR: "badge-red", VOLATILE: "badge-yellow", SIDEWAYS: "badge-navy" } as Record<string,string>)[r || ""] || "badge-dim";
   return { cls, label: r || "—" };
 };
 
@@ -117,7 +117,7 @@ export default function Analytics() {
   })) : [];
 
   return (
-    <VVLayout status={status as any}>
+    <VVLayout status={status}>
       <div className="scroll-inner">
         <div className="stat-row">
           <div className="stat-card panel">

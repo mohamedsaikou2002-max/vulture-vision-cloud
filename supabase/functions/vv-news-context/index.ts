@@ -12,7 +12,7 @@ Deno.serve(async req => {
   const db=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   const {data:claims,error:claimError}=await db.rpc('claim_news_context');
   if(claimError)return reply({error:'Context queue unavailable'},503);
-  const claim=claims?.[0];if(!claim)return reply({status:'idle'});
+  const claim=claims?.[0];if(!claim){ const {data,error}=await db.rpc('news_context_status');return error ? reply({error:'Worker status unavailable'},503) : reply(data); }
   try{
     const asOf=new Date().toISOString();const cutoff=new Date(Date.now()-24*3600_000).toISOString();
     const {data,error}=await db.from('news_articles').select('id,title,source,canonical_url,source_country,language,published_at,fetched_at').gte('fetched_at',cutoff).gte('published_at',cutoff).order('published_at',{ascending:false}).limit(1000);

@@ -7,6 +7,7 @@ import os
 import socket
 import sqlite3
 import time
+import threading
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -19,6 +20,16 @@ from defusedxml import ElementTree as ET
 
 AGENT = 'VultureVisionNewsBot/0.1'
 MAX_BYTES = 1_500_000
+HOST_THROTTLE_LOCK = threading.Lock()
+HOST_NEXT_REQUEST = {}
+
+def throttle_host(host, interval):
+    with HOST_THROTTLE_LOCK:
+        now=time.monotonic()
+        reserved=max(now,HOST_NEXT_REQUEST.get(host,0))
+        HOST_NEXT_REQUEST[host]=reserved+interval
+    time.sleep(max(0,reserved-time.monotonic()))
+
 
 
 def canonical(url):
@@ -115,7 +126,7 @@ class Crawler:
                 rate = policy.request_rate(AGENT)
                 if rate and rate.requests > 0: interval = max(interval, rate.seconds / rate.requests)
             else: interval = self.delay
-            time.sleep(max(0, interval - (time.monotonic() - self.last.get(p.hostname, 0))))
+            throttle_host(p.hostname,interval)
             row = self.cache.execute('SELECT etag,modified,body FROM http_cache WHERE url=?', (url,)).fetchone()
             headers = {}
             if row:
@@ -193,7 +204,8 @@ class Crawler:
 
 
 def open_cache(path):
-    db=sqlite3.connect(path)
+    db=sqlite3.connect(path,timeout=30)
+    db.execute('PRAGMA journal_mode=WAL')
     db.execute('CREATE TABLE IF NOT EXISTS http_cache(url TEXT PRIMARY KEY,etag TEXT,modified TEXT,body TEXT)')
     return db
 

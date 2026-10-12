@@ -1,3 +1,4 @@
+import { authorize } from '../_shared/access.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -12,9 +13,11 @@ const supa = () => createClient(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await authorize(req, true);
+  if (denied) return denied;
   const db = supa();
   try {
-    let body: any = {};
+    let body: {instrument?:string;side?:string;qty?:number;price?:number;pnl?:number;mode?:string;meta?:Record<string,unknown>} = {};
     try {
       const text = await req.text();
       if (text) body = JSON.parse(text);
@@ -26,14 +29,14 @@ Deno.serve(async (req) => {
       const { data, error } = await db.from("trade_history")
         .select("*").order("created_at", { ascending: false }).limit(limit);
       if (error) throw error;
-      const totalPnl = (data || []).reduce((s, t: any) => s + Number(t.pnl || 0), 0);
+      const totalPnl = (data || []).reduce((s, t: {pnl?:number}) => s + Number(t.pnl || 0), 0);
       return new Response(JSON.stringify({ trades: data, total_pnl: totalPnl, count: data?.length || 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { instrument, side, qty, price, pnl, mode = "paper", meta = {} } = body;
-    if (!side || qty == null || price == null) {
+    if (!["buy","sell","BUY","SELL"].includes(side || "") || typeof qty !== "number" || !Number.isFinite(qty) || qty <= 0 || typeof price !== "number" || !Number.isFinite(price) || price <= 0 || !["paper","live"].includes(mode) || instrument.length > 40) {
       return new Response(JSON.stringify({ error: "instrument, side, qty, price required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

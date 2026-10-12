@@ -1,3 +1,4 @@
+import { authorize } from '../_shared/access.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -12,6 +13,8 @@ const supa = () => createClient(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await authorize(req, true);
+  if (denied) return denied;
   const db = supa();
   try {
     if (req.method === "GET") {
@@ -30,7 +33,7 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     // Safely parse body (may be empty when used as a GET-like fetch)
-    let body: any = {};
+    let body: {reason?:string;source?:string;level?:string;payload?:Record<string,unknown>;set_active?:boolean} = {};
     try {
       const text = await req.text();
       if (text) body = JSON.parse(text);
@@ -57,7 +60,7 @@ Deno.serve(async (req) => {
       if (error) throw error;
       if (typeof set_active === "boolean") {
         await db.from("warm_state").upsert(
-          { key: "kill_switch_active", value: set_active as any },
+          { key: "kill_switch_active", value: set_active },
           { onConflict: "key" },
         );
       }

@@ -24,14 +24,6 @@ interface Item {
 }
 interface NewsData { irl: Item[]; dark: Item[]; tech: Item[]; }
 
-const fallbackTicker = [
-  "FBI warns of increased ransomware targeting healthcare",
-  "Dark web market Nemesis reported offline — unknown cause",
-  "IBM 1,000-qubit processor breaks gate fidelity record",
-  "Europol seizes infrastructure in 14-nation cyber op",
-  "LM Studio ships multi-model routing support",
-  "New CVE disclosed in OpenSSH versions 8.x – 9.6",
-];
 
 function timeAgo(iso?: string) {
   if (!iso) return "";
@@ -86,7 +78,7 @@ export default function News() {
   // ticker: use signals if brief present
   const tickerSource = brief?.supporting_signals?.length
     ? brief.supporting_signals.map(s => `[${(s.ticker_impact || []).join("/") || "MKT"}] ${s.signal}`)
-    : fallbackTicker;
+    : ["No current synthesized signals available."];
   const doubled = [...tickerSource, ...tickerSource];
 
   return (
@@ -97,13 +89,13 @@ export default function News() {
         {publisherItems.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{publisherItems.map(it => <article key={it.link} className="rounded-lg border border-border p-4 hover:border-primary"><p className="mb-2 text-xs text-primary">{it.source_country} · {it.source} · {it.language}</p><a href={it.link} target="_blank" rel="noopener noreferrer" className="text-sm leading-relaxed hover:underline">{it.title}</a><p className="mt-3 text-xs text-muted-foreground">{it.time ? timeAgo(it.time) : "Publication time unavailable"}</p>{it.id && <Link className="mt-3 inline-block text-xs text-primary underline" to={"/simulations?" + new URLSearchParams({ scenario: "Explore the consequences of: " + it.title, articles: it.id })}>Plug into simulation</Link>}</article>)}</div> : <p role="status" className="mt-5 text-sm text-muted-foreground">{publisherStatus === "loading" ? "Loading publisher headlines…" : publisherStatus === "no_recent_articles" ? "No recent publisher headlines for this market." : "Publisher ingestion is not available yet."}</p>}
       </section>
       <div className="news-grid">
-        <Column title="Live IRL News" tone="red" items={data.irl} badge="badge-red" badgeText="LIVE" />
+        <Column title="IRL News" tone="red" items={data.irl} badge="badge-red" badgeText="FEED" />
         <Column title="Dark Web Intel" tone="gold" items={data.dark} badge="badge-dark" badgeText="ALERT" />
         <Column title="Tech Intelligence" tone="cyan" items={data.tech} badge="badge-tech" badgeText="NEW" />
         <IntelSynthesisColumn brief={brief} synthBusy={synthBusy} onSynthesize={onSynthesize} />
       </div>
       <div className="ticker-bar">
-        <div className="ticker-label">// LIVE</div>
+        <div className="ticker-label">// SIGNALS</div>
         <div className="ticker-track">
           <div className="ticker-inner">
             {doubled.map((t, i) => (
@@ -126,7 +118,7 @@ function Column({ title, tone, items, badge, badgeText }: {
         {title}
       </div>
       <div className="col-body">
-        {items.length === 0 && <div className="news-item"><div className="news-title dim-text">Loading feed…</div></div>}
+        {items.length === 0 && <div className="news-item"><div className="news-title dim-text">No feed items available.</div></div>}
         {items.slice(0, 20).map((it, i) => {
           let sourceHref = it.source_url;
           if (!sourceHref && it.link) {

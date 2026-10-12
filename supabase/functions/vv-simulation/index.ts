@@ -1,3 +1,4 @@
+import { MAX_REQUEST_BYTES, validateSeedSize } from '../_shared/simulation_payload.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Operator-only pilot gateway. Keep the engine private; never put its token in VITE variables.
@@ -18,13 +19,14 @@ Deno.serve(async req => {
   if (!base || !token) return reply({ error: "Simulation engine has not been configured" }, 503);
   try {
     const raw = await req.text();
-    if (raw.length > 100000) return reply({ error: "Payload too large" }, 413);
+    if (new TextEncoder().encode(raw).byteLength > MAX_REQUEST_BYTES) return reply({ error: "Payload too large" }, 413);
     const { path, method = "GET", payload, seed } = JSON.parse(raw);
     if (typeof path !== "string" || !allowed.some(r => r.test(path)) || !["GET", "POST"].includes(method)) return reply({ error: "Unsupported engine operation" }, 400);
     const upstreamHeaders: Record<string, string> = { "X-Vulture-Gateway-Token": token };
     let body: BodyInit | undefined;
     if (path === "/api/graph/ontology/generate") {
-      if (method !== "POST" || typeof seed !== "string" || !seed.trim() || seed.length > 60000 || typeof payload?.simulation_requirement !== "string") return reply({ error: "Invalid seed document" }, 400);
+      if (method !== "POST" || typeof seed !== "string" || !seed.trim() || typeof payload?.simulation_requirement !== "string") return reply({ error: "Invalid seed document" }, 400);
+      try { validateSeedSize(seed); } catch (e) { return reply({ error: (e as Error).message }, 400); }
       const form = new FormData();
       form.append("files", new Blob([seed], { type: "text/markdown" }), "vulture-seed.md");
       form.append("simulation_requirement", payload.simulation_requirement);

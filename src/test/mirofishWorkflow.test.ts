@@ -23,4 +23,19 @@ describe("MiroFish integration", () => {
     await expect(prepareAndStart("shock", "seed", 8, vi.fn(), vi.fn(), new AbortController().signal)).rejects.toThrow("preparation failed");
     expect(invoke).toHaveBeenCalledTimes(3);
   });
+  it("resumes a saved running simulation without duplicate mutation calls",async()=>{
+    const onId=vi.fn();
+    invoke.mockResolvedValueOnce({data:{data:{status:'completed'}}});
+    expect(await prepareAndStart('shock','seed',8,vi.fn(),onId,new AbortController().signal,{project_id:'p',graph_task_id:'g',simulation_id:'s',prepared_complete:true,started:true})).toBe('s');
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(onId).toHaveBeenCalledWith('s');
+  });
+  it("saves a mutation response before honoring cancellation",async()=>{
+    const controller=new AbortController();const save=vi.fn();
+    invoke.mockImplementationOnce(async()=>{controller.abort();return {data:{data:{project_id:'recover-me'}}};});
+    await expect(prepareAndStart('shock','seed',8,vi.fn(),vi.fn(),controller.signal,{},save)).rejects.toMatchObject({name:'AbortError'});
+    expect(save).toHaveBeenCalledWith({project_id:'recover-me'});
+    expect(invoke).toHaveBeenCalledTimes(1);
+  });
+
 });

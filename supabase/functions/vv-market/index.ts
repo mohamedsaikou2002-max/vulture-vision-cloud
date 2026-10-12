@@ -1,3 +1,4 @@
+interface BybitTicker {symbol:string;bid1Size?:string;ask1Size?:string;turnover24h?:string;bid1Price?:string;ask1Price?:string;lastPrice?:string;volume24h?:string;price24hPcnt?:string;}
 // MarketWorker — Bybit (crypto) + OANDA (forex).
 // Returns a unified snapshot tick set. No long-lived sockets in edge runtime.
 
@@ -29,7 +30,7 @@ interface Tick {
 // ── Bybit ───────────────────────────────────────────────────
 async function fetchBybit(instruments: string[]): Promise<Tick[]> {
   // Prod first — testnet often returns empty bid/ask. Fall back to testnet only on hard failure.
-  let payload: any = null;
+  let payload: {result?:{list?:BybitTicker[]}} | null = null;
   try {
     const r1 = await fetch("https://api.bybit.com/v5/market/tickers?category=spot");
     if (r1.ok) payload = await r1.json();
@@ -40,7 +41,7 @@ async function fetchBybit(instruments: string[]): Promise<Tick[]> {
       if (r2.ok) payload = await r2.json();
     } catch { /* ignore */ }
   }
-  const list: any[] = payload?.result?.list ?? [];
+  const list: BybitTicker[] = payload?.result?.list ?? [];
   const want = new Set(instruments.map(s => s.toUpperCase()));
   const ts = Date.now();
   const byId: Record<string, Tick> = {};

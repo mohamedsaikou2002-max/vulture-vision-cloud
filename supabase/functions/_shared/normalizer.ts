@@ -1,3 +1,8 @@
+interface BinanceMessage {b?:string;a?:string;s?:string;B?:string;A?:string;c?:string;v?:string;E?:number;}
+interface BybitData {symbol?:string;lastPrice?:string;markPrice?:string;bid1Price?:string;ask1Price?:string;volume24h?:string;}
+interface BybitMessage {ts?:number;data?:BybitData | BybitData[];}
+interface OandaMessage {type?:string;instrument?:string;bids?:{price?:string}[];asks?:{price?:string}[];}
+interface AlpacaMessage {S?:string;T?:string;bp?:number;ap?:number;bs?:number;as?:number;p?:number;s?:number;}
 // Normalizer — convert exchange payloads into a unified tick schema.
 // Stateful: tracks last price per instrument to emit change_pct/direction.
 
@@ -32,7 +37,7 @@ export class Normalizer {
 
   private nowUs(): number { return Date.now() * 1000; }
 
-  normalizeBinance(raw: any): Tick | null {
+  normalizeBinance(raw: BinanceMessage): Tick | null {
     try {
       if (raw?.b != null && raw?.a != null && raw?.s) {
         const bid = parseFloat(raw.b), ask = parseFloat(raw.a);
@@ -56,7 +61,7 @@ export class Normalizer {
     return null;
   }
 
-  normalizeBybit(raw: any): Tick | null {
+  normalizeBybit(raw: BybitMessage): Tick | null {
     try {
       let data = raw?.data;
       if (Array.isArray(data)) data = data[0];
@@ -73,7 +78,7 @@ export class Normalizer {
     } catch { return null; }
   }
 
-  normalizeOanda(raw: any): Tick | null {
+  normalizeOanda(raw: OandaMessage): Tick | null {
     try {
       if (raw?.type !== "PRICE") return null;
       const bid = parseFloat(raw?.bids?.[0]?.price);
@@ -86,7 +91,7 @@ export class Normalizer {
     } catch { return null; }
   }
 
-  normalizeAlpaca(raw: any): Tick | null {
+  normalizeAlpaca(raw: AlpacaMessage): Tick | null {
     try {
       const sym = raw?.S; if (!sym) return null;
       if (raw.T === "q") {
@@ -110,12 +115,12 @@ export class Normalizer {
     return null;
   }
 
-  normalizeAny(raw: any, source: Source | string): Tick | null {
+  normalizeAny(raw: unknown, source: Source | string): Tick | null {
     switch ((source || "").toLowerCase()) {
-      case "binance": return this.normalizeBinance(raw);
-      case "bybit":   return this.normalizeBybit(raw);
-      case "oanda":   return this.normalizeOanda(raw);
-      case "alpaca":  return this.normalizeAlpaca(raw);
+      case "binance": return this.normalizeBinance(raw as BinanceMessage);
+      case "bybit":   return this.normalizeBybit(raw as BybitMessage);
+      case "oanda":   return this.normalizeOanda(raw as OandaMessage);
+      case "alpaca":  return this.normalizeAlpaca(raw as AlpacaMessage);
       default: return null;
     }
   }

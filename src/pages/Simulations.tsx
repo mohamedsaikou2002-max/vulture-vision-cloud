@@ -2,22 +2,26 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import CurrentScenarioInputs from '@/components/CurrentScenarioInputs';
 import { DEFAULT_CAPITAL_INPUTS, buildCurrentSeed, buildEvaluationRequirement } from '@/lib/currentScenario';
+import { useSelectedNews } from '@/hooks/useSelectedNews';
 import { useLiveNewsContext } from '@/hooks/useLiveNewsContext';
-import { personalizeContext } from '../../supabase/functions/_shared/live_context';
+import { personalizeContext, includeSelectedEvidence } from '../../supabase/functions/_shared/live_context';
 import VVLayout from '@/components/VVLayout';
 import corpus from '@/data/historicalCorpus.json';
-import { buildSeed, checkAbort, engineCall, generateReport, prepareAndStart, type EngineState } from '@/lib/mirofishWorkflow';
+import { supabase } from '@/integrations/supabase/client';
+import { type RunCheckpoint, buildSeed, checkAbort, engineCall, generateReport, prepareAndStart, type EngineState } from '@/lib/mirofishWorkflow';
 
 export default function Simulations() {
   const [params] = useSearchParams();
-  const articleIds = (params.get('articles') || '').split(',').filter(Boolean).slice(0,8);
+  const selectionKey=params.get('articles') || '';
+  const articleIds=useMemo(()=>selectionKey.split(',').filter(Boolean),[selectionKey]);
   const [mode, setMode] = useState<'current' | 'historical'>('current');
   const [inputs, setInputs] = useState(DEFAULT_CAPITAL_INPUTS);
-  const {context, status:contextStatus, version:contextVersion} = useLiveNewsContext();
+  const {context, status:contextStatus, version:contextVersion,workerStatus} = useLiveNewsContext();
+  const selectedNews=useSelectedNews(articleIds);
   const brief = useMemo(() => {
     if(!context)return null;
-    try { return personalizeContext(context,inputs); } catch { return null; }
-  },[context,inputs]);
+    try { return personalizeContext(includeSelectedEvidence(context,articleIds,selectedNews.news),inputs); } catch { return null; }
+  },[context,inputs,selectedNews.news,articleIds]);
   const [selected, setSelected] = useState('');
   const [scenario, setScenario] = useState(params.get('scenario') || 'Compare the effects of current global events on liquidity, risk and the decisions I am considering.');
   const [rounds, setRounds] = useState(8);
@@ -31,9 +35,17 @@ export default function Simulations() {
   const run = useRef<AbortController | null>(null);
   const simulationId = useRef<string | null>(null);
   const mounted = useRef(true);
+  const storageKey=useRef<string|null>(null);
+  const saved=useRef<{checkpoint:RunCheckpoint;seed:string;requirement:string;rounds:number}|null>(null);
+  const [recoverable,setRecoverable]=useState(false);
   const event = corpus.find(e => e.event_id === selected);
   useEffect(() => {
     mounted.current = true;
+    void supabase.auth.getSession().then(({data:{session}})=>{
+      if(!mounted.current || !session)return;
+      storageKey.current='vv-run-'+session.user.id;
+      try{const raw=sessionStorage.getItem(storageKey.current);if(raw){saved.current=JSON.parse(raw);simulationId.current=saved.current?.checkpoint.simulation_id || null;setRecoverable(true);setPhase('Saved run available · resume to check server status');}}catch{sessionStorage.removeItem(storageKey.current);}
+    });
     engineCall('/health').then(() => { if (mounted.current) setHealth('available'); }).catch(() => { if (mounted.current) setHealth('unavailable'); });
     return () => { mounted.current = false; run.current?.abort(); };
   }, []);
@@ -45,20 +57,22 @@ export default function Simulations() {
       catch { setError('Stop could not be confirmed. The server job may still be running.'); }
     } else setPhase('Monitoring stopped · preparation may continue on the server');
   };
-  const launch = async () => {
+  const launch = async (resume=false) => {
     const controller = new AbortController(); run.current = controller;
-    simulationId.current = null;
+    if(!resume)simulationId.current = null;
     setBusy(true); setError(''); setState(null); setReport('');
     setRunContext(mode === 'current' && brief ? 'Frozen context version ' + contextVersion + ': ' + new Date(brief.as_of).toLocaleString() : 'Historical-context run');
     const updatePhase = (p: string) => { if (mounted.current && !controller.signal.aborted) setPhase(p); };
     try {
-      const seed = mode === 'current' ? context!.background_prompt + '\n\n' + buildCurrentSeed(scenario, brief!) : buildSeed(scenario, event);
-      const requirement = mode === 'current' ? buildEvaluationRequirement(scenario, brief!) : scenario;
-      const id = await prepareAndStart(requirement, seed, rounds, updatePhase, id => { simulationId.current = id; }, controller.signal);
+      const seed = resume && saved.current ? saved.current.seed : mode === 'current' ? buildCurrentSeed(scenario, brief!) : buildSeed(scenario, event);
+      const requirement = resume && saved.current ? saved.current.requirement : mode === 'current' ? buildEvaluationRequirement(scenario, brief!) : scenario;
+      const snapshot=resume && saved.current ? saved.current : {checkpoint:{},seed,requirement,rounds};
+      const save=(checkpoint:RunCheckpoint)=>{snapshot.checkpoint=checkpoint;saved.current=snapshot;if(storageKey.current)sessionStorage.setItem(storageKey.current,JSON.stringify(snapshot));if(mounted.current)setRecoverable(true);};
+      const id = await prepareAndStart(requirement, seed, snapshot.rounds, updatePhase, id => { simulationId.current = id; }, controller.signal,snapshot.checkpoint,save);
       updatePhase('Swarm running');
       const deadline = Date.now() + 30 * 60 * 1000;
       while (!controller.signal.aborted && Date.now() < deadline) {
-        const result = await engineCall('/api/simulation/' + encodeURIComponent(id) + '/run-status') as EngineState;
+        const result = await engineCall('/api/simulation/' + encodeURIComponent(id) + '/run-status',undefined,undefined,controller.signal) as EngineState;
         checkAbort(controller.signal);
         if (mounted.current) setState(result);
         if (['completed', 'stopped', 'failed'].includes(result.runner_status)) {
@@ -97,7 +111,7 @@ export default function Simulations() {
         <section className="space-y-5 rounded-2xl border border-border bg-background/90 p-6">
           <h2 className="text-lg font-semibold">Build a scenario</h2>
           <div className="flex gap-2"><button disabled={busy} className={'rounded-lg border px-4 py-2 text-sm ' + (mode === 'current' ? 'border-primary text-primary' : 'border-border')} onClick={() => setMode('current')}>Current events</button><button disabled={busy} className={'rounded-lg border px-4 py-2 text-sm ' + (mode === 'historical' ? 'border-primary text-primary' : 'border-border')} onClick={() => setMode('historical')}>Historical context</button></div>
-          {mode === 'current' && <><CurrentScenarioInputs value={inputs} disabled={busy} onChange={setInputs}/>{articleIds.length > 0 && <p className="text-xs text-primary">{articleIds.length} selected news item(s) will be included alongside the global snapshot.</p>}<p role="status" className="rounded-lg border border-primary/30 p-3 text-sm">{context ? (Date.parse(context.expires_at)<=Date.now() ? 'Context is stale; waiting for an automatic refresh · version ' : 'Background prompt updated automatically · version ') + contextVersion + ' · ' + new Date(context.as_of).toLocaleString() : contextStatus === 'loading' ? 'Loading prepared news context…' : contextStatus === 'waiting' ? 'Waiting for ingested news to produce the first background prompt.' : 'Live context service is unavailable.'}</p>
+          {mode === 'current' && <><CurrentScenarioInputs value={inputs} disabled={busy} onChange={setInputs}/>{selectedNews.error && <p role="alert" className="text-sm text-destructive">{selectedNews.error}</p>}{articleIds.length > 0 && <p className="text-xs text-primary">{selectedNews.status === 'ready' ? articleIds.length + ' selected news item(s) verified for this run.' : 'Verifying selected news…'}</p>}<p role="status" className="rounded-lg border border-primary/30 p-3 text-sm">{'Worker: '+workerStatus.replace(/_/g,' ')+' · '}{context ? (Date.parse(context.expires_at)<=Date.now() ? 'Context is stale; waiting for an automatic refresh · version ' : 'Background prompt updated automatically · version ') + contextVersion + ' · ' + new Date(context.as_of).toLocaleString() : contextStatus === 'loading' ? 'Loading prepared news context…' : contextStatus === 'waiting' ? 'Waiting for ingested news to produce the first background prompt.' : 'Live context service is unavailable.'}</p>
           {brief && <div className="rounded-xl border border-primary/30 p-4"><p className="text-xs text-primary">As of {new Date(brief.as_of).toLocaleString()} · {brief.coverage.articles} headlines · {brief.coverage.markets.length} markets</p><p className="mt-3 text-sm leading-relaxed">{brief.summary}</p><h3 className="mt-4 text-sm font-semibold">Suggested scenario inputs</h3><div className="mt-3 space-y-2">{brief.suggestions.map((suggestion,i) => <button key={i} disabled={busy} className="w-full rounded-lg border border-border p-3 text-left text-sm hover:border-primary" onClick={() => setScenario(suggestion.prompt)}>{suggestion.title}</button>)}</div><h3 className="mt-4 text-sm font-semibold">Options to compare</h3><ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">{brief.comparison_options.map((option,i) => <li key={i}>{option}</li>)}</ul><details className="mt-4 text-xs"><summary className="cursor-pointer text-primary">Sources and assumptions</summary><ul className="mt-3 space-y-2">{brief.news.map(n => <li key={n.id}><a className="underline" href={n.canonical_url} target="_blank" rel="noopener noreferrer">{n.source_country} · {n.source}: {n.title}</a></li>)}</ul><p className="mt-3">{brief.assumptions.join(' · ')}</p></details><p className="mt-4 text-xs text-muted-foreground">New reporting updates this context automatically. Each launch freezes its own version; background updates do not rewrite an active run. Prices and portfolio valuations are not part of this news snapshot.</p></div>}</>}
           {mode === 'historical' && <>
 
@@ -106,8 +120,9 @@ export default function Simulations() {
           </>}
           <div><label htmlFor="scenario" className="mb-2 block text-sm">What should the swarm explore?</label><textarea id="scenario" rows={5} maxLength={4000} className="w-full rounded-lg border border-border bg-background p-3 text-sm leading-relaxed" value={scenario} onChange={e => setScenario(e.target.value)} disabled={busy}/></div>
           <div><label htmlFor="rounds" className="mb-2 block text-sm">Rounds · {rounds}</label><input id="rounds" className="w-full accent-yellow-500" type="range" min={1} max={24} value={rounds} disabled={busy} onChange={e => setRounds(Number(e.target.value))}/><p className="mt-2 text-xs text-muted-foreground">Agent count is generated from the memory graph. More rounds increase API usage.</p></div>
-          <button className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground disabled:opacity-40" disabled={busy || health !== 'available' || !scenario.trim() || (mode === 'current' && (!brief || Date.parse(brief.expires_at)<=Date.now()))} onClick={launch}>Start simulation</button>
-          {busy && <button className="w-full rounded-lg border border-border px-4 py-3 text-sm" onClick={stop}>Stop run</button>}
+          <button className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground disabled:opacity-40" disabled={busy || health !== 'available' || !scenario.trim() || (mode === 'current' && (!brief || Date.parse(brief.expires_at)<=Date.now()))} onClick={()=>void launch()}>Start simulation</button>
+          {recoverable && !busy && <div className="flex flex-wrap gap-3"><button disabled={health!=='available'} onClick={()=>void launch(true)} className="rounded-lg border border-primary p-3 text-sm">Resume saved run</button><button onClick={()=>{saved.current=null;setRecoverable(false);if(storageKey.current)sessionStorage.removeItem(storageKey.current);}} className="rounded-lg border border-border p-3 text-sm">Forget local checkpoint</button></div>}
+          {busy && <button className="w-full rounded-lg border border-border px-4 py-3 text-sm" onClick={stop}>Stop simulation / report monitoring</button>}
           {error && <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">{error}</p>}
         </section>
         <section className="rounded-2xl border border-border bg-background/90 p-6" aria-live="polite">
