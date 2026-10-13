@@ -884,3 +884,12 @@ h1, h2, h3, h4, h5, h6 { color: white; }
 
 .se-up   { color: var(--green) !important; }
 .se-down { color: var(--red)   !important; }
+
+/* Keep the expanded workspace navigation usable on smaller screens. */
+@media (max-width: 1050px) {
+  .nav { flex-wrap: wrap; gap: 10px; padding: 12px 16px; }
+  .nav-links { order: 3; flex-basis: 100%; min-width: 0; overflow-x: auto; }
+  .nav-link { white-space: nowrap; flex-shrink: 0; }
+  .nav-logo { font-size: .85rem; }
+  .page-content { padding-top: 112px; }
+}
