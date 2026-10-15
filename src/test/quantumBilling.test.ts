@@ -29,7 +29,7 @@ describe("quantum pay-per-job billing rules", () => {
     // est = 8*8*1024*0.0004 = 26.2144s → provider = ceil(26.2144*160) = 4195
     expect(q.est_qpu_secs).toBeCloseTo(26.214, 2);
     expect(q.provider_cost_cents).toBe(4195);
-    expect(q.markup_cents).toBe(Math.ceil(3146 * 0.25));
+    expect(q.markup_cents).toBe(Math.ceil(4195 * 0.25));
     expect(q.quote_cents).toBe(q.provider_cost_cents + q.markup_cents);
     expect(estimateQpuSecs(16, 1024, cfg)).toBeGreaterThan(2 * estimateQpuSecs(8, 1024, cfg));
   });
