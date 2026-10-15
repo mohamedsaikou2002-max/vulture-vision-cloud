@@ -1,2 +1,4 @@
 - [ ] Simulations page (/simulations) powered by MiroFish
 - [ ] Seed simulations from socio-economics corpus (events, agents, scenario blends)
+- [ ] IBM Quantum optional pay-per-job: schema (ledger, audit events, quotes), edge functions (quote, authorize, dispatch, webhook, reconcile), UI (toggle, cap, usage & billing page), tests
+- [ ] Keep $99/mo copilot proposed-only (no Stripe activation); quantum strictly per-job PAYG; no auto-trading
