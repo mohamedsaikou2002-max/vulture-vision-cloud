@@ -7,7 +7,7 @@ describe("local socio-economic simulation",()=>{
   });
   it("provides baseline plus one point per requested period",()=>{
     expect(simulateScenario(zero)).toHaveLength(13);
-    expect(simulateScenario(zero)[0]).toEqual(simulateScenario(zero)[12]);
+    expect({...simulateScenario(zero)[0],period:12}).toEqual(simulateScenario(zero)[12]);
   });
   it("keeps every modeled index finite and bounded",()=>{
     for(const preset of Object.values(PRESET_SCENARIOS)){
