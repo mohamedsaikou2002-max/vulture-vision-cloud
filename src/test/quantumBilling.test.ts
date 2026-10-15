@@ -26,9 +26,9 @@ describe("quantum pay-per-job billing rules", () => {
 
   it("quote math: provider cost + 25% markup, superlinear in qubits", () => {
     const q = computeQuote(8, 1024, cfg, new Date("2026-01-01T00:00:00Z"));
-    // est = 8*8*1024*0.0004 = 26.2144s → provider = ceil(26.2144*120) = 3146
+    // est = 8*8*1024*0.0004 = 26.2144s → provider = ceil(26.2144*160) = 4195
     expect(q.est_qpu_secs).toBeCloseTo(26.214, 2);
-    expect(q.provider_cost_cents).toBe(3146);
+    expect(q.provider_cost_cents).toBe(4195);
     expect(q.markup_cents).toBe(Math.ceil(3146 * 0.25));
     expect(q.quote_cents).toBe(q.provider_cost_cents + q.markup_cents);
     expect(estimateQpuSecs(16, 1024, cfg)).toBeGreaterThan(2 * estimateQpuSecs(8, 1024, cfg));
@@ -50,15 +50,15 @@ describe("quantum pay-per-job billing rules", () => {
   });
 
   it("meter correctness: settlement uses actual metered seconds, never a fixed price", () => {
-    const s = settleCharge(10, cfg, 10000); // 10s * 120c = 1200 + 25% = 1500
-    expect(s.provider_cost_cents).toBe(1200);
-    expect(s.markup_cents).toBe(300);
-    expect(s.charge_cents).toBe(1500);
+    const s = settleCharge(10, cfg, 10000); // 10s * 160c = 1600 + 25% = 2000
+    expect(s.provider_cost_cents).toBe(1600);
+    expect(s.markup_cents).toBe(400);
+    expect(s.charge_cents).toBe(2000);
     expect(s.exceeds_cap).toBe(false);
   });
 
   it("hard cap: settlement exceeding the approved cap is flagged, never silently charged", () => {
-    const s = settleCharge(100, cfg, 1000); // 12000 + 3000 = 15000 > 1000
+    const s = settleCharge(100, cfg, 1000); // 16000 + 4000 = 20000 > 1000
     expect(s.exceeds_cap).toBe(true);
   });
 
