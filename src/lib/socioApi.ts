@@ -1,9 +1,10 @@
 // Vulture Vision — Socio-Economics Backend API Client
 // Connects to socioeconomics_backend.py on VITE_SOCIO_HOST (default localhost:5002)
 
-const SOCIO_HOST = (import.meta.env.VITE_SOCIO_HOST as string) || "localhost:5002";
+const SOCIO_BASE_URL = (import.meta.env.VITE_SOCIO_BASE_URL as string | undefined)?.trim();
+const SOCIO_HOST = (import.meta.env.VITE_SOCIO_HOST as string | undefined)?.trim();
 const isHttps = typeof location !== "undefined" && location.protocol === "https:";
-const BASE_URL = `${isHttps ? "https" : "http"}://${SOCIO_HOST}`;
+const BASE_URL = SOCIO_BASE_URL?.replace(/\/$/, "") || (SOCIO_HOST ? `${isHttps ? "https" : "http"}://${SOCIO_HOST}` : null);
 
 export const SOCIO_DIMS = [
   "fear", "trust", "liquidity", "volatility",
@@ -56,6 +57,7 @@ export interface SocioResult {
 }
 
 export async function fetchSocioFull(): Promise<SocioResult> {
+  if (!BASE_URL) return { data: null, error: { kind: "offline", message: "Remote socio-economic API not configured. The local scenario lab works without it." } };
   try {
     const res = await fetch(`${BASE_URL}/api/socioeconomics/full`, { signal: AbortSignal.timeout(60000) });
     if (!res.ok) {
@@ -82,6 +84,7 @@ export async function fetchSocioFull(): Promise<SocioResult> {
 }
 
 export async function fetchSocioHealth(): Promise<boolean> {
+  if (!BASE_URL) return false;
   try {
     const r = await fetch(`${BASE_URL}/api/socioeconomics/health`, { signal: AbortSignal.timeout(3000) });
     if (!r.ok) return false;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import VVLayout from "@/components/VVLayout";
+import LocalSocioLab from "@/components/LocalSocioLab";
 import {
   fetchSocioFull, fetchSocioHealth, SOCIO_DIMS, SocioFull, colorForDim,
 } from "@/lib/socioApi";
@@ -45,8 +46,8 @@ export default function SocioEconomics() {
   }, []);
 
   const status = {
-    label: online === null ? "CONNECTING" : online ? "SYSTEM ONLINE" : "BACKEND OFFLINE",
-    tone: (online ? "green" : "red") as "green" | "red",
+    label: online === null ? "LOCAL LAB READY" : online ? "REMOTE SYSTEM ONLINE" : "LOCAL LAB READY · REMOTE OFFLINE",
+    tone: (online ? "green" : "gold") as "green" | "gold",
   };
 
 
@@ -73,6 +74,7 @@ export default function SocioEconomics() {
   return (
     <VVLayout status={status}>
       <div className="scroll-inner">
+        <LocalSocioLab />
 
         {err && (
           <div
@@ -99,7 +101,7 @@ export default function SocioEconomics() {
               <div style={{ color: "#8a7a55", fontSize: ".55rem", marginTop: 4, letterSpacing: ".08em" }}>
                 {err.kind === "malformed"
                   ? "Check socioeconomics_backend.py logs — response shape did not match expected schema."
-                  : "Start socioeconomics_backend.py on port 5002 (VITE_SOCIO_HOST to override)."}
+                  : "Configure an authorized remote endpoint via VITE_SOCIO_BASE_URL. The local scenario model above remains available."}
                 {lastFetch && ` · last attempt ${lastFetch.toLocaleTimeString()}`}
               </div>
             </div>
