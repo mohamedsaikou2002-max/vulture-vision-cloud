@@ -884,3 +884,56 @@ h1, h2, h3, h4, h5, h6 { color: white; }
 
 .se-up   { color: var(--green) !important; }
 .se-down { color: var(--red)   !important; }
+
+/* ── Simulations page (MiroFish) ─────────────────────────── */
+.sim-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+@media (max-width: 1100px) { .sim-grid { grid-template-columns: 1fr; } }
+.sim-label { display: block; font-size: 9px; letter-spacing: 0.15em; color: var(--dim); margin: 10px 0 4px; }
+.sim-corpus-tag { color: var(--gold); border: 1px solid var(--gold-dim); padding: 0 4px; margin-left: 6px; font-size: 8px; }
+.sim-corpus-off { color: #ff2222; border-color: #ff2222; }
+.sim-textarea { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--gold-dim); color: var(--green-bright); font-family: "Share Tech Mono", monospace; font-size: 11px; padding: 6px 8px; resize: vertical; }
+.sim-textarea:focus { outline: none; border-color: var(--gold); }
+.sim-presets { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.sim-preset { background: none; border: 1px solid var(--gold-dim); color: var(--dim); font-family: inherit; font-size: 9px; padding: 3px 6px; cursor: pointer; letter-spacing: 0.05em; }
+.sim-preset:hover:not(:disabled) { color: var(--gold); border-color: var(--gold); }
+.sim-preset:disabled { opacity: 0.4; cursor: default; }
+.sim-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sim-slider { width: 100%; accent-color: var(--gold); }
+.sim-actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.sim-btn { background: none; border: 1px solid var(--gold-dim); color: var(--gold); font-family: inherit; font-size: 10px; letter-spacing: 0.12em; padding: 6px 12px; cursor: pointer; }
+.sim-btn:hover:not(:disabled) { background: rgba(240,192,64,0.1); }
+.sim-btn:disabled { opacity: 0.4; cursor: default; }
+.sim-btn-go { border-color: var(--green-bright); color: var(--green-bright); }
+.sim-btn-go:hover:not(:disabled) { background: rgba(0,255,136,0.08); }
+.sim-btn-stop { border-color: #ff2222; color: #ff2222; }
+.sim-elapsed { font-size: 10px; color: var(--gold); letter-spacing: 0.1em; }
+.sim-error { margin-top: 10px; font-size: 10px; color: #ff2222; letter-spacing: 0.05em; }
+.sim-banner { display: flex; align-items: flex-start; gap: 12px; border: 1px solid #ff2222; background: rgba(255,34,34,0.06); padding: 10px 14px; margin-bottom: 12px; }
+.sim-banner-icon { color: #ff2222; font-size: 16px; }
+.sim-banner-title { color: #ff2222; font-size: 11px; letter-spacing: 0.15em; }
+.sim-banner-body { color: var(--dim); font-size: 10px; margin-top: 3px; }
+.sim-banner-body code { color: var(--gold); }
+.sim-banner .sim-btn { margin-left: auto; flex-shrink: 0; }
+.sim-placeholder { color: var(--dim); font-size: 10px; letter-spacing: 0.1em; padding: 14px 0; }
+.sim-verdict-text { color: var(--green-bright); font-size: 11px; line-height: 1.6; }
+.sim-signals { margin-top: 8px; }
+.sim-signal { color: var(--gold); font-size: 10px; padding: 2px 0; }
+.sim-archetypes { margin-top: 12px; }
+.sim-archetype-row { display: grid; grid-template-columns: 110px 30px 1fr 44px; align-items: center; gap: 8px; padding: 2px 0; font-size: 10px; }
+.sim-archetype-name { color: var(--dim); letter-spacing: 0.08em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sim-archetype-count { color: var(--gold); text-align: right; }
+.sim-archetype-conf { color: var(--green-bright); text-align: right; }
+.sim-bar { height: 6px; background: rgba(255,255,255,0.06); }
+.sim-bar-fill { height: 100%; background: var(--gold); }
+.sim-signal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 4px; }
+.sim-signal-cell { border: 1px solid rgba(255,255,255,0.08); padding: 4px 6px; display: flex; flex-direction: column; }
+.sim-signal-key { font-size: 8px; color: var(--dim); letter-spacing: 0.1em; }
+.sim-signal-val { font-size: 11px; color: var(--green-bright); }
+.sim-timeline { margin-bottom: 12px; }
+.sim-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.sim-table th { text-align: left; color: var(--dim); font-weight: normal; letter-spacing: 0.12em; font-size: 8px; padding: 4px 8px; border-bottom: 1px solid var(--gold-dim); }
+.sim-table td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: top; }
+.sim-num { color: var(--gold); }
+.sim-summary { color: var(--green-bright); max-width: 320px; }
+.sim-narratives { color: var(--dim); max-width: 260px; }
+.sim-footer { font-size: 9px; color: var(--dim); letter-spacing: 0.12em; padding: 6px 0 20px; }
