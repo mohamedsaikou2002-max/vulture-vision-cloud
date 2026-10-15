@@ -41,6 +41,132 @@ export type Database = {
         }
         Relationships: []
       }
+      news_articles: {
+        Row: {
+          canonical_url: string
+          fetched_at: string
+          id: string
+          ingestion_method: string
+          language: string | null
+          published_at: string | null
+          source: string
+          source_country: string
+          source_id: string
+          title: string
+        }
+        Insert: {
+          canonical_url: string
+          fetched_at?: string
+          id: string
+          ingestion_method: string
+          language?: string | null
+          published_at?: string | null
+          source: string
+          source_country: string
+          source_id: string
+          title: string
+        }
+        Update: {
+          canonical_url?: string
+          fetched_at?: string
+          id?: string
+          ingestion_method?: string
+          language?: string | null
+          published_at?: string | null
+          source?: string
+          source_country?: string
+          source_id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      news_context_budget: {
+        Row: {
+          attempts: number
+          window_start: string
+        }
+        Insert: {
+          attempts: number
+          window_start: string
+        }
+        Update: {
+          attempts?: number
+          window_start?: string
+        }
+        Relationships: []
+      }
+      news_context_queue: {
+        Row: {
+          id: number
+          last_attempt: string | null
+          last_error: string | null
+          lease_token: string | null
+          lease_until: string | null
+          processed_revision: number
+          revision: number
+        }
+        Insert: {
+          id: number
+          last_attempt?: string | null
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          processed_revision?: number
+          revision?: number
+        }
+        Update: {
+          id?: number
+          last_attempt?: string | null
+          last_error?: string | null
+          lease_token?: string | null
+          lease_until?: string | null
+          processed_revision?: number
+          revision?: number
+        }
+        Relationships: []
+      }
+      news_prompt_versions: {
+        Row: {
+          context: Json
+          expires_at: string
+          generated_at: string
+          source_revision: number
+          version: number
+        }
+        Insert: {
+          context: Json
+          expires_at: string
+          generated_at?: string
+          source_revision: number
+          version?: never
+        }
+        Update: {
+          context?: Json
+          expires_at?: string
+          generated_at?: string
+          source_revision?: number
+          version?: never
+        }
+        Relationships: []
+      }
+      scenario_synthesis_limits: {
+        Row: {
+          requests: number
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          requests?: number
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          requests?: number
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       synthesis_history: {
         Row: {
           antithesis: Json | null
@@ -181,7 +307,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_news_context: {
+        Args: never
+        Returns: {
+          source_revision: number
+          token: string
+        }[]
+      }
+      claim_scenario_synthesis: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      finish_news_context: {
+        Args: {
+          p_context: Json
+          p_error?: string
+          p_revision: number
+          p_token: string
+        }
+        Returns: boolean
+      }
+      news_context_status: { Args: never; Returns: Json }
     }
     Enums: {
       [_ in never]: never
