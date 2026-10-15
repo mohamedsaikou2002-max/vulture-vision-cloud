@@ -134,12 +134,12 @@ export function subscribeToIntelBriefs(
         const msg = JSON.parse(e.data);
         if (msg.type === "synthesis_brief" && msg.data) {
           onBrief(msg.data);
-          try { window.dispatchEvent(new CustomEvent("vv-new-intel")); } catch {}
+          try { window.dispatchEvent(new CustomEvent("vv-new-intel")); } catch { /* Retain last successful state on transient failure. */ }
         }
         if (msg.type === "regime_update" && msg.data && onRegime) onRegime(msg.data);
-      } catch {}
+      } catch { /* Retain last successful state on transient failure. */ }
     };
-    ws.onerror = () => { try { ws?.close(); } catch {} };
+    ws.onerror = () => { try { ws?.close(); } catch { /* Retain last successful state on transient failure. */ } };
     ws.onclose = () => {
       if (!dead) retryTimer = setTimeout(connect, 5000);
     };
@@ -149,7 +149,7 @@ export function subscribeToIntelBriefs(
   return () => {
     dead = true;
     if (retryTimer) clearTimeout(retryTimer);
-    try { ws?.close(); } catch {}
+    try { ws?.close(); } catch { /* Retain last successful state on transient failure. */ }
   };
 }
 

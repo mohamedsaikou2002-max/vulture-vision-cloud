@@ -1,5 +1,7 @@
+interface Whale {tx_hash:string;value_usd:number;from_addr:string;to_addr:string;ts:number;}
+import { authorize } from '../_shared/access.ts';
 const __origFetch = globalThis.fetch;
-globalThis.fetch = ((input: any, init: any = {}) => __origFetch(input, { ...init, signal: init.signal ?? AbortSignal.timeout(12000) })) as typeof fetch;
+globalThis.fetch = ((input: RequestInfo | URL, init: RequestInit = {}) => __origFetch(input, { ...init, signal: init.signal ?? AbortSignal.timeout(12000) })) as typeof fetch;
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 // Live market analytics. CoinGecko for crypto, Stooq for SPY/equities (no key).
@@ -25,7 +27,7 @@ async function fetchCrypto(): Promise<Crypto[]> {
   const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&price_change_percentage=1h,24h,7d`;
   const r = await fetch(url, { headers: { "User-Agent": "VultureVision/1.0" } });
   if (!r.ok) return [];
-  const data = await r.json() as any[];
+  const data = await r.json() as {id:string;symbol:string;name:string;current_price:number;price_change_percentage_24h:number;price_change_percentage_1h_in_currency?:number;price_change_percentage_24h_in_currency?:number;price_change_percentage_7d_in_currency?:number;market_cap:number;total_volume:number;sparkline_in_7d?:{price:number[]}}[];
   return data.map(d => ({
     symbol: d.symbol.toUpperCase(),
     name: d.name,
@@ -172,7 +174,7 @@ async function buildAsset(symbol: string, type: "CRYPTO" | "EQUITY", price: numb
   };
 }
 
-async function aiNarrative(crypto: Crypto[], assets: Asset[], port: any): Promise<string> {
+async function aiNarrative(crypto: Crypto[], assets: Asset[], port: {dominant_regime:string;avg_quantum_score:number;avg_prob_up_30d:number}): Promise<string> {
   const GEMINI = Deno.env.get("GEMINI_API_KEY");
   if (!GEMINI) return "AI synthesis offline — GEMINI_API_KEY not configured.";
 
@@ -206,7 +208,7 @@ Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, k
       console.error("Gemini narrative error:", r.status, j);
       return `AI synthesis error: ${j?.error?.message || r.status}`;
     }
-    return j?.candidates?.[0]?.content?.parts?.map((p: any) => p.thought ? "" : (p.text || "")).join("") || "";
+    return j?.candidates?.[0]?.content?.parts?.map((p: {thought?:boolean;text?:string}) => p.thought ? "" : (p.text || "")).join("") || "";
   } catch (e) {
     console.error("Gemini narrative threw:", e);
     return "AI synthesis offline — engine running on raw quantitative signals only.";
@@ -220,7 +222,7 @@ const WHALE_THRESHOLD_USD = 50_000;
 
 async function fetchOnchain(ethUsd: number) {
   const key = Deno.env.get("ETHERSCAN_API_KEY");
-  if (!key) return { gas: null, whales: [] as any[] };
+  if (!key) return { gas: null, whales: [] as Whale[] };
   const gasP = fetch(`${ETHERSCAN_URL}?module=gastracker&action=gasoracle&apikey=${key}`).then(r => r.json()).catch(() => null);
   const txP = fetch(`${ETHERSCAN_URL}?module=account&action=txlist&address=0x0000000000000000000000000000000000000000&startblock=0&endblock=99999999&page=1&offset=25&sort=desc&apikey=${key}`).then(r => r.json()).catch(() => null);
   const [gasRes, txRes] = await Promise.all([gasP, txP]);
@@ -234,7 +236,7 @@ async function fetchOnchain(ethUsd: number) {
       ts_us: Date.now() * 1000,
     };
   }
-  const whales: any[] = [];
+  const whales: Whale[] = [];
   if (txRes?.status === "1") {
     for (const tx of (txRes.result || [])) {
       const eth = Number(tx.value || 0) / 1e18;
@@ -254,6 +256,8 @@ async function fetchOnchain(ethUsd: number) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await authorize(req, true);
+  if (denied) return denied;
   try {
     const crypto = await fetchCrypto();
 

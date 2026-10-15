@@ -1,15 +1,19 @@
+import { validateChatMessage } from '../_shared/request_limits.ts';
+import { authorize } from '../_shared/access.ts';
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await authorize(req, true);
+  if (denied) return denied;
 
   try {
-    const { message } = await req.json();
-    if (!message || typeof message !== "string") {
-      return new Response(JSON.stringify({ error: "message required" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if(req.method!=="POST")return new Response(JSON.stringify({error:"Method not allowed"}),{status:405,headers:corsHeaders});
+    const raw=await req.text();
+    if(new TextEncoder().encode(raw).byteLength>40000)return new Response(JSON.stringify({error:"Message payload too large"}),{status:413,headers:corsHeaders});
+    let message:string;
+    try {message=validateChatMessage(JSON.parse(raw).message);}
+    catch(e){return new Response(JSON.stringify({error:(e as Error).message}),{status:400,headers:{...corsHeaders,"Content-Type":"application/json"}});}
 
     const GEMINI = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI) throw new Error("GEMINI_API_KEY not configured");
@@ -17,10 +21,11 @@ Deno.serve(async (req) => {
     const system = "You are Vulture Vision, an elite intelligence synthesis AI. Analyze market data, news, and OSINT intel with precision. Be concise, analytical, and actionable. Speak in clipped operational tone.";
 
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI },
+        signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts: [{ text: message }] }],
@@ -33,7 +38,7 @@ Deno.serve(async (req) => {
       console.error("Gemini error:", r.status, j);
       throw new Error(j?.error?.message || `Gemini ${r.status}`);
     }
-    const reply = j?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") || "[no response]";
+    const reply = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).join("") || "[no response]";
 
 
     return new Response(JSON.stringify({ reply }), {

@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  build: { rollupOptions: { output: { manualChunks(id) {
+    if(id.includes("node_modules/@supabase/") || id.includes("node_modules/@lovable.dev/"))return "auth-client";
+    if(id.includes("node_modules/recharts/"))return "charts";
+  } } } },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

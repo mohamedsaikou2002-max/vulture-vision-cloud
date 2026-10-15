@@ -1,3 +1,5 @@
+import { parseInstruments } from '../_shared/request_limits.ts';
+interface BybitTicker { symbol:string; bid1Price?:string; ask1Price?:string; bid1Size?:string; ask1Size?:string; lastPrice?:string; price24hPcnt?:string; turnover24h?:string; }
 // MarketWorker — Bybit (crypto) + OANDA (forex).
 // Returns a unified snapshot tick set. No long-lived sockets in edge runtime.
 
@@ -29,7 +31,7 @@ interface Tick {
 // ── Bybit ───────────────────────────────────────────────────
 async function fetchBybit(instruments: string[]): Promise<Tick[]> {
   // Prod first — testnet often returns empty bid/ask. Fall back to testnet only on hard failure.
-  let payload: any = null;
+  let payload: { result?: { list?: BybitTicker[] } } | null = null;
   try {
     const r1 = await fetch("https://api.bybit.com/v5/market/tickers?category=spot");
     if (r1.ok) payload = await r1.json();
@@ -40,7 +42,7 @@ async function fetchBybit(instruments: string[]): Promise<Tick[]> {
       if (r2.ok) payload = await r2.json();
     } catch { /* ignore */ }
   }
-  const list: any[] = payload?.result?.list ?? [];
+  const list: BybitTicker[] = payload?.result?.list ?? [];
   const want = new Set(instruments.map(s => s.toUpperCase()));
   const ts = Date.now();
   const byId: Record<string, Tick> = {};
@@ -101,8 +103,9 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const cryptoParam = url.searchParams.get("crypto");
     const fxParam = url.searchParams.get("forex");
-    const crypto = cryptoParam ? cryptoParam.split(",").map(s => s.trim().toUpperCase()) : DEFAULT_CRYPTO;
-    const forex = fxParam ? fxParam.split(",").map(s => s.trim().toUpperCase()) : DEFAULT_FOREX;
+    let crypto:string[];let forex:string[];
+    try { crypto = parseInstruments(cryptoParam,DEFAULT_CRYPTO);
+    forex = parseInstruments(fxParam,DEFAULT_FOREX); } catch(e) {return new Response(JSON.stringify({error:(e as Error).message}),{status:400,headers:{...corsHeaders,"Content-Type":"application/json"}});}
 
     const token = Deno.env.get("OANDA_PRACTICE_TOKEN") || "";
     const accountId = Deno.env.get("OANDA_ACCOUNT_ID") || "";

@@ -42,7 +42,7 @@ RETURNS TABLE(source_revision bigint, token uuid) LANGUAGE plpgsql SECURITY DEFI
 DECLARE q public.news_context_queue%ROWTYPE; n integer; refresh_needed boolean;
 BEGIN
   SELECT * INTO q FROM public.news_context_queue WHERE id=1 FOR UPDATE;
-  IF q.lease_until > now() OR q.last_attempt > now()-interval '30 seconds' THEN RETURN; END IF;
+  IF q.lease_until > now() OR q.last_attempt > now()-interval '60 seconds' THEN RETURN; END IF;
   SELECT NOT EXISTS(SELECT 1 FROM public.news_prompt_versions WHERE expires_at > now()) INTO refresh_needed;
   IF q.revision <= q.processed_revision AND NOT refresh_needed THEN RETURN; END IF;
   INSERT INTO public.news_context_budget(window_start,attempts) VALUES(date_trunc('hour',now()),1)

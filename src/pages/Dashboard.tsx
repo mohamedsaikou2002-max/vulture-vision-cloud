@@ -58,8 +58,8 @@ export default function Dashboard() {
       if (error) throw error;
       const reply = data?.reply || data?.message || "[no reply]";
       setMessages(m => [...m, { type: "ai", text: String(reply) }]);
-    } catch (e: any) {
-      setMessages(m => [...m, { type: "ai", text: `[ERROR: ${e?.message || "Backend Connection Failed"}]` }]);
+    } catch (e: unknown) {
+      setMessages(m => [...m, { type: "ai", text: `[ERROR: ${e instanceof Error ? e.message : "Backend Connection Failed"}]` }]);
     } finally {
       setBusy(false);
       setMode("STANDBY");

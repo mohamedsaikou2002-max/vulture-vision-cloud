@@ -1,4 +1,5 @@
 """Continuously ingest news and publish background prompts. Run on a supervised backend."""
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 import threading
@@ -25,21 +26,43 @@ def context_loop(stop):
         stop.wait(2)
 
 
+def crawl_source(source):
+    db=None
+    try:
+        db=open_cache(os.environ.get('NEWS_CRAWLER_CACHE','crawler-cache.sqlite'))
+        items,report=Crawler(source,db).crawl(limit=20)
+        upload(items)
+        print(json.dumps({'source':source['id'],'items':len(items),'status':report['status']}),flush=True)
+    except Exception as e:
+        print(json.dumps({'source':source['id'],'status':'skipped','error':str(e)}),flush=True)
+    finally:
+        if db is not None:db.close()
+
+
 def ingest_loop(stop):
     registry=json.loads(Path(__file__).with_name('sources.json').read_text())['sources']
     selected=set(os.environ.get('NEWS_SOURCE_IDS','').split(','))- {''}
-    while not stop.is_set():
-        for source in registry:
-            if stop.is_set():break
-            if not source['enabled'] or selected and source['id'] not in selected:continue
-            db=open_cache(os.environ.get('NEWS_CRAWLER_CACHE','crawler-cache.sqlite'))
-            try:
-                items,report=Crawler(source,db).crawl(limit=20)
-                upload(items) # Each publisher batch reaches the database immediately, not after a whole global sweep.
-                print(json.dumps({'source':source['id'],'items':len(items),'status':report['status']}),flush=True)
-            except Exception as e:print(json.dumps({'source':source['id'],'status':'skipped','error':str(e)}),flush=True)
-            finally:db.close()
-        stop.wait(max(15,int(os.environ.get('NEWS_CRAWL_INTERVAL_SECONDS','60'))))
+    sources=[s for s in registry if s['enabled'] and (not selected or s['id'] in selected)]
+    interval=max(15,int(os.environ.get('NEWS_CRAWL_INTERVAL_SECONDS','60')))
+    workers=max(1,min(8,int(os.environ.get('NEWS_CRAWL_WORKERS','4'))))
+    due={s['id']:0.0 for s in sources};pending={}
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        while not stop.is_set():
+            for source_id,future in list(pending.items()):
+                if future.done():
+                    try:future.result()
+                    except Exception as e:
+                        print(json.dumps({'source':source_id,'status':'retrying','error':str(e)}),flush=True)
+                        due[source_id]=time.monotonic()+interval
+                    finally:del pending[source_id]
+            # Oldest due source first; one slow publisher cannot stall the global sweep.
+            for source in sorted(sources,key=lambda s:due[s['id']]):
+                if len(pending)>=workers:break
+                source_id=source['id']
+                if source_id not in pending and due[source_id]<=time.monotonic():
+                    due[source_id]=time.monotonic()+interval
+                    pending[source_id]=pool.submit(crawl_source,source)
+            stop.wait(0.5)
 
 
 def main():

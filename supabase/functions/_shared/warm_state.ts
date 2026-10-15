@@ -65,7 +65,7 @@ export class WarmState {
       const expires_at = ttlSeconds ? new Date(Date.now() + ttlSeconds * 1000).toISOString() : null;
       const { error } = await this.client
         .from("warm_state")
-        .upsert({ key, value: value as any, expires_at }, { onConflict: "key" });
+        .upsert({ key, value, expires_at }, { onConflict: "key" });
       if (error) { console.warn(`[warm_state] set(${key}) failed:`, error.message); return false; }
       return true;
     } catch (e) {
@@ -74,7 +74,7 @@ export class WarmState {
     }
   }
 
-  async get<T = any>(key: string, defaultValue: T | null = null): Promise<T | null> {
+  async get<T = unknown>(key: string, defaultValue: T | null = null): Promise<T | null> {
     try {
       const { data, error } = await this.client
         .from("warm_state").select("value, expires_at").eq("key", key).maybeSingle();
@@ -100,7 +100,7 @@ export class WarmState {
       const { data, error } = await this.client
         .from("warm_state").select("key").like("key", sql);
       if (error || !data) return [];
-      return data.map((r: any) => r.key);
+      return data.map((r: {key:string}) => r.key);
     } catch { return []; }
   }
 }

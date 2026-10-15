@@ -4,9 +4,9 @@ export interface EngineState {
   runner_status: string; current_round: number; total_rounds: number;
   progress_percent: number; total_actions_count: number;
 }
-export async function engineCall(path: string, payload?: Record<string, unknown>, seed?: string) {
+export async function engineCall(path: string, payload?: Record<string, unknown>, seed?: string, signal?: AbortSignal) {
   const { data, error } = await supabase.functions.invoke("vv-simulation", {
-    body: { path, method: payload ? "POST" : "GET", payload, seed },
+    body: { path, method: payload ? "POST" : "GET", payload, seed }, signal,
   });
   if (error || data?.error) throw new Error(data?.error || error?.message || "Simulation request failed");
   return data?.data ?? data;
@@ -25,7 +25,7 @@ async function waitTask(taskId: string, phase: (value: string) => void, signal: 
   const deadline = Date.now() + 20 * 60 * 1000;
   while (Date.now() < deadline) {
     checkAbort(signal);
-    const task = await engineCall("/api/graph/task/" + encodeURIComponent(taskId));
+    const task = await engineCall("/api/graph/task/" + encodeURIComponent(taskId),undefined,undefined,signal);
     checkAbort(signal);
     if (task.status === "failed") throw new Error("Engine preparation failed");
     if (task.status === "completed") return;
@@ -39,23 +39,46 @@ async function waitTask(taskId: string, phase: (value: string) => void, signal: 
   }
   throw new Error("Preparation deadline exceeded");
 }
-export async function prepareAndStart(scenario: string, seed: string, rounds: number, phase: (value: string) => void, onId: (id: string) => void, signal: AbortSignal) {
-  phase("Extracting entities");
-  const project = await engineCall("/api/graph/ontology/generate", { simulation_requirement: scenario }, seed);
+export interface RunCheckpoint {project_id?:string;graph_task_id?:string;simulation_id?:string;prepared_task_id?:string;prepared_complete?:boolean;started?:boolean;}
+export async function prepareAndStart(scenario: string, seed: string, rounds: number, phase: (value: string) => void, onId: (id: string) => void, signal: AbortSignal, checkpoint:RunCheckpoint={}, save:(value:RunCheckpoint)=>void=()=>{}) {
+  // Mutation responses finish so returned job IDs can be saved before cancellation.
+  const update=(patch:RunCheckpoint)=>{Object.assign(checkpoint,patch);save({...checkpoint});};
   checkAbort(signal);
-  phase("Building memory graph");
-  const graph = await engineCall("/api/graph/build", { project_id: project.project_id });
-  await waitTask(graph.task_id, phase, signal);
-  const sim = await engineCall("/api/simulation/create", { project_id: project.project_id, enable_twitter: true, enable_reddit: false });
-  onId(sim.simulation_id);
+  if(!checkpoint.project_id){
+    phase("Extracting entities");
+    const project=await engineCall("/api/graph/ontology/generate",{simulation_requirement:scenario},seed);
+    update({project_id:project.project_id});
+  }
   checkAbort(signal);
-  phase("Generating agent profiles");
-  const prepared = await engineCall("/api/simulation/prepare", { simulation_id: sim.simulation_id, parallel_profile_count: 2 });
-  if (prepared.task_id) await waitTask(prepared.task_id, phase, signal);
+  if(!checkpoint.graph_task_id){
+    phase("Building memory graph");
+    const graph=await engineCall("/api/graph/build",{project_id:checkpoint.project_id});
+    update({graph_task_id:graph.task_id});
+  }
+  await waitTask(checkpoint.graph_task_id!,phase,signal);
   checkAbort(signal);
-  await engineCall("/api/simulation/start", { simulation_id: sim.simulation_id, platform: "twitter", max_rounds: rounds, enable_graph_memory_update: false });
+  if(!checkpoint.simulation_id){
+    const sim=await engineCall("/api/simulation/create",{project_id:checkpoint.project_id,enable_twitter:true,enable_reddit:false});
+    update({simulation_id:sim.simulation_id});
+  }
+  onId(checkpoint.simulation_id!);
   checkAbort(signal);
-  return sim.simulation_id as string;
+  if(!checkpoint.prepared_complete){
+    phase("Generating agent profiles");
+    if(!checkpoint.prepared_task_id){
+      const prepared=await engineCall("/api/simulation/prepare",{simulation_id:checkpoint.simulation_id,parallel_profile_count:2});
+      update({prepared_task_id:prepared.task_id,prepared_complete:!prepared.task_id});
+    }
+    if(checkpoint.prepared_task_id)await waitTask(checkpoint.prepared_task_id,phase,signal);
+    update({prepared_complete:true});
+  }
+  checkAbort(signal);
+  if(!checkpoint.started){
+    await engineCall("/api/simulation/start",{simulation_id:checkpoint.simulation_id,platform:"twitter",max_rounds:rounds,enable_graph_memory_update:false});
+    update({started:true});
+  }
+  checkAbort(signal);
+  return checkpoint.simulation_id!;
 }
 
 export function checkAbort(signal: AbortSignal) { if (signal.aborted) throw new DOMException("Stopped", "AbortError"); }

@@ -1,5 +1,6 @@
+import { MAX_SEED_BYTES,validateSeedSize } from '../../supabase/functions/_shared/simulation_payload';
 import { describe, expect, it } from 'vitest';
-import { compileBackgroundPrompt, personalizeContext, selectRecentEvidence, type LiveNewsContext } from '../../supabase/functions/_shared/live_context';
+import { compileBackgroundPrompt, personalizeContext, includeSelectedEvidence, selectRecentEvidence, type LiveNewsContext } from '../../supabase/functions/_shared/live_context';
 import { buildCurrentSeed } from '../../supabase/functions/_shared/scenario_contract';
 const now=Date.parse('2026-10-12T04:00:00Z');
 const article=(id:string,country:string,published='2026-10-12T03:30:00Z')=>({id,title:'Reported development '+id,source:'Publisher',canonical_url:'https://example.com/'+id,source_country:country,language:'en',published_at:published,fetched_at:'2026-10-12T03:40:00Z'});
@@ -16,8 +17,28 @@ describe('Automatic global news context',()=>{
   it('prepares context before user input and personalizes without mutating the stored version',()=>{
     expect(compileBackgroundPrompt(context)).toContain('Await the user scenario');
     const personal=personalizeContext(context,{...context.inputs,capital:50000,objective:'Preserve cash',alternatives:'Maintain cash;Reduce exposure'});
-    expect(personal.comparison_options).toEqual(['Maintain cash','Reduce exposure']);
+    expect(personal.comparison_options).toEqual(['Maintain current approach (baseline)','Maintain cash','Reduce exposure']);
     expect(personal.inputs.capital).toBe(50000);expect(context.inputs.capital).toBeNull();
     expect(buildCurrentSeed('My scenario',personal,now)).toContain('revision-4');
   });
+});
+
+it('preserves one decision alongside a baseline',()=>{
+ expect(personalizeContext(context,{...context.inputs,alternatives:'Reduce exposure'}).comparison_options).toEqual(['Maintain current approach (baseline)','Reduce exposure']);
+});
+it('includes all explicitly selected evidence even from one market',()=>{
+ const selected=Array.from({length:8},(_,i)=>article(String(i).padStart(64,'0'),'US'));
+ const result=includeSelectedEvidence(context,selected.map(n=>n.id),selected,now);
+ expect(result.news).toHaveLength(9);
+ expect(()=>includeSelectedEvidence(context,['f'.repeat(64)],selected,now)).toThrow('missing');
+});
+it('supports 80 long multilingual headlines without duplicating news',()=>{
+ const news=Array.from({length:80},(_,i)=>({...article(String(i),'US'),title:'新闻'.repeat(300)+i}));
+ const seed=buildCurrentSeed('My scenario',{...context,news},now);
+ expect(seed.match(/Untrusted publisher evidence:/g)).toHaveLength(1);
+ expect(seed).toContain(news[79].title);
+});
+it('rejects oversized UTF-8 seeds before any engine request',()=>{
+ expect(()=>validateSeedSize('新'.repeat(Math.ceil(MAX_SEED_BYTES/3)))).toThrow();
+ expect(()=>validateSeedSize('')).toThrow();
 });

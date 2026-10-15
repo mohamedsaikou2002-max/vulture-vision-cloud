@@ -6,9 +6,12 @@ export function useLiveNewsContext() {
   const [context,setContext]=useState<LiveNewsContext|null>(null);
   const [status,setStatus]=useState<'loading'|'ready'|'waiting'|'unavailable'>('loading');
   const [version,setVersion]=useState<number|null>(null);
+  const [workerStatus,setWorkerStatus]=useState('unknown');
   const active=useRef(false);
   const lastVersion=useRef(0);
   const reload=useCallback(async()=>{
+    const {data:worker,error:workerError}=await (supabase as SupabaseClient).rpc('news_context_status');
+    if(active.current)setWorkerStatus(workerError?'unavailable':worker?.status || 'unknown');
     const {data,error}=await (supabase as SupabaseClient).from('news_prompt_versions').select('version,context').order('version',{ascending:false}).limit(1);
     if(!active.current)return;
     if(error){setStatus('unavailable');return;}
@@ -25,5 +28,5 @@ export function useLiveNewsContext() {
     const timer=setInterval(refresh,15000);
     return()=>{active.current=false;clearInterval(timer);void supabase.removeChannel(channel);};
   },[reload]);
-  return {context,status,version,reload};
+  return {context,status,version,reload,workerStatus};
 }

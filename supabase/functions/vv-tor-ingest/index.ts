@@ -1,3 +1,4 @@
+import { authorize } from '../_shared/access.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
@@ -13,13 +14,15 @@ interface Incoming {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await authorize(req, true);
+  if (denied) return denied;
   try {
     const body = await req.json();
     let raw: Incoming[] = [];
     if (Array.isArray(body?.entries)) {
       raw = body.entries;
     } else if (Array.isArray(body?.links)) {
-      raw = body.links.map((l: any) => ({
+      raw = body.links.map((l: string | (Incoming & {title?:string})) => ({
         url: typeof l === "string" ? l : l.url,
         name: typeof l === "object" ? (l.title || l.name || l.url) : l,
         description: typeof l === "object" ? l.description : "",

@@ -1,3 +1,4 @@
+import { authorize } from '../_shared/access.ts';
 // vv-mirofish — regime/verdict engine.
 // Mirofish layer fuses market microstructure (OFI, vol, drift) with the
 // latest quantum coherence to produce a directional verdict + confidence.
@@ -14,7 +15,7 @@ const corsHeaders = {
 const log = (event: string, data: Record<string, unknown> = {}) =>
   console.log(JSON.stringify({ ts: new Date().toISOString(), fn: "vv-mirofish", event, ...data }));
 
-function classify(ticks: any[], coherence: number) {
+function classify(ticks: {change_24h_pct?:number;ofi?:number}[], coherence: number) {
   if (!ticks.length) return { verdict: "NO_DATA", confidence: 0, drift: 0, ofi: 0 };
   const drift = ticks.reduce((s, t) => s + (Number(t.change_24h_pct) || 0), 0) / ticks.length;
   const ofi = ticks.reduce((s, t) => s + (Number(t.ofi) || 0), 0) / ticks.length;
@@ -31,6 +32,8 @@ function classify(ticks: any[], coherence: number) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await authorize(req, true);
+  if (denied) return denied;
   const t0 = Date.now();
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -49,7 +52,7 @@ Deno.serve(async (req) => {
       sb.functions.invoke("vv-market"),
       sb.from("warm_state").select("value").eq("key", "quantum_state").maybeSingle(),
     ]);
-    const ticks = (m.data?.ticks ?? []) as any[];
+    const ticks = (m.data?.ticks ?? []) as {change_24h_pct?:number;ofi?:number}[];
     const coherence = Number(q.data?.value?.coherence ?? 0);
     const v = classify(ticks, coherence);
     const verdict = { ...v, coherence, instruments: ticks.length, ts: new Date().toISOString() };

@@ -61,11 +61,11 @@ export async function fetchSocioFull(): Promise<SocioResult> {
     if (!res.ok) {
       return { data: null, error: { kind: "http", status: res.status, message: `HTTP ${res.status} ${res.statusText}` } };
     }
-    let json: any;
+    let json: {status?:string;data?:SocioFull};
     try {
       json = await res.json();
-    } catch (e: any) {
-      return { data: null, error: { kind: "malformed", message: `Invalid JSON: ${e?.message || e}` } };
+    } catch (e: unknown) {
+      return { data: null, error: { kind: "malformed", message: `Invalid JSON: ${e instanceof Error ? e.message : String(e)}` } };
     }
     if (!json || typeof json !== "object") {
       return { data: null, error: { kind: "malformed", message: "Response was not a JSON object" } };
@@ -74,8 +74,8 @@ export async function fetchSocioFull(): Promise<SocioResult> {
       return { data: null, error: { kind: "malformed", message: `Unexpected payload shape (status="${json.status}")` } };
     }
     return { data: json.data as SocioFull };
-  } catch (e: any) {
-    const msg = String(e?.message || e);
+  } catch (e: unknown) {
+    const msg = String(e instanceof Error ? e.message : String(e));
     const kind: SocioErrorKind = /timeout|abort/i.test(msg) ? "timeout" : "offline";
     return { data: null, error: { kind, message: msg || "Network error" } };
   }
