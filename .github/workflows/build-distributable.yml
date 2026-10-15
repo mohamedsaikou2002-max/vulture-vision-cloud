@@ -1,0 +1,23 @@
+name: Build distributable frontend
+on:
+  push:
+    branches:
+      - feature/trade-lab-lovable-integration-20261015
+  workflow_dispatch:
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vulture-vision-compiled-site
+          path: dist/
+          retention-days: 14
