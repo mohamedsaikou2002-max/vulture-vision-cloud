@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import VVLayout from "@/components/VVLayout";
+import QuantumBilling from "@/components/QuantumBilling";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchLatestBrief, fetchRegime, subscribeToIntelBriefs,
@@ -319,6 +320,8 @@ export default function Analytics() {
               {data?.narrative || <span className="dim-text">⬡ COMPUTING PROBABILISTIC ANALYSIS...</span>}
             </div>
           </div>
+
+          <QuantumBilling />
         </div>
       </div>
     </VVLayout>
