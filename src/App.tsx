@@ -9,6 +9,7 @@ const Dashboard=lazy(()=>import("./pages/Dashboard"));
 const Analytics=lazy(()=>import("./pages/Analytics"));
 const News=lazy(()=>import("./pages/News"));
 const SocioEconomics=lazy(()=>import("./pages/SocioEconomics"));
+const TradeLab=lazy(()=>import("./pages/TradeLab"));
 const Simulations=lazy(()=>import("./pages/Simulations"));
 import NotFound from "./pages/NotFound";
 import AuthGate from "./components/AuthGate";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/news" element={<News />} />
           <Route path="/socioeconomics" element={<SocioEconomics />} />
+          <Route path="/trade-lab" element={<TradeLab />} />
           <Route path="/simulations" element={<Simulations />} />
           <Route path="*" element={<NotFound />} />
         </Routes></Suspense>

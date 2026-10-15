@@ -1,0 +1,23 @@
+import { describe,it,expect } from 'vitest';
+import { DEFAULT_PLAN,evaluateReplay,expectancy,parseCandleCsv,plannedRisk,stressSuite,summarizeJournal,validatePlan,type Candle } from '@/lib/tradeLab/engine';
+const plan={...DEFAULT_PLAN,spreadBps:0,slippageBps:0,feePerUnit:0};
+const bar=(o:number,h:number,l:number,c:number,time='2026-10-01T14:00:00Z'):Candle=>({timestamp:time,open:o,high:h,low:l,close:c,volume:10});
+describe('Deterministic educational Trade Lab',()=>{
+ it('computes the specified expectancy and break-even model',()=>{const r=expectancy(.45,2,1,.1);expect(r.expectedR).toBeCloseTo(.25);expect(r.breakEven).toBeCloseTo(1.1/3);});
+ it('rejects invalid side geometry and non-finite sizing',()=>{expect(()=>validatePlan({...plan,direction:'short'})).toThrow();expect(()=>validatePlan({...plan,quantity:Infinity})).toThrow();});
+ it('includes contract point values and costs in planned risk',()=>{expect(plannedRisk({...plan,pointValue:50,quantity:2,feePerUnit:1}).loss).toBe(204);});
+ it('does not treat confidence as financial evidence',()=>{expect(plannedRisk({...plan,confidence:0})).toEqual(plannedRisk({...plan,confidence:100}));expect(stressSuite({...plan,confidence:0})).toEqual(stressSuite({...plan,confidence:100}));});
+ it('uses stop-first execution for ambiguous bars',()=>{const r=evaluateReplay(plan,[bar(100,105,97,104)]);expect(r.netPnl).toBe(-2);expect(r.ambiguousBars).toBe(1);expect(r.status).toBe('closed');});
+ it('models gaps beyond stop triggers and risk breaches',()=>{const r=evaluateReplay({...plan,maxLoss:3},[bar(100,101,99,100),bar(90,91,89,90,'2026-10-01T14:01:00Z')]);expect(r.netPnl).toBe(-10);expect(r.limitBreached).toBe(true);});
+ it('models short trades with the correct P&L sign',()=>{const r=evaluateReplay({...plan,direction:'short',stop:102,target:96},[bar(100,101,95,96)]);expect(r.netPnl).toBe(4);});
+ it('does not assume an unreachable limit entry filled',()=>{expect(evaluateReplay({...plan,orderType:'limit',entry:99},[bar(101,103,100,102)]).status).toBe('not_filled');});
+ it('models favorable opening prices for a buy limit',()=>{const r=evaluateReplay({...plan,orderType:'limit'},[bar(99,105,98.5,104)]);expect(r.entry).toBe(99);expect(r.netPnl).toBe(5);});
+ it('does not claim a target fill that could precede an intrabar limit entry',()=>{const r=evaluateReplay({...plan,orderType:'limit'},[bar(102,105,99,101)]);expect(r.status).toBe('open');expect(r.netPnl).toBe(1);expect(r.ambiguousBars).toBe(1);});
+ it('makes no trade or costs for an abstention',()=>{const r=evaluateReplay({...plan,direction:'neutral'},[bar(100,105,97,104)]);expect(r.status).toBe('no_trade');expect(r.netPnl).toBe(0);});
+ it('reports execution costs without double-counting them in P&L',()=>{const r=evaluateReplay({...plan,spreadBps:10,slippageBps:10,feePerUnit:1},[bar(100,101,99,100)]);expect(r.netPnl).toBeCloseTo(-2.3);expect(r.cost).toBeCloseTo(2.3);});
+ it('returns no result from unrevealed future candles',()=>{expect(evaluateReplay(plan,[]).status).toBe('not_filled');});
+ it('does not invent correlation or overfitting performance',()=>{expect(stressSuite(plan).filter(r=>r.kind==='requires_data').every(r=>r.pnl===null)).toBe(true);});
+ it('calculates explicit losing-streak losses',()=>{expect(stressSuite(plan).find(r=>r.name==='15 consecutive losses')?.pnl).toBe(-30);});
+ it('enforces chronological OHLCV integrity and timezone',()=>{const csv='timestamp,open,high,low,close,volume\n2026-10-01T14:00:00Z,100,101,99,100,10\n2026-10-01T14:01:00Z,100,102,99,101,20';expect(parseCandleCsv(csv)).toHaveLength(2);expect(()=>parseCandleCsv(csv.replace('14:01','14:00'))).toThrow();expect(()=>parseCandleCsv(csv.replace('100,101,99','100,98,99'))).toThrow();});
+ it('does not calculate aggregate win rates from open trades',()=>{const open=evaluateReplay(plan,[bar(100,101,99,100)]);expect(summarizeJournal([open],10000).winRate).toBeNull();});
+});

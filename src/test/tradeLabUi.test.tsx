@@ -1,0 +1,28 @@
+import { beforeEach,afterEach,it,expect,vi } from 'vitest';
+import { render,screen,fireEvent,waitFor,cleanup } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+const invoke=vi.hoisted(()=>vi.fn());
+vi.mock('@/integrations/supabase/client',()=>({supabase:{functions:{invoke},from:()=>({select:()=>({order:()=>({limit:()=>Promise.resolve({data:[],error:null})})})})}}));
+vi.mock('@/hooks/useLiveNewsContext',()=>({useLiveNewsContext:()=>({context:null,version:null})}));
+import TradeLab from '@/pages/TradeLab';
+beforeEach(()=>{invoke.mockReset();vi.stubGlobal('crypto',{subtle:{digest:async()=>new Uint8Array(32).buffer}});});
+afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+it('freezes a plan before advancing and keeps post-decision candles out of the AI snapshot',async()=>{
+ render(<MemoryRouter><TradeLab/></MemoryRouter>);
+ const input=screen.getByLabelText(/CSV: timestamp/);
+ const file=new File([''], 'history.csv',{type:'text/csv'});
+ Object.defineProperty(file,'text',{value:async()=> 'timestamp,open,high,low,close,volume\n2026-10-01T14:00:00Z,100,101,99,100,1\n2026-10-01T14:01:00Z,100,105,99,104,1'});
+ fireEvent.change(input,{target:{files:[file]}});
+ const freeze=await screen.findByText('Freeze plan at revealed candle');
+ expect(freeze).toBeDisabled();
+ fireEvent.change(screen.getByLabelText('Why this direction?'),{target:{value:'Test hypothesis'}});
+ fireEvent.change(screen.getByLabelText('What would invalidate the thesis?'),{target:{value:'Stop breached'}});
+ fireEvent.click(freeze);
+ expect(screen.getByLabelText('Planned entry')).toBeDisabled();
+ fireEvent.click(screen.getByText('Reveal next candle'));
+ invoke.mockResolvedValue({data:{status:'complete',as_of:'2026-10-01T14:00:00Z',news_version:null,news_status:'no_recent_context',reviewers:[]},error:null});
+ fireEvent.click(screen.getByText('Request six opposing AI reviews'));
+ await waitFor(()=>expect(invoke).toHaveBeenCalledTimes(1));
+ expect(invoke.mock.calls[0][1].body.visibleCandles).toHaveLength(1);
+ expect(invoke.mock.calls[0][1].body.visibleCandles[0].timestamp).toBe('2026-10-01T14:00:00Z');
+});
