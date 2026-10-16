@@ -67,7 +67,7 @@ export function parseSimulationChatRequest(value: unknown): SimulationChatReques
     };
   });
   const round = value.round;
-  if (!Number.isInteger(round) || (round as number) < 0 || (round as number) > 24) throw new Error("Invalid round");
+  if (typeof round !== "number" || !Number.isInteger(round) || round < 0 || round > 24) throw new Error("Invalid round");
   return {
     question: bounded(value.question, "Question", 1500, true),
     scenario: bounded(value.scenario, "Scenario", 4000, true),

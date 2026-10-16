@@ -6,6 +6,7 @@ import { useSelectedNews } from '@/hooks/useSelectedNews';
 import { useLiveNewsContext } from '@/hooks/useLiveNewsContext';
 import { personalizeContext, includeSelectedEvidence } from '../../supabase/functions/_shared/live_context';
 import VVLayout from '@/components/VVLayout';
+import SimulationSwarmChat from '@/components/SimulationSwarmChat';
 import corpus from '@/data/historicalCorpus.json';
 import { supabase } from '@/integrations/supabase/client';
 import { type RunCheckpoint, buildSeed, checkAbort, engineCall, generateReport, prepareAndStart, type EngineState } from '@/lib/mirofishWorkflow';
@@ -135,6 +136,16 @@ export default function Simulations() {
           <div className="mt-8 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">Historical replays can be influenced by a model's prior knowledge. Corpus magnitude estimates remain unverified. Use runs to explore hypotheses; measure predictive performance separately against unseen outcomes.</div>
         </section>
       </div>
+      <SimulationSwarmChat
+        scenario={scenario}
+        contextSummary={mode === 'current' ? (brief?.summary || '') : event ? event.trigger + ' · Transmission: ' + event.contagion_channels : ''}
+        asOf={mode === 'current' ? (brief?.as_of || '') : event ? event.start_date : ''}
+        news={mode === 'current' && brief ? brief.news.slice(0, 8).map(item => ({ id: item.id, title: item.title, source: item.source })) : []}
+        report={report}
+        runStatus={state?.runner_status || 'not_started'}
+        round={state?.current_round || 0}
+        contextKey={mode === 'current' ? 'news:' + String(contextVersion || 'unavailable') : 'historical:' + selected}
+      />
     </main>
   </VVLayout>;
 }

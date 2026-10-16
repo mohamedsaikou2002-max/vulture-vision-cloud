@@ -49,6 +49,7 @@ export default function SimulationSwarmChat(props: SimulationRoomProps) {
     setExchanges([]);
     setResponded(false);
     setError("");
+    setWaiting(false);
   }, [props.contextKey]);
 
   async function send() {
@@ -78,7 +79,7 @@ export default function SimulationSwarmChat(props: SimulationRoomProps) {
       setExchanges(previous => [...previous, { id: ++next.current, question: text, choice, result }]);
       setResponded(true);
       setQuestion("");
-      requestAnimationFrame(() => container.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => container.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" }));
     } catch (e) {
       if (generation.current === current) setError(e instanceof Error ? e.message : "Could not contact the AI research room");
     } finally {
