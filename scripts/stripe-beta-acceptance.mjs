@@ -57,8 +57,8 @@ const expectedPaid=phase==="paid";
 if(Boolean(status.body.active)!==expectedPaid)
   throw Error("Payment state did not match "+phase+"; inspect webhook receipts and subscription ledger");
 const premium=await market();
-if(expectedPaid&&premium.http===402)
-  throw Error("Premium market endpoint still denies a verified paid beta account");
+if(expectedPaid&&(premium.http<200||premium.http>=300))
+  throw Error("Verified paid user expected a 2xx premium API response, got HTTP "+premium.http);
 if(!expectedPaid&&premium.http!==402)
   throw Error("Unpaid beta user was not rejected with 402; got HTTP "+premium.http);
 if(phase==="preflight"){
