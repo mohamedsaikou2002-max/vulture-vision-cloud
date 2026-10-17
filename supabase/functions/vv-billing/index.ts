@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
   const environment = Deno.env.get("VV_BILLING_ENV"), key = Deno.env.get("STRIPE_SECRET_KEY");
   const mode = checkedBillingEnvironment(environment, key);
   const { data: settings, error: configError } = await admin.from("vv_billing_environment").select("mode").eq("id", true).maybeSingle();
-  const backendReady = !!mode && !configError && settings?.mode === mode && !!Deno.env.get("STRIPE_WEBHOOK_SECRET");
+  const backendReady = !!mode && !configError && settings?.mode === mode && !!Deno.env.get("STRIPE_WEBHOOK_SECRET")?.startsWith("whsec_");
   if (action === "status") {
     if (!backendReady) return response({ active: false, mode: mode || "unconfigured", billing_ready: false, state: "billing_unconfigured" });
     const { data: subscriptions, error: subError } = await admin.from("vv_billing_subscriptions")
