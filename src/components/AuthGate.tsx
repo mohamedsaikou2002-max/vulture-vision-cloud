@@ -103,13 +103,18 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     finally { setWorking(false); }
   };
   const goStripe = async (action: "checkout" | "portal") => {
+    const expected = RELEASE_CHANNEL === "beta" ? "test" : "live";
+    if (!billing || billing.mode !== expected || !billing.billing_ready) {
+      setErr("This app is not connected to the matching Stripe environment");
+      return;
+    }
     setWorking(true); setErr("");
     try {
       const result = await billingOperation(action);
       if (!result.url) throw new Error("Stripe did not return a checkout URL");
       const hosted = new URL(result.url);
-      const expected = action === "checkout" ? "checkout.stripe.com" : "billing.stripe.com";
-      if (hosted.protocol !== "https:" || hosted.hostname !== expected) throw new Error("Unexpected payment link");
+      const stripeHost = action === "checkout" ? "checkout.stripe.com" : "billing.stripe.com";
+      if (hosted.protocol !== "https:" || hosted.hostname !== stripeHost) throw new Error("Unexpected payment link");
       window.location.assign(result.url);
     } catch(e) { setErr(e instanceof Error ? e.message : "Stripe is not configured"); }
     finally { setWorking(false); }
@@ -176,8 +181,10 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           <p className="mt-1 text-xs text-muted-foreground">Your final amount, any applicable taxes and renewal details appear in Stripe Checkout.</p>
         </div>
         {!billing && <p role="status" className="text-sm text-muted-foreground">Verifying your subscription…</p>}
+        {billing && (billing.mode !== (RELEASE_CHANNEL === "beta" ? "test" : "live")) &&
+          <p role="alert" className="text-sm text-destructive">Wrong deployment environment. This {RELEASE_CHANNEL} app cannot use a {billing.mode} subscription backend.</p>}
         {billing && !billing.billing_ready && <p role="alert" className="text-sm text-destructive">Billing is not configured for this environment. No payments can be accepted yet.</p>}
-        {billing?.billing_ready && <button type="button" disabled={working || checking}
+        {billing?.billing_ready && billing.mode === (RELEASE_CHANNEL === "beta" ? "test" : "live") && <button type="button" disabled={working || checking}
           onClick={() => void goStripe("checkout")}
           className="w-full rounded bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40">
           {working ? "REDIRECTING…" : RELEASE_CHANNEL === "beta" ? "CONTINUE TO TEST CHECKOUT" : "SUBSCRIBE SECURELY"}

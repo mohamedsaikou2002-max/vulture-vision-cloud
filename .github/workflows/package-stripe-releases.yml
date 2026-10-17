@@ -1,0 +1,45 @@
+name: Package Vulture beta and commercial releases
+on:
+  push:
+    branches:
+      - feature/stripe-supabase-paywall-20261016
+  workflow_dispatch:
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --no-audit --no-fund
+      - name: Assemble isolated release source packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/vv-beta/source /tmp/vv-commercial/source
+          for mode in beta commercial; do
+            destination="/tmp/vv-$mode/source"
+            rsync -a \
+              --exclude='.git' --exclude='.env' --exclude='.env.*' \
+              --exclude='node_modules' --exclude='dist' --exclude='.cache' \
+              --exclude='*.log' --exclude='*.zip' \
+              ./ "$destination/"
+            cp "deployment/stripe/.env.$mode.example" "$destination/.env.release.example"
+            printf 'Release channel: %s\nThis source cannot accept Stripe payments until its own Supabase, OAuth, products, prices, secrets and webhook are configured.\n' "$mode" > "$destination/RELEASE-READ-ME.txt"
+            cd "/tmp/vv-$mode" && zip -qr "/tmp/vulture-vision-$mode.zip" source
+          done
+          mv /tmp/vulture-vision-beta.zip "$GITHUB_WORKSPACE/vulture-vision-beta.zip"
+          mv /tmp/vulture-vision-commercial.zip "$GITHUB_WORKSPACE/vulture-vision-commercial.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vulture-beta-source-package
+          path: vulture-vision-beta.zip
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vulture-commercial-source-package
+          path: vulture-vision-commercial.zip
+          retention-days: 30
