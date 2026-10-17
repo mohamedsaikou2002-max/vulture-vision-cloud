@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 
 type AuthMode = "signin" | "register" | "reset";
 interface BillingStatus { active: boolean; mode: "test" | "live" | "unconfigured"; billing_ready: boolean; state: string; }
@@ -67,8 +66,11 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const oauth = async () => {
     setErr(""); setWorking(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-      if (result.error) throw result.error;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) throw error;
     } catch(e) { setErr(e instanceof Error ? e.message : String(e)); }
     finally { setWorking(false); }
   };
