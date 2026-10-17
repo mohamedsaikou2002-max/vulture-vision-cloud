@@ -17,7 +17,7 @@ The account owner must activate Stripe Billing and configure the customer portal
 
 ## 2. Supabase accounts
 
-Google login uses the existing Lovable OAuth-to-Supabase flow. Enable Google OAuth in Lovable/Supabase and allow the actual beta/commercial callback origins. Email/password signup and reset use Supabase Auth.
+Google login uses `supabase.auth.signInWithOAuth({provider: 'google'})` against each deployment's own Supabase project. Enable Google under Supabase Auth Providers in each beta/live project, configure its Google OAuth credentials and allow the actual beta/commercial redirect origins. Do not reuse a Lovable-hosted OAuth connection tied to a different project. Email/password signup and reset use Supabase Auth.
 
 In **Authentication** configure SMTP deliverability, confirmation-email enforcement, redirect allowlists, password policy, rate limits and CAPTCHA/abuse protections. Users must confirm email before paying. Do not disable Google provider verification.
 
