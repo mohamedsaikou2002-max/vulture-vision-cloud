@@ -101,3 +101,7 @@ Start locally: \`npm ci && npm run dev\`. For a compiled deploy: \`npm run build
 
 ## Remaining live-account prerequisites
 Stripe Products/Prices and secret keys cannot be created without an authenticated Stripe connection. The build **does not** prove real payments. A paid-beta launch requires the Stripe test integration tests above, and a commercial launch requires separate live-mode verification. Keep the commercial release unpublished until these succeed.
+
+## 6. Test-mode payment acceptance
+
+See STRIPE_BETA_ACCEPTANCE.md for a staged real HTTP checkout/webhook/paywall smoke test. Synthetic test fixtures are not proof of a completed Stripe payment. Keep commercial mode unpublished until the live test is successful.
