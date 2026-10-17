@@ -26,10 +26,10 @@ jobs:
               --exclude='.git' --exclude='.env' --exclude='.env.*' \
               --exclude='node_modules' --exclude='dist' --exclude='.cache' \
               --exclude='*.log' --exclude='*.zip' \
-              ./ "$destination/"
-            cp "deployment/stripe/.env.$mode.example" "$destination/.env.release.example"
+              "$GITHUB_WORKSPACE/" "$destination/"
+            cp "$GITHUB_WORKSPACE/deployment/stripe/.env.$mode.example" "$destination/.env.release.example"
             printf 'Release channel: %s\nThis source cannot accept Stripe payments until its own Supabase, OAuth, products, prices, secrets and webhook are configured.\n' "$mode" > "$destination/RELEASE-READ-ME.txt"
-            cd "/tmp/vv-$mode" && zip -qr "/tmp/vulture-vision-$mode.zip" source
+            (cd "/tmp/vv-$mode" && zip -qr "/tmp/vulture-vision-$mode.zip" source)
           done
           mv /tmp/vulture-vision-beta.zip "$GITHUB_WORKSPACE/vulture-vision-beta.zip"
           mv /tmp/vulture-vision-commercial.zip "$GITHUB_WORKSPACE/vulture-vision-commercial.zip"
