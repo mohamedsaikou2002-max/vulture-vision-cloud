@@ -5,8 +5,8 @@ const db=new PGlite();
 try {
  await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
   CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);
-  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $;
-  CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $ SELECT nullif(current_setting('request.jwt.claim.role',true),'') $;
+  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $auth_uid$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $auth_uid$;
+  CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $auth_role$ SELECT nullif(current_setting('request.jwt.claim.role',true),'') $auth_role$;
   SELECT set_config('request.jwt.claim.role','service_role',false);`);
  for(const name of (await readdir('supabase/migrations')).filter(n=>n.endsWith('.sql')).sort())await db.exec(await readFile('supabase/migrations/'+name,'utf8'));
  const scalar=async(sql)=>(await db.query(sql)).rows[0];
