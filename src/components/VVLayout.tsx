@@ -13,6 +13,7 @@ const links = [
   { to: "/socioeconomics", label: "SOCIO-ECONOMICS" },
   { to: "/simulations", label: "SIMULATIONS" },
   { to: "/news", label: "NEWS FEED" },
+  { to: "/account", label: "ACCOUNT / BILLING" },
 ];
 
 export default function VVLayout({ children, status, blurred = true }: Props) {
