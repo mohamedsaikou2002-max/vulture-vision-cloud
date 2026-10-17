@@ -8,7 +8,7 @@ Adapted from the user's Belicia GitHub project:
 - \`src/lib/podApi.ts\`: modelled-agent interrogation and context-bearing conversations.
 - \`supabase/functions/pod-room/index.ts\`: server-only Gemini generation.
 
-The adaptation uses Vulture Vision's existing scenario inputs, news snapshots, MiroFish run status and optional generated report. It does **not** reuse Belicia's unrelated persuasion model or claim that role cards are real MiroFish agents.
+The adaptation uses Vulture Vision's existing scenario inputs, news snapshots, MiroFish run status and optional generated report. When a report is attached, the chat uses the scenario and news context frozen when that simulation was launched; background news updates do not overwrite the report's original inputs. It does **not** reuse Belicia's unrelated persuasion model or claim that role cards are real MiroFish agents.
 
 ## Implementation
 - Frontend: \`src/components/SimulationSwarmChat.tsx\` displayed on \`/simulations\`.

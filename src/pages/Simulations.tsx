@@ -37,7 +37,9 @@ export default function Simulations() {
   const simulationId = useRef<string | null>(null);
   const mounted = useRef(true);
   const storageKey=useRef<string|null>(null);
-  const saved=useRef<{checkpoint:RunCheckpoint;seed:string;requirement:string;rounds:number;contextLabel?:string}|null>(null);
+  type ResearchContext = { scenario:string; summary:string; asOf:string; news:{id:string; title:string; source:string}[]; key:string };
+  const [frozenChatContext, setFrozenChatContext] = useState<ResearchContext|null>(null);
+  const saved=useRef<{checkpoint:RunCheckpoint;seed:string;requirement:string;rounds:number;contextLabel?:string;chatContext?:ResearchContext}|null>(null);
   const [recoverable,setRecoverable]=useState(false);
   const event = corpus.find(e => e.event_id === selected);
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function Simulations() {
     void supabase.auth.getSession().then(({data:{session}})=>{
       if(!mounted.current || !session)return;
       storageKey.current='vv-run-'+session.user.id;
-      try{const raw=sessionStorage.getItem(storageKey.current);if(raw){saved.current=JSON.parse(raw);simulationId.current=saved.current?.checkpoint.simulation_id || null;setRecoverable(true);setPhase('Saved run available · resume to check server status');}}catch{sessionStorage.removeItem(storageKey.current);}
+      try{const raw=sessionStorage.getItem(storageKey.current);if(raw){saved.current=JSON.parse(raw);simulationId.current=saved.current?.checkpoint.simulation_id || null;if(saved.current?.chatContext)setFrozenChatContext(saved.current.chatContext);setRecoverable(true);setPhase('Saved run available · resume to check server status');}}catch{sessionStorage.removeItem(storageKey.current);}
     });
     engineCall('/health').then(() => { if (mounted.current) setHealth('available'); }).catch(() => { if (mounted.current) setHealth('unavailable'); });
     return () => { mounted.current = false; run.current?.abort(); };
@@ -68,7 +70,11 @@ export default function Simulations() {
     try {
       const seed = resume && saved.current ? saved.current.seed : mode === 'current' ? buildCurrentSeed(scenario, brief!) : buildSeed(scenario, event);
       const requirement = resume && saved.current ? saved.current.requirement : mode === 'current' ? buildEvaluationRequirement(scenario, brief!) : scenario;
-      const snapshot=resume && saved.current ? saved.current : {checkpoint:{},seed,requirement,rounds,contextLabel};
+      const chatContext: ResearchContext = mode === 'current'
+        ? { scenario, summary: brief?.summary || '', asOf: brief?.as_of || '', news: brief?.news.slice(0,8).map(item => ({ id:item.id, title:item.title.slice(0,240), source:item.source.slice(0,100) })) || [], key: 'news:' + String(contextVersion || 'unavailable') }
+        : { scenario, summary: event ? event.trigger + ' · Transmission: ' + event.contagion_channels : '', asOf: event?.start_date || '', news:[], key: 'historical:' + selected };
+      const snapshot=resume && saved.current ? saved.current : {checkpoint:{},seed,requirement,rounds,contextLabel,chatContext};
+      if(snapshot.chatContext)setFrozenChatContext(snapshot.chatContext);
       const save=(checkpoint:RunCheckpoint)=>{snapshot.checkpoint=checkpoint;saved.current=snapshot;if(storageKey.current)sessionStorage.setItem(storageKey.current,JSON.stringify(snapshot));if(mounted.current)setRecoverable(true);};
       const id = await prepareAndStart(requirement, seed, snapshot.rounds, updatePhase, id => { simulationId.current = id; }, controller.signal,snapshot.checkpoint,save);
       updatePhase('Swarm running');
@@ -102,6 +108,10 @@ export default function Simulations() {
     catch (e) { if (mounted.current && !controller.signal.aborted) setError(e instanceof Error ? e.message : 'Report failed'); }
     finally { if (mounted.current) setBusy(false); }
   };
+  const liveChatContext: ResearchContext = mode === 'current'
+    ? { scenario, summary: brief?.summary || '', asOf: brief?.as_of || '', news: brief?.news.slice(0,8).map(item => ({ id:item.id, title:item.title.slice(0,240), source:item.source.slice(0,100) })) || [], key: 'news:' + String(contextVersion || 'unavailable') }
+    : { scenario, summary: event ? event.trigger + ' · Transmission: ' + event.contagion_channels : '', asOf: event?.start_date || '', news:[], key: 'historical:' + selected };
+  const chatContext = report && frozenChatContext ? frozenChatContext : liveChatContext;
   return <VVLayout status={{ label: busy ? 'SIMULATION IN PROGRESS' : health === 'available' ? 'ENGINE AVAILABLE' : health === 'checking' ? 'CHECKING ENGINE' : 'ENGINE UNAVAILABLE', tone: busy ? 'gold' : health === 'available' ? 'green' : 'red' }}>
     <main className="mx-auto max-w-6xl px-4 py-8 md:px-8">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -137,14 +147,14 @@ export default function Simulations() {
         </section>
       </div>
       <SimulationSwarmChat
-        scenario={scenario}
-        contextSummary={mode === 'current' ? (brief?.summary || '') : event ? event.trigger + ' · Transmission: ' + event.contagion_channels : ''}
-        asOf={mode === 'current' ? (brief?.as_of || '') : event ? event.start_date : ''}
-        news={mode === 'current' && brief ? brief.news.slice(0, 8).map(item => ({ id: item.id, title: item.title, source: item.source })) : []}
+        scenario={chatContext.scenario}
+        contextSummary={chatContext.summary}
+        asOf={chatContext.asOf}
+        news={chatContext.news}
         report={report}
         runStatus={state?.runner_status || 'not_started'}
         round={state?.current_round || 0}
-        contextKey={mode === 'current' ? 'news:' + String(contextVersion || 'unavailable') : 'historical:' + selected}
+        contextKey={chatContext.key}
       />
     </main>
   </VVLayout>;
