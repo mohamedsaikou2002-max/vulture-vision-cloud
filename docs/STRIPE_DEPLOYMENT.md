@@ -80,6 +80,10 @@ VITE_RELEASE_CHANNEL=beta # or commercial
 
 Start locally: \`npm ci && npm run dev\`. For a compiled deploy: \`npm run build\` and host \`dist/\` on the configured origin. Update \`VV_SITE_URL\` accordingly.
 
+### Private research backends
+
+`vv-research-proxy` is the only allowed browser-facing route to external Azure Intel and Socio-Economics APIs. Set server-only `VV_INTEL_BACKEND_URL` and `VV_SOCIO_BACKEND_URL` (HTTPS base origins) and `VV_RESEARCH_BACKEND_TOKEN` as appropriate; private gateways must independently authenticate the proxy and never expose their HTTP/WebSocket ports directly. Realtime clients now use regular polling until a paid-authenticated Supabase Realtime channel is implemented. Synthesis mutation is operator-only.
+
 ## 5. Acceptance checklist — complete before real charges
 
 - Create email account; verify the email link; sign out; sign in; reset password; check Google OAuth redirects.
