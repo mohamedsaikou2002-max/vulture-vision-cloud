@@ -3,7 +3,7 @@
 // even when an engine is unavailable. Synthetic analyst roles are not live agents.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  parseSimulationChatRequest, buildSimulationChatPrompt, parseSimulationChatAnswer
+  parseSimulationChatRequest, buildSimulationChatPrompt, parseSimulationChatAnswer, availableGeminiModels
 } from "../_shared/simulation_chat_contract.ts";
 
 const cors = {
@@ -35,8 +35,9 @@ Deno.serve(async (req: Request) => {
 
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) return reply({ error: "Gemini is not configured for simulation chat" }, 503);
-  const configured = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
-  if (!/^[A-Za-z0-9_.-]{3,80}$/.test(configured)) return reply({ error: "Invalid Gemini model configuration" }, 503);
+  let models: string[];
+  try { models = availableGeminiModels(Deno.env.get("GEMINI_MODEL")); }
+  catch { return reply({ error: "Invalid Gemini model configuration" }, 503); }
 
   // Existing service-role-only RPC atomically enforces 6 synthesis calls per user per hour.
   // If migrations aren't deployed, fail closed rather than make unmetered provider calls.
@@ -46,27 +47,37 @@ Deno.serve(async (req: Request) => {
   if (claimed !== true) return reply({ error: "Hourly simulation research limit reached (6 calls)" }, 429);
 
   const prompt = buildSimulationChatPrompt(request);
+  const generationBody = JSON.stringify({
+    systemInstruction: { parts: [{ text: prompt.system }] },
+    contents: [{ role: "user", parts: [{ text: prompt.user }] }],
+    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 2500, temperature: 0.35 },
+  });
   try {
-    const upstream = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/" + configured + ":generateContent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        signal: AbortSignal.timeout(40000),
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: prompt.system }] },
-          contents: [{ role: "user", parts: [{ text: prompt.user }] }],
-          generationConfig: { responseMimeType: "application/json", maxOutputTokens: 2500, temperature: 0.35 },
-        }),
+    for (const model of models) {
+      const upstream = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+          signal: AbortSignal.timeout(40000),
+          body: generationBody,
+        }
+      );
+      // Older 2.5 models may be restricted for new Google API projects.
+      // A 404 is a model-access/configuration failure, not billable inference success.
+      if (upstream.status === 404) {
+        console.warn("Gemini model unavailable (404); trying another supported model", model);
+        continue;
       }
-    );
-    if (!upstream.ok) {
-      console.error("Simulation Gemini provider failure", upstream.status);
-      return reply({ error: upstream.status === 429 ? "Gemini is rate-limited" : "Gemini request failed" }, 502);
+      if (!upstream.ok) {
+        console.error("Simulation Gemini provider failure", upstream.status);
+        return reply({ error: upstream.status === 429 ? "Gemini is rate-limited" : "Gemini request failed" }, 502);
+      }
+      const result = await upstream.json();
+      const text = result?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("") || "";
+      const validated = parseSimulationChatAnswer(text, request.mode, request.news.map(n => n.id), model);
+      return reply(validated);
     }
-    const j = await upstream.json();
-    const text = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
-    const result = parseSimulationChatAnswer(text, request.mode, request.news.map(n => n.id), configured);
-    return reply(result);
+    return reply({ error: "No supported Gemini model is accessible for the configured API key" }, 503);
   } catch (e) {
     console.error("Simulation chat service failed", e instanceof Error ? e.name : "unknown");
     return reply({ error: "Gemini response unavailable or invalid; no simulation was fabricated" }, 502);

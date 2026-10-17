@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseSimulationChatRequest, buildSimulationChatPrompt,
-  parseSimulationChatAnswer, type SimulationChatRequest
+  parseSimulationChatAnswer, availableGeminiModels, type SimulationChatRequest
 } from "../../supabase/functions/_shared/simulation_chat_contract";
 
 const ref = "a".repeat(64);
@@ -28,6 +28,12 @@ const output = {
   evidence_ids: [ref, "invented-source"],
 };
 describe("Podroom-inspired Vulture simulation chat contract", () => {
+  it("uses current Flash models by default and falls back when legacy models return 404", () => {
+    expect(availableGeminiModels()).toEqual(["gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+    expect(availableGeminiModels("gemini-2.5-flash")).toEqual(["gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+    expect(availableGeminiModels("gemini-3.8-flash")).toHaveLength(2);
+    expect(() => availableGeminiModels("../not-a-model")).toThrow("Invalid Gemini model");
+  });
   it("accepts bounded scenario, role panel and news context", () => {
     expect(parseSimulationChatRequest(input)).toEqual(input);
   });
