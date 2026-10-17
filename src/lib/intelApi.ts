@@ -1,10 +1,5 @@
-// Vulture Vision — Intelligence Backend API Client
-// Connects to vv_intel_backend running on VITE_INTEL_HOST:8000
-
-const INTEL_HOST = (import.meta.env.VITE_INTEL_HOST as string) || "localhost:8000";
-const isHttps = typeof location !== "undefined" && location.protocol === "https:";
-const BASE_URL = `${isHttps ? "https" : "http"}://${INTEL_HOST}`;
-const WS_URL = `${isHttps ? "wss" : "ws"}://${INTEL_HOST}`;
+// Authenticated Supabase proxy for subscriber-only intelligence backends.
+import { supabase } from "@/integrations/supabase/client";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -77,80 +72,32 @@ export interface IntelBrief {
   };
 }
 
-// ── REST calls ──────────────────────────────────────────────
-
-export async function fetchLatestBrief(): Promise<IntelBrief | null> {
+// ── Subscriber-only backend calls ─────────────────────────
+async function requestIntel<T>(operation: string): Promise<T|null> {
   try {
-    const res = await fetch(`${BASE_URL}/brief/latest`, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch { return null; }
+    const {data,error}=await supabase.functions.invoke("vv-research-proxy",{body:{operation}});
+    if(error||data?.error) return null;
+    return data as T;
+  } catch{return null;}
 }
-
-export async function fetchRegime(): Promise<RegimeState | null> {
-  try {
-    const res = await fetch(`${BASE_URL}/regime`, { signal: AbortSignal.timeout(6000) });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch { return null; }
+export function fetchLatestBrief(): Promise<IntelBrief|null> {
+  return requestIntel<IntelBrief>("intel-brief");
 }
-
-export async function fetchHealth(): Promise<{ status: string; queue_depth: number } | null> {
-  try {
-    const res = await fetch(`${BASE_URL}/health`, { signal: AbortSignal.timeout(4000) });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch { return null; }
+export function fetchRegime(): Promise<RegimeState|null> {
+  return requestIntel<RegimeState>("intel-regime");
 }
-
-export async function triggerSynthesis(): Promise<{ message: string } | null> {
-  try {
-    const res = await fetch(`${BASE_URL}/synthesize/now`, { method: "POST", signal: AbortSignal.timeout(90000) });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch { return null; }
+export function fetchHealth(): Promise<{status:string;queue_depth:number}|null> {
+  return requestIntel<{status:string;queue_depth:number}>("intel-health");
 }
-
-// ── WebSocket subscription ──────────────────────────────────
-
+export function triggerSynthesis(): Promise<{message:string}|null> {
+  return requestIntel<{message:string}>("intel-synthesize");
+}
+/** Live sockets from a public client would bypass Stripe. Existing screens poll
+ * for research updates; realtime requires an authenticated Supabase channel. */
 export function subscribeToIntelBriefs(
-  onBrief: (brief: IntelBrief) => void,
-  onRegime?: (regime: RegimeState) => void,
-): () => void {
-  let ws: WebSocket | null = null;
-  let dead = false;
-  let retryTimer: ReturnType<typeof setTimeout> | undefined;
-
-  function connect() {
-    if (dead) return;
-    try {
-      ws = new WebSocket(`${WS_URL}/ws`);
-    } catch {
-      retryTimer = setTimeout(connect, 5000);
-      return;
-    }
-    ws.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data);
-        if (msg.type === "synthesis_brief" && msg.data) {
-          onBrief(msg.data);
-          try { window.dispatchEvent(new CustomEvent("vv-new-intel")); } catch { /* Retain last successful state on transient failure. */ }
-        }
-        if (msg.type === "regime_update" && msg.data && onRegime) onRegime(msg.data);
-      } catch { /* Retain last successful state on transient failure. */ }
-    };
-    ws.onerror = () => { try { ws?.close(); } catch { /* Retain last successful state on transient failure. */ } };
-    ws.onclose = () => {
-      if (!dead) retryTimer = setTimeout(connect, 5000);
-    };
-  }
-
-  connect();
-  return () => {
-    dead = true;
-    if (retryTimer) clearTimeout(retryTimer);
-    try { ws?.close(); } catch { /* Retain last successful state on transient failure. */ }
-  };
+  _onBrief: (brief: IntelBrief)=>void, _onRegime?: (regime:RegimeState)=>void
+): ()=>void {
+  return ()=>{};
 }
 
 // ── Helpers ─────────────────────────────────────────────────

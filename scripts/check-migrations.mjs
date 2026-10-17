@@ -3,7 +3,11 @@ import { readFile,readdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const db=new PGlite();
 try {
- await db.exec('CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS; CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);');
+ await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
+  CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);
+  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $auth_uid$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $auth_uid$;
+  CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $auth_role$ SELECT nullif(current_setting('request.jwt.claim.role',true),'') $auth_role$;
+  SELECT set_config('request.jwt.claim.role','service_role',false);`);
  for(const name of (await readdir('supabase/migrations')).filter(n=>n.endsWith('.sql')).sort())await db.exec(await readFile('supabase/migrations/'+name,'utf8'));
  const scalar=async(sql)=>(await db.query(sql)).rows[0];
  for(const table of ['warm_state','trade_history','synthesis_history','kill_switch_alerts']) {
@@ -24,9 +28,24 @@ try {
  await db.exec("UPDATE news_context_queue SET last_attempt=now()-interval '61 seconds';UPDATE news_context_budget SET attempts=60");
  assert.equal((await scalar("SELECT news_context_status()->>'status' AS status")).status,'budget_exhausted');
  assert.equal((await db.query('SELECT * FROM claim_news_context()')).rows.length,0);
- await db.exec('SET ROLE authenticated');
- assert.ok((await db.query('SELECT news_context_status()')).rows.length);
+ await db.exec("INSERT INTO auth.users(id) VALUES('00000000-0000-0000-0000-000000000011');");
+ await db.exec("UPDATE public.vv_billing_environment SET mode='test' WHERE id=true");
+ await db.exec("INSERT INTO public.vv_billing_subscriptions(stripe_subscription_id,user_id,stripe_customer_id,price_id,mode,stripe_status,last_invoice_status,paid_until) VALUES('sub_testpay','00000000-0000-0000-0000-000000000011','cus_test','price_test','test','active','open',now()+interval '1 month')");
+ await db.exec("SET ROLE authenticated; SELECT set_config('request.jwt.claim.role','authenticated',false); SELECT set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000011',false);");
+ assert.equal((await scalar("SELECT public.vv_has_paid_access() AS paid")).paid,false);
+ assert.equal((await scalar("SELECT news_context_status() AS status")).status,null);
+ assert.equal((await scalar("SELECT count(*)::integer AS n FROM public.news_articles")).n,0);
+ await db.exec("RESET ROLE; UPDATE public.vv_billing_subscriptions SET last_invoice_status='paid' WHERE stripe_subscription_id='sub_testpay'; SET ROLE authenticated;");
+ assert.equal((await scalar("SELECT public.vv_has_paid_access() AS paid")).paid,false);
+ await db.exec("RESET ROLE; UPDATE public.vv_billing_subscriptions SET last_invoice_amount_paid_cents=9900 WHERE stripe_subscription_id='sub_testpay';");
+ await db.exec("SET ROLE authenticated;");
+ assert.equal((await scalar("SELECT public.vv_has_paid_access() AS paid")).paid,true);
+ assert.ok((await scalar("SELECT news_context_status() AS status")).status);
+ assert.equal((await scalar("SELECT count(*)::integer AS n FROM public.news_articles")).n,1);
+ await db.exec("RESET ROLE; UPDATE public.vv_billing_subscriptions SET stripe_status='canceled' WHERE stripe_subscription_id='sub_testpay'; SET ROLE authenticated;");
+ assert.equal((await scalar("SELECT public.vv_has_paid_access() AS paid")).paid,false);
+ assert.equal((await scalar("SELECT count(*)::integer AS n FROM public.news_articles")).n,0);
  await assert.rejects(db.query('SELECT * FROM news_context_queue'));
  await assert.rejects(db.query('SELECT * FROM claim_news_context()'));
- console.log('Migration checks passed: permissions, leases, mid-generation updates, retained context and hourly budget.');
+ console.log('Migration checks passed: premium RLS, unpaid denial, invoice-paid access, cancellation, leases and hourly budget.');
 } finally {await db.close();}

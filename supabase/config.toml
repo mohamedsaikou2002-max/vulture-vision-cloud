@@ -1,1 +1,9 @@
 project_id = "wfxjufhqdgzajidciwxb"
+# Stripe calls the webhook without a Supabase JWT; authenticity comes from HMAC.
+[functions.vv-stripe-webhook]
+verify_jwt = false
+
+# This function verifies the Supabase bearer token via auth.getUser itself.
+# Disable legacy gateway JWT checks for projects using asymmetric JWT signing keys.
+[functions.vv-billing]
+verify_jwt = false

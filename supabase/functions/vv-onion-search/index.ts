@@ -1,9 +1,12 @@
+import { requirePaid } from "../_shared/paid_access.ts";
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 // Live .onion search via Ahmia (clearnet endpoint that indexes Tor sites).
 // No Tor proxy required. Parses the public HTML results page.
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const unpaid = await requirePaid(req);
+  if (unpaid) return unpaid;
   try {
     const { q } = await req.json();
     if (!q || typeof q !== "string") {

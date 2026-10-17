@@ -8,6 +8,7 @@
 //  - Ledger is append-only via quantum_job_events; never simulates payment.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { paidAccessForUser } from "../_shared/paid_access.ts";
 import {
   computeQuote, isQuoteExpired, capValid, canAuthorize, canDispatch,
   validIdempotencyKey, DEFAULT_CONFIG, type QuantumRateConfig,
@@ -47,6 +48,8 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await sb.auth.getUser(token);
   if (userErr || !userData?.user) return json({ error: "auth_invalid" }, 401);
   const userId = userData.user.id;
+  const unpaid = await paidAccessForUser(userId);
+  if (unpaid) return unpaid;
 
   // ── load rate config (server-side only) ───────────────────
   const { data: cfgRow } = await sb.from("quantum_billing_config").select("*").eq("id", 1).maybeSingle();

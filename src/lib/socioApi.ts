@@ -1,9 +1,5 @@
-// Vulture Vision — Socio-Economics Backend API Client
-// Connects to socioeconomics_backend.py on VITE_SOCIO_HOST (default localhost:5002)
-
-const SOCIO_HOST = (import.meta.env.VITE_SOCIO_HOST as string) || "localhost:5002";
-const isHttps = typeof location !== "undefined" && location.protocol === "https:";
-const BASE_URL = `${isHttps ? "https" : "http"}://${SOCIO_HOST}`;
+// Subscriber-only Supabase relay. Never contact a visitor's localhost or a public backend directly.
+import { supabase } from "@/integrations/supabase/client";
 
 export const SOCIO_DIMS = [
   "fear", "trust", "liquidity", "volatility",
@@ -57,40 +53,20 @@ export interface SocioResult {
 
 export async function fetchSocioFull(): Promise<SocioResult> {
   try {
-    const res = await fetch(`${BASE_URL}/api/socioeconomics/full`, { signal: AbortSignal.timeout(60000) });
-    if (!res.ok) {
-      return { data: null, error: { kind: "http", status: res.status, message: `HTTP ${res.status} ${res.statusText}` } };
-    }
-    let json: {status?:string;data?:SocioFull};
-    try {
-      json = await res.json();
-    } catch (e: unknown) {
-      return { data: null, error: { kind: "malformed", message: `Invalid JSON: ${e instanceof Error ? e.message : String(e)}` } };
-    }
-    if (!json || typeof json !== "object") {
-      return { data: null, error: { kind: "malformed", message: "Response was not a JSON object" } };
-    }
-    if (json.status !== "ok" || !json.data || typeof json.data !== "object") {
-      return { data: null, error: { kind: "malformed", message: `Unexpected payload shape (status="${json.status}")` } };
-    }
-    return { data: json.data as SocioFull };
-  } catch (e: unknown) {
-    const msg = String(e instanceof Error ? e.message : String(e));
-    const kind: SocioErrorKind = /timeout|abort/i.test(msg) ? "timeout" : "offline";
-    return { data: null, error: { kind, message: msg || "Network error" } };
-  }
+    const {data,error}=await supabase.functions.invoke("vv-research-proxy",{body:{operation:"socio-full"}});
+    if(error||data?.error)return {data:null,error:{kind:"offline",message:"Protected socio-economic service unavailable"}};
+    if(data?.status!=="ok" || !data.data || typeof data.data!=="object")
+      return {data:null,error:{kind:"malformed",message:"Invalid socio-economic service response"}};
+    return {data:data.data as SocioFull};
+  }catch{return {data:null,error:{kind:"offline",message:"Socio-economic backend unavailable"}};}
 }
-
 export async function fetchSocioHealth(): Promise<boolean> {
   try {
-    const r = await fetch(`${BASE_URL}/api/socioeconomics/health`, { signal: AbortSignal.timeout(3000) });
-    if (!r.ok) return false;
-    const d = await r.json();
-    return d.status === "ok";
-  } catch { return false; }
+    const {data,error}=await supabase.functions.invoke("vv-research-proxy",{body:{operation:"socio-health"}});
+    return !error && !data?.error && data?.status==="ok";
+  }catch{return false;}
 }
-
-export function socioBaseUrl() { return BASE_URL; }
+export function socioBaseUrl(){return "Authenticated Supabase research gateway";}
 
 export function colorForDim(dim: string, val: number): string {
   const badHigh = ["fear", "volatility", "inflation", "default"];

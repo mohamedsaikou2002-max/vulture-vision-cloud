@@ -2,6 +2,7 @@
 // Unlike the separate operator-only MiroFish engine, this answers research questions
 // even when an engine is unavailable. Synthetic analyst roles are not live agents.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { paidAccessForUser } from "../_shared/paid_access.ts";
 import {
   parseSimulationChatRequest, buildSimulationChatPrompt, parseSimulationChatAnswer, availableGeminiModels
 } from "../_shared/simulation_chat_contract.ts";
@@ -32,6 +33,8 @@ Deno.serve(async (req: Request) => {
   const identity = createClient(url, anon, { auth: { persistSession: false } });
   const { data: { user }, error: authError } = await identity.auth.getUser(bearer);
   if (!user || authError) return reply({ error: "Invalid session" }, 401);
+  const unpaid = await paidAccessForUser(user.id);
+  if (unpaid) return unpaid;
 
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) return reply({ error: "Gemini is not configured for simulation chat" }, 503);

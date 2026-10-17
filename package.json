@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:migrations": "node scripts/check-migrations.mjs"
+    "test:migrations": "node scripts/check-migrations.mjs",
+    "test:stripe:beta": "node scripts/stripe-beta-acceptance.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
