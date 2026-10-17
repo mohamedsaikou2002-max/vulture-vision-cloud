@@ -5,7 +5,7 @@ describe("Premium access enforcement integration inventory",()=>{
  it("enforces entitlement on all valuable user Edge endpoints",()=>{
    for(const name of ["vv-market","vv-news","vv-onion-search","vv-simulation","vv-simulation-chat",
      "vv-scenario-brief","vv-quantum-jobs","vv-analytics","vv-chat","vv-quantum","vv-trades",
-     "vv-synthesis","vv-mirofish","vv-killswitch","vv-tor-ingest"]){
+     "vv-synthesis","vv-mirofish","vv-killswitch","vv-tor-ingest","vv-research-proxy"]){
       const source=read("supabase/functions/"+name+"/index.ts");
       expect(/(requirePaid|paidAccessForUser|authorize)\(/.test(source),name+" must authenticate and check paid access").toBe(true);
    }
