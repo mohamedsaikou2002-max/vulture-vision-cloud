@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import CurrentScenarioInputs from '@/components/CurrentScenarioInputs';
 import { DEFAULT_CAPITAL_INPUTS, buildCurrentSeed, buildEvaluationRequirement } from '@/lib/currentScenario';
 import { useSelectedNews } from '@/hooks/useSelectedNews';
@@ -118,7 +118,7 @@ export default function Simulations() {
         <div><p className="text-xs uppercase tracking-[.25em] text-primary">Research workspace</p><h1 className="mt-2 text-3xl font-semibold text-foreground">Scenario simulations</h1><p className="mt-3 max-w-2xl text-sm text-muted-foreground">Combine current global news or historical context with your inputs to compare conditional scenarios using MiroFish. Results describe simulated behavior and are not calibrated forecasts.</p></div>
         <span className="rounded-full border border-border px-3 py-1 text-xs">{corpus.length} historical scenarios</span>
       </div>
-      {health === 'unavailable' && <div role="status" className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">The simulation service is unavailable or your account does not have pilot access. You can still explore the corpus and prepare a scenario.</div>}
+      {health === 'unavailable' && <div role="status" className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm">The simulation service is unavailable or your account does not have pilot access. You can still explore the corpus and prepare a scenario. Or use the <Link to="/socioeconomics" className="underline text-primary">local socio-economic simulator</Link>.</div>}
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
         <section className="space-y-5 rounded-2xl border border-border bg-background/90 p-6">
           <h2 className="text-lg font-semibold">Build a scenario</h2>

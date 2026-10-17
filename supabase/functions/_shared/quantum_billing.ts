@@ -22,7 +22,7 @@ export interface Quote {
 }
 
 export const DEFAULT_CONFIG: QuantumRateConfig = {
-  provider_rate_cents_per_qpu_sec: 120,
+  provider_rate_cents_per_qpu_sec: 160,
   markup_bp: 2500,
   est_qpu_secs_per_qubit_shot: 0.0004,
   quote_ttl_seconds: 900,
@@ -32,7 +32,7 @@ export const DEFAULT_CONFIG: QuantumRateConfig = {
   ibm_configured: false,
 };
 
-/** Conservative estimate: qubits² × shots × per-shot secs (superlinear in qubits). */
+/** Illustrative heuristic only: qubits² × shots × per-shot secs. Not a calibrated upper bound or IBM runtime prediction. */
 export function estimateQpuSecs(nQubits: number, shots: number, cfg: QuantumRateConfig): number {
   const q = Math.max(1, nQubits);
   const s = Math.max(1, shots);

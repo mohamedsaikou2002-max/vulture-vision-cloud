@@ -1,0 +1,31 @@
+name: Export audited source snapshot
+
+on:
+  push:
+    branches:
+      - feature/trade-lab-lovable-integration-20261015
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archive source excluding git metadata and local secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -czf /tmp/vulture-vision-cloud-source.tar.gz \
+            --exclude=.git --exclude=.env --exclude=.env.local \
+            --exclude='.env.*' --exclude=node_modules \
+            --exclude=dist --exclude=coverage --exclude='*.log' .
+          mv /tmp/vulture-vision-cloud-source.tar.gz ./vulture-vision-cloud-source.tar.gz
+          tar -tzf vulture-vision-cloud-source.tar.gz | grep -E '^./src/App.tsx$' >/dev/null
+          tar -tzf vulture-vision-cloud-source.tar.gz | grep -E '^./src/pages/TradeLab.tsx$' >/dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vulture-vision-source
+          path: vulture-vision-cloud-source.tar.gz
+          retention-days: 14

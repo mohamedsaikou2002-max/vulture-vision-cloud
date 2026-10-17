@@ -1,6 +1,6 @@
 CREATE TABLE public.quantum_billing_config (
   id integer PRIMARY KEY DEFAULT 1,
-  provider_rate_cents_per_qpu_sec integer NOT NULL DEFAULT 120,
+  provider_rate_cents_per_qpu_sec integer NOT NULL DEFAULT 160,
   markup_bp integer NOT NULL DEFAULT 2500,
   est_qpu_secs_per_qubit_shot numeric NOT NULL DEFAULT 0.0004,
   quote_ttl_seconds integer NOT NULL DEFAULT 900,
