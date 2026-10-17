@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { paidAccessForUser } from '../_shared/paid_access.ts';
 import { parseCapitalInputs, validateModelBrief, type NewsEvidence } from '../_shared/scenario_contract.ts';
 const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Content-Type': 'application/json' };
 Deno.serve(async req => {
@@ -9,6 +10,8 @@ Deno.serve(async req => {
   const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: auth } } });
   const { data: { user }, error: authError } = await db.auth.getUser();
   if (authError || !user) return reply({ error: 'Sign in required' }, 401);
+  const unpaid = await paidAccessForUser(user.id);
+  if (unpaid) return unpaid;
   const operators = (Deno.env.get('MIROFISH_ALLOWED_USER_IDS') || '').split(',').map(s => s.trim());
   if (!operators.includes(user.id)) return reply({ error: 'Current-event synthesis pilot access is not enabled for this account' }, 403);
   const key = Deno.env.get('GEMINI_API_KEY');

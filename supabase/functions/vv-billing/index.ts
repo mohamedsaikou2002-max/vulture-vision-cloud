@@ -61,6 +61,10 @@ Deno.serve(async (req) => {
     if (customerErr) throw new Error("Customer lookup failed");
     let customerId: string = mapping?.stripe_customer_id || "";
     if (action === "checkout") {
+      // Server-only quota; this is never callable by ordinary JWT clients.
+      const { data: allowed, error: rateError } = await admin.rpc("vv_claim_checkout", { p_user_id: user.id });
+      if (rateError) return response({ error: "Checkout rate limiter unavailable" }, 503);
+      if (allowed !== true) return response({ error: "Too many checkout attempts; try again later" }, 429);
       const { data: active, error: accessError } = await admin.from("vv_billing_subscriptions")
         .select("mode,stripe_status,last_invoice_status,paid_until")
         .eq("user_id", user.id).eq("mode", mode).limit(15);

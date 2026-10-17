@@ -1,4 +1,5 @@
 import { parseInstruments } from '../_shared/request_limits.ts';
+import { requirePaid } from '../_shared/paid_access.ts';
 interface BybitTicker { symbol:string; bid1Price?:string; ask1Price?:string; bid1Size?:string; ask1Size?:string; lastPrice?:string; price24hPcnt?:string; turnover24h?:string; }
 // MarketWorker — Bybit (crypto) + OANDA (forex).
 // Returns a unified snapshot tick set. No long-lived sockets in edge runtime.
@@ -99,6 +100,8 @@ async function fetchOanda(instruments: string[], token: string, accountId: strin
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const unpaid = await requirePaid(req);
+  if (unpaid) return unpaid;
   try {
     const url = new URL(req.url);
     const cryptoParam = url.searchParams.get("crypto");

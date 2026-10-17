@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requirePaid } from "../_shared/paid_access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -301,6 +302,8 @@ async function fetchPublisherNews(req: Request, country?: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const unpaid = await requirePaid(req);
+  if (unpaid) return unpaid;
   try {
     const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
     const selectedCountry = body.country || new URL(req.url).searchParams.get("country");
