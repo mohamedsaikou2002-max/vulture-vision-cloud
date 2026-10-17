@@ -67,7 +67,7 @@ BEGIN
       EXECUTE format('DROP POLICY %I ON public.%I',p.policyname,t);
     END LOOP;
     EXECUTE format('CREATE POLICY %I ON public.%I FOR SELECT TO authenticated USING (public.vv_has_paid_access())',
-      'Paid subscriber read '+t,t);
+      'Paid subscriber read '||t,t);
   END LOOP;
 END $$;
 -- News-context status is metadata about a paid research service: hide it from unpaid callers.
