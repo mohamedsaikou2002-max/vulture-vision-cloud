@@ -70,9 +70,8 @@ Deno.serve(async (req) => {
       if (ownerError) throw new Error("Customer lookup failed");
       if (account) {
         const price = stripeCurrentPriceId(subscription);
-        const permitted = [
-          Deno.env.get("STRIPE_PRO_PRICE_ID"), Deno.env.get("STRIPE_BETA_PRICE_ID")
-        ].filter(Boolean).includes(price);
+        const expectedPrice = mode === "test" ? Deno.env.get("STRIPE_BETA_PRICE_ID") : Deno.env.get("STRIPE_PRO_PRICE_ID");
+        const permitted = !!expectedPrice && price === expectedPrice;
         const periodEnd = stripeCurrentPeriodEnd(subscription);
         const lastInvoice = subscriptionInvoiceStatus(subscription);
         // Never entitle unknown price or unpaid invoice, even when Stripe says 'active'.
