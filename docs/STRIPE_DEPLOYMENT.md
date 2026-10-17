@@ -105,3 +105,5 @@ Stripe Products/Prices and secret keys cannot be created without an authenticate
 ## 6. Test-mode payment acceptance
 
 See STRIPE_BETA_ACCEPTANCE.md for a staged real HTTP checkout/webhook/paywall smoke test. Synthetic test fixtures are not proof of a completed Stripe payment. Keep commercial mode unpublished until the live test is successful.
+
+Paid access additionally requires a positive amount actually paid on the latest Stripe invoice. Fully discounted or $0 invoices do not grant commercial access; promotional codes are disabled for this initial paid-only release. Refunds and disputes require a separate revocation workflow before production.

@@ -3,7 +3,7 @@
  * without an external Stripe account or a payment-card request.
  */
 import {
-  stripeCurrentPeriodEnd, stripeCurrentPriceId, stripeCustomerId, subscriptionInvoiceStatus,
+  stripeCurrentPeriodEnd, stripeCurrentPriceId, stripeCustomerId, subscriptionInvoiceStatus, subscriptionInvoicePaidCents,
   type StripeSubscription,
 } from "./stripe_api.ts";
 import { hasActivePaidSubscription, type EntitlementRecord } from "./subscription_policy.ts";
@@ -55,6 +55,7 @@ export function projectStripeSubscription(
     mode,
     stripe_status: trusted ? subscription.status : "unsupported_price",
     last_invoice_status: subscriptionInvoiceStatus(subscription),
+    last_invoice_amount_paid_cents: subscriptionInvoicePaidCents(subscription),
     paid_until: paidUntil,
   };
 }

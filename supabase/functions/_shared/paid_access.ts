@@ -17,7 +17,7 @@ export async function paidAccessForUser(userId: string): Promise<Response | null
     .select("mode").eq("id", true).maybeSingle();
   if (settingError || settings?.mode !== mode) return denied("billing_environment_mismatch", 503);
   const { data, error } = await db.from("vv_billing_subscriptions")
-    .select("mode,stripe_status,last_invoice_status,paid_until")
+    .select("mode,stripe_status,last_invoice_status,last_invoice_amount_paid_cents,paid_until")
     .eq("user_id", userId).eq("mode", mode)
     .eq("stripe_status", "active").eq("last_invoice_status", "paid")
     .gt("paid_until", new Date().toISOString()).limit(1);

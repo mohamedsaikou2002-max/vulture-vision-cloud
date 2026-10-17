@@ -5,6 +5,7 @@ export interface EntitlementRecord {
   mode: string;
   stripe_status: string;
   last_invoice_status: string;
+  last_invoice_amount_paid_cents: number;
   paid_until: string | null;
 }
 export function hasActivePaidSubscription(
@@ -16,6 +17,7 @@ export function hasActivePaidSubscription(
   return row.mode === environment &&
     row.stripe_status === "active" &&
     row.last_invoice_status === "paid" &&
+    Number.isSafeInteger(row.last_invoice_amount_paid_cents) && row.last_invoice_amount_paid_cents > 0 &&
     Number.isFinite(until) && until > at.getTime();
 }
 export function checkedBillingEnvironment(env: string | undefined, key: string | undefined): "test" | "live" | null {

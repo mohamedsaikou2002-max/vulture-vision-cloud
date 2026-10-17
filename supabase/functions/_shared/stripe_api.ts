@@ -41,7 +41,7 @@ export async function stripeRequest<T>(
   }
   return await res.json() as T;
 }
-export interface StripePrice { id: string; active: boolean; livemode: boolean; currency: string; type: string; recurring?: { interval?: string }; }
+export interface StripePrice { id: string; active: boolean; livemode: boolean; currency: string; type: string; unit_amount?: number | null; recurring?: { interval?: string }; }
 export interface StripeCustomer { id: string; }
 export interface StripeCheckout { id: string; url: string | null; }
 export interface StripePortal { url: string; }
@@ -51,7 +51,7 @@ export interface StripeSubscription {
   status: string;
   current_period_end?: number;
   items?: { data?: Array<{current_period_end?: number; price?: {id:string}}> };
-  latest_invoice?: string | { status?: string };
+  latest_invoice?: string | { status?: string; amount_paid?: number };
 }
 export function stripeCustomerId(customer: StripeSubscription["customer"]): string {
   return typeof customer === "string" ? customer : customer.id;
@@ -64,4 +64,11 @@ export function stripeCurrentPriceId(sub: StripeSubscription): string {
 }
 export function subscriptionInvoiceStatus(sub: StripeSubscription): string {
   return typeof sub.latest_invoice === "string" ? "unknown" : sub.latest_invoice?.status || "unknown";
+}
+
+/** Paid invoice status is not sufficient: fully discounted $0 invoices are paid too. */
+export function subscriptionInvoicePaidCents(sub: StripeSubscription): number {
+  const invoice = typeof sub.latest_invoice === "string" ? null : sub.latest_invoice;
+  const value = invoice?.amount_paid;
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : 0;
 }

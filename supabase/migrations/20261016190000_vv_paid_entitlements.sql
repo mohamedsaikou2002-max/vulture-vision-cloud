@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS public.vv_billing_subscriptions (
   mode text NOT NULL CHECK (mode IN ('test','live')),
   stripe_status text NOT NULL,
   last_invoice_status text NOT NULL DEFAULT 'unknown',
+  last_invoice_amount_paid_cents bigint NOT NULL DEFAULT 0 CHECK (last_invoice_amount_paid_cents >= 0),
   paid_until timestamptz,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -53,6 +54,7 @@ AS $$
       AND s.mode=e.mode
       AND s.stripe_status='active'
       AND s.last_invoice_status='paid'
+      AND s.last_invoice_amount_paid_cents > 0
       AND s.paid_until > now()
   );
 $$;

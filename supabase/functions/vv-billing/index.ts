@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
   if (action === "status") {
     if (!backendReady) return response({ active: false, mode: mode || "unconfigured", billing_ready: false, state: "billing_unconfigured" });
     const { data: subscriptions, error: subError } = await admin.from("vv_billing_subscriptions")
-      .select("mode,stripe_status,last_invoice_status,paid_until").eq("user_id", user.id).eq("mode", mode).limit(20);
+      .select("mode,stripe_status,last_invoice_status,last_invoice_amount_paid_cents,paid_until").eq("user_id", user.id).eq("mode", mode).limit(20);
     if (subError) return response({ error: "Billing status unavailable" }, 503);
     return response({
       active: (subscriptions || []).some((s: EntitlementRecord) => hasActivePaidSubscription(s, mode)),
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       if (rateError) return response({ error: "Checkout rate limiter unavailable" }, 503);
       if (allowed !== true) return response({ error: "Too many checkout attempts; try again later" }, 429);
       const { data: active, error: accessError } = await admin.from("vv_billing_subscriptions")
-        .select("mode,stripe_status,last_invoice_status,paid_until")
+        .select("mode,stripe_status,last_invoice_status,last_invoice_amount_paid_cents,paid_until")
         .eq("user_id", user.id).eq("mode", mode).limit(15);
       if (accessError) throw new Error("Account status unavailable");
       if ((active || []).some((s: EntitlementRecord) => hasActivePaidSubscription(s, mode))) {
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
       if (!priceId || !/^price_[a-zA-Z0-9]+$/.test(priceId)) return response({ error: "Subscription price has not been configured" }, 503);
       const price = await stripeRequest<StripePrice>(key, "GET", "/v1/prices/" + priceId);
       if (!price.active || price.livemode !== (mode === "live") || price.type !== "recurring" || price.currency !== "usd" ||
-          price.recurring?.interval !== "month") return response({ error: "Price is not an active monthly USD subscription for this environment" }, 503);
+          price.recurring?.interval !== "month" || !Number.isSafeInteger(price.unit_amount) || (price.unit_amount ?? 0) <= 0) return response({ error: "Price is not an active monthly USD subscription for this environment" }, 503);
       if (!customerId) {
         const fields = new URLSearchParams();
         if (user.email) fields.set("email", user.email);
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
         "subscription_data[metadata][supabase_user_id]": user.id,
         "metadata[supabase_user_id]": user.id,
         billing_address_collection: "required",
-        allow_promotion_codes: "true",
+        allow_promotion_codes: "false",
       });
       if (Deno.env.get("STRIPE_AUTOMATIC_TAX") === "true") fields.set("automatic_tax[enabled]", "true");
       const session = await stripeRequest<StripeCheckout>(key, "POST", "/v1/checkout/sessions", fields,

@@ -18,6 +18,7 @@ describe("Premium access enforcement integration inventory",()=>{
    expect(sql).toContain("USING (public.vv_has_paid_access())");
    expect(sql).toContain("REVOKE ALL ON public.%I FROM PUBLIC,anon,authenticated");
    expect(sql).toContain("s.last_invoice_status='paid'");
+   expect(sql).toContain("s.last_invoice_amount_paid_cents > 0");
  });
  it("keeps the billing secret and price selection on the server",()=>{
    const frontend=read("src/components/AuthGate.tsx");

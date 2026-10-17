@@ -11,7 +11,7 @@ const now = new Date("2026-10-16T12:00:00Z");
 const active: StripeSubscription = {
   id:"sub_123456",customer:"cus_765432",status:"active",
   items:{data:[{current_period_end:1823817600,price:{id:"price_Beta123"}}]},
-  latest_invoice:{status:"paid"},
+  latest_invoice:{status:"paid",amount_paid:9900},
 };
 const event=(type:string,obj:Record<string,unknown>,livemode=false,id="evt_123456"):SignedEventShape =>
   ({id,type,livemode,data:{object:obj}});
@@ -48,6 +48,7 @@ describe("Milestone 2 — signed payment → entitlement → revocation",()=>{
   it("unlocks only after a current paid invoice on the matching test subscription",()=>{
     const paid=event("invoice.paid",{parent:{subscription_details:{subscription:active.id}}});
     expect(activeAfterStripeEvent(paid,active,"test","price_Beta123",now)).toBe(true);
+    expect(activeAfterStripeEvent(paid,{...active,latest_invoice:{status:"paid",amount_paid:0}},"test","price_Beta123",now)).toBe(false);
     expect(activeAfterStripeEvent(paid,active,"test","price_NotOurPlan",now)).toBe(false);
     expect(activeAfterStripeEvent(paid,{...active,status:"trialing"},"test","price_Beta123",now)).toBe(false);
     expect(activeAfterStripeEvent(paid,{...active,latest_invoice:"in_123456"},"test","price_Beta123",now)).toBe(false);

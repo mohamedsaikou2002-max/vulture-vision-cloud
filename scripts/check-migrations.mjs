@@ -35,7 +35,9 @@ try {
  assert.equal((await scalar("SELECT public.vv_has_paid_access() AS paid")).paid,false);
  assert.equal((await scalar("SELECT news_context_status() AS status")).status,null);
  assert.equal((await scalar("SELECT count(*)::integer AS n FROM public.news_articles")).n,0);
- await db.exec("RESET ROLE; UPDATE public.vv_billing_subscriptions SET last_invoice_status='paid' WHERE stripe_subscription_id='sub_testpay';");
+ await db.exec("RESET ROLE; UPDATE public.vv_billing_subscriptions SET last_invoice_status='paid' WHERE stripe_subscription_id='sub_testpay'; SET ROLE authenticated;");
+ assert.equal((await scalar("SELECT public.vv_has_paid_access() AS paid")).paid,false);
+ await db.exec("RESET ROLE; UPDATE public.vv_billing_subscriptions SET last_invoice_amount_paid_cents=9900 WHERE stripe_subscription_id='sub_testpay';");
  await db.exec("SET ROLE authenticated;");
  assert.equal((await scalar("SELECT public.vv_has_paid_access() AS paid")).paid,true);
  assert.ok((await scalar("SELECT news_context_status() AS status")).status);
