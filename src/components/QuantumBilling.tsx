@@ -12,6 +12,14 @@ import {
  * authorizing a maximum charge, and only when payment processing is
  * configured server-side. Estimates are clearly marked as estimates.
  */
+function errorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    const detail = (error as Error & { detail?: { error?: string } }).detail;
+    return detail?.error || error.message || fallback;
+  }
+  return fallback;
+}
+
 export default function QuantumBilling() {
   const [data, setData] = useState<QuantumJobsResponse | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
@@ -28,8 +36,8 @@ export default function QuantumBilling() {
     try {
       setData(await fetchQuantumJobs());
       setLoadErr(null);
-    } catch (e: any) {
-      setLoadErr(e?.message === "auth_required" ? "Sign in to view quantum usage." : "Quantum billing service unavailable.");
+    } catch (e: unknown) {
+      setLoadErr(errorMessage(e, "") === "auth_required" ? "Sign in to view quantum usage." : "Quantum billing service unavailable.");
     }
   }, []);
 
@@ -47,7 +55,7 @@ export default function QuantumBilling() {
       });
       setPendingJob(res.job);
       if (!res.replay) idemKey.current = newIdempotencyKey(); // next submission gets a fresh key
-    } catch (e: any) { setActionErr(e?.message || "quote_failed"); }
+    } catch (e: unknown) { setActionErr(errorMessage(e, "quote_failed")); }
     setBusy(false);
   }
 
@@ -61,8 +69,8 @@ export default function QuantumBilling() {
       setPendingJob(null);
       await load();
       if (!disp.job) setActionErr("dispatch_failed");
-    } catch (e: any) {
-      setActionErr(e?.detail?.error || e?.message || "authorization_failed");
+    } catch (e: unknown) {
+      setActionErr(errorMessage(e, "authorization_failed"));
       await load();
     }
     setBusy(false);

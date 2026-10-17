@@ -13,6 +13,11 @@ import {
   validIdempotencyKey, DEFAULT_CONFIG, type QuantumRateConfig,
 } from "../_shared/quantum_billing.ts";
 
+interface JobMeterSummary {
+  id: string; created_at: string; status: string;
+  charge_cents: number | null; refund_cents: number | null;
+  provider_reported_qpu_secs: number | null;
+}
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -65,27 +70,27 @@ Deno.serve(async (req) => {
     const { data: jobs } = await sb
       .from("quantum_jobs").select("*").eq("user_id", userId)
       .order("created_at", { ascending: false }).limit(100);
-    const ids = (jobs || []).map((j: any) => j.id);
-    let events: any[] = [];
+    const ids = (jobs || []).map((j: JobMeterSummary) => j.id);
+    let events: Record<string, unknown>[] = [];
     if (ids.length) {
       const { data } = await sb.from("quantum_job_events").select("*").in("job_id", ids)
         .order("created_at", { ascending: false }).limit(500);
       events = data || [];
     }
     const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
-    const period = (jobs || []).filter((j: any) => j.created_at >= monthStart.toISOString());
+    const period = (jobs || []).filter((j: JobMeterSummary) => j.created_at >= monthStart.toISOString());
     const totals = {
       jobs: period.length,
-      charged_cents: period.reduce((s: number, j: any) => s + (j.charge_cents || 0), 0),
-      refunded_cents: period.reduce((s: number, j: any) => s + (j.refund_cents || 0), 0),
-      qpu_secs: period.reduce((s: number, j: any) => s + (Number(j.provider_reported_qpu_secs) || 0), 0),
-      pending: period.filter((j: any) => ["quoted", "authorized", "dispatched"].includes(j.status)).length,
+      charged_cents: period.reduce((s: number, j: JobMeterSummary) => s + (j.charge_cents || 0), 0),
+      refunded_cents: period.reduce((s: number, j: JobMeterSummary) => s + (j.refund_cents || 0), 0),
+      qpu_secs: period.reduce((s: number, j: JobMeterSummary) => s + (Number(j.provider_reported_qpu_secs) || 0), 0),
+      pending: period.filter((j: JobMeterSummary) => ["quoted", "authorized", "dispatched"].includes(j.status)).length,
     };
     return json({ config: configState, jobs: jobs || [], events, period_totals: totals });
   }
 
   // ── POST actions ──────────────────────────────────────────
-  const body = (await req.json().catch(() => ({}))) as any;
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const action = String(body.action || "");
 
   const recordEvent = async (jobId: string, event: string, data: Record<string, unknown> = {}) => {
@@ -252,7 +257,7 @@ async function stripeConfirmAuthorization(
 }
 
 async function ibmDispatch(
-  _key: string, _job: any,
+  _key: string, _job: unknown,
 ): Promise<{ ok: boolean; provider_job_id?: string; backend?: string; error?: string }> {
   // Real implementation: submit to IBM Quantum Runtime with max_execution_time
   // and provider usage limits. Reached only when IBM_QUANTUM_API_KEY is set.
