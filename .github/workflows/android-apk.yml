@@ -36,7 +36,13 @@ jobs:
       # GitHub's Ubuntu image already ships cmdline-tools and ANDROID_HOME.
       # The old setup-android action requests retired SDK package 'tools'.
       - name: Install Android SDK platform 35
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+        run: |
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
       - name: Configure Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
