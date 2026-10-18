@@ -1,0 +1,43 @@
+/* Handset navigation and soft-keyboard safe layout, desktop preserved. */
+@media (max-width: 720px) {
+  html, body, #root { width: 100%; min-height: 100dvh; height: 100dvh; }
+  .nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: max(9px, env(safe-area-inset-top)) 12px 8px;
+  }
+  .nav-logo { font-size: .77rem; letter-spacing: .09em; width: 100%; }
+  .nav-links {
+    display: flex;
+    flex: 1 1 100%;
+    width: 100%;
+    gap: 4px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .nav-links::-webkit-scrollbar { display:none; }
+  .nav-link { font-size: .58rem; padding: 6px 8px; letter-spacing: .06em; }
+  .nav-status { display:none; }
+  .page-content { padding-top: calc(108px + env(safe-area-inset-top)); padding-bottom: env(safe-area-inset-bottom); }
+  .scroll-inner { min-height: 0; -webkit-overflow-scrolling: touch; }
+  .chat-wrap { padding: 10px; min-height: 0; align-items: stretch; }
+  .chat-box { width: 100%; height: 100%; min-height: 0; }
+  .chat-header { padding: 10px; }
+  .chat-header-title { font-size: .55rem; letter-spacing: .1em; }
+  .chat-mode { font-size: .5rem; }
+  .chat-messages { padding: 12px 10px; }
+  .chat-input-row { padding: 10px; }
+  .chat-send { padding: 8px 12px; margin-left: 6px; }
+  .eagle-title { font-size: clamp(2.1rem, 10vw, 3.7rem); letter-spacing: .09em; text-align:center; }
+  .eagle-sub { letter-spacing: .22em; }
+  .morning-brief-strip, .regime-bar { overflow-x: auto; max-width: 100%; }
+  .search-area { padding: 16px 12px 0; }
+  .results-list { padding: 0 12px; }
+  .corner { display: none; }
+}
