@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     const system = "You are Vulture Vision, an elite intelligence synthesis AI. Analyze market data, news, and OSINT intel with precision. Be concise, analytical, and actionable. Speak in clipped operational tone.";
 
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI },
@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts: [{ text: message }] }],
-          generationConfig: { maxOutputTokens: 1000, temperature: 0.7 },
+          generationConfig: { maxOutputTokens: 2048, temperature: 0.7 },
         }),
       },
     );
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
       console.error("Gemini error:", r.status, j);
       throw new Error(j?.error?.message || `Gemini ${r.status}`);
     }
-    const reply = j?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text).join("") || "[no response]";
+    const reply = j?.candidates?.[0]?.content?.parts?.filter((p: { thought?: boolean }) => !p.thought).map((p: { text?: string }) => p.text ?? "").join("") || "[no response]";
 
 
     return new Response(JSON.stringify({ reply }), {
