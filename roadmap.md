@@ -1,4 +1,6 @@
 - [x] Simulations page (/simulations) powered by MiroFish
+- [ ] Modern public video landing and information page, Grey Company story/socials, subtle Three.js and parallax.
+- [ ] Google member profiles and $99/month Stripe subscriptions; activation depends on payment setup approval and accepting staged membership tables.
 - [x] Seed simulations from socio-economics corpus (events, agents, scenario blends)
 - [ ] IBM Quantum optional pay-per-job: schema (ledger, audit events, quotes), edge functions (quote, authorize, dispatch, webhook, reconcile), UI (toggle, cap, usage & billing page), tests
 - [ ] Keep $99/mo copilot proposed-only (no Stripe activation); quantum strictly per-job PAYG; no auto-trading
