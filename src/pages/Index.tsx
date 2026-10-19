@@ -1,37 +1,26 @@
-import { Component, lazy, Suspense, useEffect, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
-import { ArrowDown, ArrowUpRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import PublicShell from "@/components/PublicShell";
-const LandingScene = lazy(() => import("@/components/LandingScene"));
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import video from "@/assets/vulture-video.asset.json";
 
-class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() { return { failed: true }; }
-  render() { return this.state.failed ? null : this.props.children; }
-}
+const pad = (n: number) => String(n).padStart(2, "0");
 
 export default function Index() {
-  const [scene, setScene] = useState<{ color: string; reduced: boolean } | null>(null);
-  useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setScene({ color: getComputedStyle(document.documentElement).getPropertyValue("--gold").trim(), reduced });
-  }, []);
-  return <PublicShell>
-    <main>
-      <section className="public-hero">
-        <div className="public-eyebrow"><span /> INDEPENDENT INTELLIGENCE. ELEVATED.</div>
-        <h1>VULTURE<br /><span>VISION</span><span className="title-period">.</span></h1>
-        <div className="hero-bottom"><p>A higher perspective.<br />A clearer view of the market.</p><Button asChild size="lg"><Link to="/welcome">Discover the perspective <ArrowUpRight /></Link></Button></div>
-        <div className="hero-coordinate">EST. BY GREY COMPANY <span>01 / THE OVERVIEW</span></div>
-        <div className="public-scene" aria-hidden="true"><SceneBoundary><Suspense fallback={null}>{scene && <LandingScene {...scene} />}</Suspense></SceneBoundary></div>
-      </section>
-      <section className="public-intro">
-        <span className="section-index">01 — THE NAME</span>
-        <div><h2>Perspective changes<br />everything.</h2><p>Inspired by the vulture’s extraordinary altitude and long-range vision, Vulture Vision is built around one idea: rise above the noise and see what others miss.</p><p>From a single vantage point, a vulture surveys miles of terrain. We bring that same wide-angle perspective to markets—connecting signals, context, and risk before you make your next move.</p><Button asChild variant="link"><Link to="/welcome">Meet Vulture Vision <ArrowUpRight /></Link></Button></div>
-        <ArrowDown className="intro-arrow" aria-hidden="true" />
-      </section>
-      <section className="public-proof"><div><strong>400+</strong><span>Day traders in beta testing</span></div><p>From independent day traders to hedge funds and capital management firms. A broader view for researching allocation, managing risk, and making informed capital decisions.</p></section>
+  const navigate = useNavigate();
+  const [now, setNow] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+  const go = () => navigate("/welcome");
+  return <>
+    <div className="video-bg"><video autoPlay muted loop playsInline src={video.url} /></div>
+    <div className="video-overlay" />
+    <div className="scanlines" />
+    <div className="noise" />
+    <div className="corner corner-tl" /><div className="corner corner-tr" />
+    <div className="corner corner-bl" /><div className="corner corner-br" />
+    <main className="landing-wrap" onClick={go} onKeyDown={e => e.key === "Enter" && go()} role="button" tabIndex={0} aria-label="Continue to Vulture Vision">
+      <h1 className="eagle-title">VULTURE VISION</h1>
+      <p className="eagle-sub">Intelligence Dominance</p>
+      <div className="click-hint">Click anywhere to continue</div>
     </main>
-  </PublicShell>;
+    <div className="sys-clock">SYS // {pad(now.getUTCHours())}:{pad(now.getUTCMinutes())}:{pad(now.getUTCSeconds())} UTC</div>
+  </>;
 }
