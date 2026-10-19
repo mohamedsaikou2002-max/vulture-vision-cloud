@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
+import Welcome from "./pages/Welcome";
 const Dashboard=lazy(()=>import("./pages/Dashboard"));
 const Analytics=lazy(()=>import("./pages/Analytics"));
 const News=lazy(()=>import("./pages/News"));
@@ -20,19 +21,21 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AuthGate>
       <BrowserRouter>
         <Suspense fallback={<p role="status" className="p-8">Loading workspace…</p>}><Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/welcome" element={<Welcome />} />
+          <Route path="/pricing" element={<Welcome />} />
+          <Route element={<AuthGate />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/news" element={<News />} />
           <Route path="/socioeconomics" element={<SocioEconomics />} />
           <Route path="/simulations" element={<Simulations />} />
           <Route path="*" element={<NotFound />} />
+          </Route>
         </Routes></Suspense>
       </BrowserRouter>
-      </AuthGate>
     </TooltipProvider>
   </QueryClientProvider>
 );
