@@ -49,7 +49,7 @@ export default function Simulations() {
       storageKey.current='vv-run-'+session.user.id;
       try{const raw=sessionStorage.getItem(storageKey.current);if(raw){saved.current=JSON.parse(raw);simulationId.current=saved.current?.checkpoint.simulation_id || null;if(saved.current?.chatContext)setFrozenChatContext(saved.current.chatContext);setRecoverable(true);setPhase('Saved run available · resume to check server status');}}catch{sessionStorage.removeItem(storageKey.current);}
     });
-    engineCall('/health').then(() => { if (mounted.current) setHealth('available'); }).catch(() => { if (mounted.current) setHealth('unavailable'); });
+    engineCall('/health').then((h) => { if (mounted.current) setHealth(h?.available === false ? 'unavailable' : 'available'); }).catch(() => { if (mounted.current) setHealth('unavailable'); });
     return () => { mounted.current = false; run.current?.abort(); };
   }, []);
   const stop = async () => {

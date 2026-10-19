@@ -13,7 +13,12 @@ Deno.serve(async req => {
   const { data: { user }, error } = await sb.auth.getUser();
   if (error || !user) return reply({ error: "Sign in required" }, 401);
   const operators = (Deno.env.get("MIROFISH_ALLOWED_USER_IDS") ?? "").split(",").map(s => s.trim());
-  if (!operators.includes(user.id)) return reply({ error: "Simulation pilot access is not enabled for this account" }, 403);
+  if (!operators.includes(user.id)) {
+    // Health probes get a soft answer so the page can show its "no pilot access" notice instead of crashing.
+    const probe = await req.clone().json().catch(() => null);
+    if (probe?.path === "/health") return reply({ data: { available: false, reason: "pilot_access_required" } });
+    return reply({ error: "Simulation pilot access is not enabled for this account" }, 403);
+  }
   const base = Deno.env.get("MIROFISH_URL");
   const token = Deno.env.get("MIROFISH_GATEWAY_TOKEN");
   if (!base || !token) return reply({ error: "Simulation engine has not been configured" }, 503);
