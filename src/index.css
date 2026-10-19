@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -26,6 +25,11 @@
     --green-dim:   #3a5a4a;
     --cyan:        #00e5ff;
     --blue-accent: #1e88e5;
+    --public-ink: #f4f5f2;
+    --public-soft: #aeb3ad;
+    --public-line: #ffffff29;
+    --public-surface: #101310;
+    --public-scrim: #05080599;
 
     /* shadcn token shims (HSL) — required by component library */
     --background: 0 0% 0%;
