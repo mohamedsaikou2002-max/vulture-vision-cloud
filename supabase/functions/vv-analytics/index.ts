@@ -259,7 +259,7 @@ async function fetchOnchain(ethUsd: number) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const denied = await authorize(req, true);
+  const denied = await authorize(req);
   if (denied) return denied;
   try {
     const crypto = await fetchCrypto();
