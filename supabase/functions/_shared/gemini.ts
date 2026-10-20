@@ -1,3 +1,4 @@
+import { createGeminiFailover, geminiFetch, hasGeminiKeys } from './gemini_failover.ts';
 // Server-only Gemini adapter. Retry only model-not-found, never ambiguous failures.
 import { availableGeminiModels } from './simulation_chat_contract.ts';
 declare const Deno: { env: { get(key: string): string | undefined } };
@@ -6,19 +7,21 @@ export class GeminiError extends Error {
     super(message); this.name = 'GeminiError';
   }
 }
+export const hasConfiguredAI = () => hasGeminiKeys() || !!Deno.env.get('LOVABLE_API_KEY');
 export interface GenOpts { system?: string; prompt: string; json?: boolean; maxOutputTokens?: number; temperature?: number; timeoutMs?: number }
-export async function generateGemini(key: string, configuredModel: string | undefined, body: unknown, fetcher: typeof fetch = fetch, timeoutMs = 18000): Promise<{text: string; model: string}> {
+export async function generateGemini(key: string, configuredModel: string | undefined, body: unknown, fetcher: typeof fetch = fetch, timeoutMs = 18000, transport?: typeof geminiFetch): Promise<{text: string; model: string}> {
   if (!key) throw new GeminiError('not_configured', 'AI service is not configured', 503);
   let models: string[];
   try { models = availableGeminiModels(configuredModel); }
   catch { throw new GeminiError('model_unavailable', 'Invalid Gemini model configuration', 503); }
-  const signal = AbortSignal.timeout(timeoutMs);
+  const deadline = Date.now() + timeoutMs;
+  const send = transport ?? createGeminiFailover({credentials:()=>[{slot:'explicit',value:key}],fetch:fetcher});
   for (const model of models) {
     let response: Response;
     try {
-      response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, signal, body: JSON.stringify(body),
-      });
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) throw new Error('deadline');
+      response = await send(model, JSON.stringify(body), remaining);
     } catch { throw new GeminiError('timeout', 'AI request timed out', 504); }
     if (response.status === 404) { await response.body?.cancel(); continue; }
     if (!response.ok) throw new GeminiError(response.status === 429 ? 'rate_limited' : 'upstream', response.status === 429 ? 'AI provider is rate-limited. Try again later.' : 'AI provider request failed.', response.status === 429 ? 429 : 502);
@@ -51,8 +54,7 @@ interface GenerationBody {
 }
 /** Reuse the provider already configured by the host. Never retry a failed inference through another provider. */
 export async function generateConfigured(body: GenerationBody, timeoutMs = 18000) {
-  const native = Deno.env.get('GEMINI_API_KEY');
-  if (native) return generateGemini(native, Deno.env.get('GEMINI_MODEL'), body, fetch, timeoutMs);
+  if (hasGeminiKeys()) return generateGemini('configured-slots', Deno.env.get('GEMINI_MODEL'), body, fetch, timeoutMs, geminiFetch);
   const gateway = Deno.env.get('LOVABLE_API_KEY');
   if (!gateway) throw new GeminiError('not_configured', 'AI service is not configured', 503);
   const model = Deno.env.get('LOVABLE_AI_MODEL') || 'google/gemini-2.5-flash';

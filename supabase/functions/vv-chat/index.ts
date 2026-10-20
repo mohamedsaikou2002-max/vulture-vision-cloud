@@ -1,6 +1,6 @@
 import { authorize } from '../_shared/access.ts';
 import { parseIntelChat, buildIntelChatBody } from '../_shared/intel_chat.ts';
-import { generateConfigured } from '../_shared/gemini.ts';
+import { hasConfiguredAI, generateConfigured } from '../_shared/gemini.ts';
 const corsHeaders = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Content-Type': 'application/json' };
 
 Deno.serve(async (req) => {
@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
   let request;
   try { request = parseIntelChat(JSON.parse(raw)); }
   catch (e) { return reply({ error: (e as Error).message }, 400); }
-  if (!Deno.env.get('GEMINI_API_KEY') && !Deno.env.get('LOVABLE_API_KEY')) return reply({ error: 'AI service is not configured' }, 503);
+  if (!hasConfiguredAI()) return reply({ error: 'AI service is not configured' }, 503);
   try {
     const { text, model } = await generateConfigured(buildIntelChatBody(request));
     return reply({ reply: text, model });

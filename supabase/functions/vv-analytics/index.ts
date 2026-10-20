@@ -1,5 +1,5 @@
 import { authorize } from '../_shared/access.ts';
-import { generateConfigured } from '../_shared/gemini.ts';
+import { hasConfiguredAI, generateConfigured } from '../_shared/gemini.ts';
 import { summarizeMarketStatus, type MarketSource } from '../_shared/market_status.ts';
 const fetchMarket: typeof fetch = (input, init = {}) => fetch(input, { ...init, signal: init.signal ?? AbortSignal.timeout(8000) });
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
@@ -181,8 +181,7 @@ async function buildAsset(symbol: string, type: "CRYPTO" | "EQUITY", price: numb
 }
 
 async function aiNarrative(crypto: Crypto[], assets: Asset[], port: {dominant_regime:string;avg_quantum_score:number;avg_prob_up_30d:number}): Promise<string> {
-  const GEMINI = Deno.env.get("GEMINI_API_KEY");
-  if (!GEMINI && !Deno.env.get("LOVABLE_API_KEY")) return "AI synthesis unavailable — no provider is configured.";
+  if (!hasConfiguredAI()) return "AI synthesis unavailable — no provider is configured.";
 
   const prompt = `VULTURE VISION INTEL BRIEF — ${new Date().toISOString()}
 

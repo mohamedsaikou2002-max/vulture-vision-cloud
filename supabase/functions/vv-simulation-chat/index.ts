@@ -1,7 +1,7 @@
 // vv-simulation-chat — user-authenticated Gemini research panel.
 // Unlike the separate operator-only MiroFish engine, this answers research questions
 // even when an engine is unavailable. Synthetic analyst roles are not live agents.
-import { generateConfigured } from "../_shared/gemini.ts";
+import { hasConfiguredAI, generateConfigured } from "../_shared/gemini.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   parseSimulationChatRequest, buildSimulationChatPrompt, parseSimulationChatAnswer
@@ -34,7 +34,7 @@ Deno.serve(async (req: Request) => {
   const { data: { user }, error: authError } = await identity.auth.getUser(bearer);
   if (!user || authError) return reply({ error: "Invalid session" }, 401);
 
-  if (!Deno.env.get('GEMINI_API_KEY') && !Deno.env.get('LOVABLE_API_KEY')) return reply({ error: 'AI is not configured for simulation chat' }, 503);
+  if (!hasConfiguredAI()) return reply({ error: 'AI is not configured for simulation chat' }, 503);
 
   // Existing service-role-only RPC atomically enforces 6 synthesis calls per user per hour.
   // If migrations aren't deployed, fail closed rather than make unmetered provider calls.

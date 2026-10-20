@@ -22,7 +22,7 @@ function edge(name: string, fetcher: typeof fetch, values: Record<string, string
     const exports = {};
     const scope = createContext({ exports, URL, URLSearchParams, Request, Response, Headers, AbortSignal, TextEncoder, console,
       fetch: fetcher,
-      Deno: { env: { get: (key: string) => values[key] }, serve: (value: Handler) => { handler = value; } },
+      Deno: { env: { get: (key: string) => values[key], toObject: () => ({...values}) }, serve: (value: Handler) => { handler = value; } },
       require: (specifier: string) => {
         if (specifier.endsWith('/access.ts')) return { authorize: async () => denied ? Response.json({ error: 'Operator access required' }, { status: 403 }) : null };
         if (specifier.startsWith('https://')) return { createClient: () => ({ auth: { getUser: async () => ({ data: { user: null }, error: { message: 'Fixture no session' } }) }, from: query }) };

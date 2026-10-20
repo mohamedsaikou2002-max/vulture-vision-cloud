@@ -10,7 +10,7 @@ export function loadEdgeHandler(name:string,fetcher:typeof fetch,values:Record<s
     if(cache.has(file))return cache.get(file)!;
     const exports={};cache.set(file,exports);
     const context=createContext({exports,console,URL,URLSearchParams,Request,Response,Headers,AbortSignal,TextEncoder,Uint32Array,crypto:webcrypto,fetch:fetcher,
-      Deno:{env:{get:(key:string)=>values[key]},serve:(fn:typeof handler)=>{handler=fn;}},
+      Deno:{env:{get:(key:string)=>values[key],toObject:()=>({...values})},serve:(fn:typeof handler)=>{handler=fn;}},
       require:(specifier:string)=>{
         if(specifier==='npm:@supabase/supabase-js@2/cors')return {corsHeaders:{}};
         if(specifier.startsWith('https://esm.sh/@supabase/supabase-js'))return {createClient};
