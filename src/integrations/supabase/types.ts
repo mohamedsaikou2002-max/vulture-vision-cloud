@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      autosim_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          parent_job_id: string | null
+          result: Json | null
+          scenario: string
+          stage_log: Json
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          parent_job_id?: string | null
+          result?: Json | null
+          scenario: string
+          stage_log?: Json
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          parent_job_id?: string | null
+          result?: Json | null
+          scenario?: string
+          stage_log?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autosim_jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "autosim_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kill_switch_alerts: {
         Row: {
           created_at: string
@@ -337,6 +387,36 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          current_period_end: string | null
+          plan: string | null
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_period_end?: string | null
+          plan?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_period_end?: string | null
+          plan?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       synthesis_history: {
         Row: {
           antithesis: Json | null
@@ -498,6 +578,17 @@ export type Database = {
         Returns: boolean
       }
       news_context_status: { Args: never; Returns: Json }
+      vv_autosim_has_access: { Args: { p_user_id: string }; Returns: boolean }
+      vv_claim_autosim: {
+        Args: {
+          p_job_id: string
+          p_limit: number
+          p_parent_id: string
+          p_scenario: string
+          p_user_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
