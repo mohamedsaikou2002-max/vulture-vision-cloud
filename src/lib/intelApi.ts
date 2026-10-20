@@ -1,8 +1,10 @@
+import { supabase } from '@/integrations/supabase/client';
 // Vulture Vision — Intelligence Backend API Client
 // Connects to vv_intel_backend running on VITE_INTEL_HOST:8000
 
+import { indexedBrief } from './workspaceData';
 import { backendOrigin } from './backendOrigin';
-const BASE_URL = backendOrigin(import.meta.env.VITE_INTEL_HOST, import.meta.env.DEV, 8000, typeof location !== 'undefined' && location.protocol === 'https:');
+const BASE_URL = backendOrigin(import.meta.env.VITE_INTEL_HOST, false, 8000, typeof location !== 'undefined' && location.protocol === 'https:');
 const WS_URL = BASE_URL?.replace(/^http/, 'ws');
 
 // ── Types ───────────────────────────────────────────────────
@@ -79,7 +81,7 @@ export interface IntelBrief {
 // ── REST calls ──────────────────────────────────────────────
 
 export async function fetchLatestBrief(): Promise<IntelBrief | null> {
-  if (!BASE_URL) return null;
+  if (!BASE_URL) return indexedBrief().catch(()=>null);
   try {
     const res = await fetch(`${BASE_URL}/brief/latest`, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
@@ -120,7 +122,13 @@ export function subscribeToIntelBriefs(
   onBrief: (brief: IntelBrief) => void,
   onRegime?: (regime: RegimeState) => void,
 ): () => void {
-  if (!WS_URL) return () => {};
+  if (!WS_URL) {
+    let active=true;
+    const refresh=()=>{void indexedBrief().then(b=>{if(active&&b)onBrief(b);}).catch(()=>{});};
+    const channel=supabase.channel('intel-indexed-news').on('postgres_changes',{event:'INSERT',schema:'public',table:'news_articles'},refresh).subscribe();
+    const timer=setInterval(refresh,60000);
+    return ()=>{active=false;clearInterval(timer);void supabase.removeChannel(channel);};
+  }
   let ws: WebSocket | null = null;
   let dead = false;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;

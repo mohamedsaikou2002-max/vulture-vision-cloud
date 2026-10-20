@@ -1,0 +1,1244 @@
+[
+  {
+    "id": "global-extra-001",
+    "name": "IMF Blogs",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-002",
+    "name": "World Bank Blogs",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-003",
+    "name": "Liberty Street Economics",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-004",
+    "name": "Brookings Economic Studies",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-005",
+    "name": "SemiAnalysis",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-006",
+    "name": "Stratechery",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-007",
+    "name": "Wolf Street",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-008",
+    "name": "Econbrowser",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-009",
+    "name": "Krebs on Security",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-010",
+    "name": "BleepingComputer",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-011",
+    "name": "Cloudflare Blog",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-012",
+    "name": "Google Project Zero",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-013",
+    "name": "Chainalysis Blog",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-014",
+    "name": "Ethereum Foundation Blog",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-015",
+    "name": "Coinbase Blog",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-016",
+    "name": "The Register",
+    "source_country": "GB",
+    "country_name": "United Kingdom"
+  },
+  {
+    "id": "global-extra-017",
+    "name": "IEEE Spectrum",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-018",
+    "name": "EIA Today in Energy",
+    "source_country": "US",
+    "country_name": "United States"
+  },
+  {
+    "id": "global-extra-019",
+    "name": "Bank of Canada Publications",
+    "source_country": "CA",
+    "country_name": "Canada"
+  },
+  {
+    "id": "global-extra-020",
+    "name": "BetaKit",
+    "source_country": "CA",
+    "country_name": "Canada"
+  },
+  {
+    "id": "global-extra-021",
+    "name": "The Logic",
+    "source_country": "CA",
+    "country_name": "Canada"
+  },
+  {
+    "id": "global-extra-022",
+    "name": "Canadian Centre for Policy Alternatives",
+    "source_country": "CA",
+    "country_name": "Canada"
+  },
+  {
+    "id": "global-extra-023",
+    "name": "Expansi\u00f3n M\u00e9xico",
+    "source_country": "MX",
+    "country_name": "Mexico"
+  },
+  {
+    "id": "global-extra-024",
+    "name": "Mexico Business News",
+    "source_country": "MX",
+    "country_name": "Mexico"
+  },
+  {
+    "id": "global-extra-025",
+    "name": "La Rep\u00fablica",
+    "source_country": "CO",
+    "country_name": "Colombia"
+  },
+  {
+    "id": "global-extra-026",
+    "name": "Valora Analitik",
+    "source_country": "CO",
+    "country_name": "Colombia"
+  },
+  {
+    "id": "global-extra-027",
+    "name": "Semana Econ\u00f3mica",
+    "source_country": "PE",
+    "country_name": "Peru"
+  },
+  {
+    "id": "global-extra-028",
+    "name": "El Peruano",
+    "source_country": "PE",
+    "country_name": "Peru"
+  },
+  {
+    "id": "global-extra-029",
+    "name": "Pulso",
+    "source_country": "CL",
+    "country_name": "Chile"
+  },
+  {
+    "id": "global-extra-030",
+    "name": "Emol Econom\u00eda",
+    "source_country": "CL",
+    "country_name": "Chile"
+  },
+  {
+    "id": "global-extra-031",
+    "name": "InfoMoney",
+    "source_country": "BR",
+    "country_name": "Brazil"
+  },
+  {
+    "id": "global-extra-032",
+    "name": "Brazil Journal",
+    "source_country": "BR",
+    "country_name": "Brazil"
+  },
+  {
+    "id": "global-extra-033",
+    "name": "NeoFeed",
+    "source_country": "BR",
+    "country_name": "Brazil"
+  },
+  {
+    "id": "global-extra-034",
+    "name": "De Nederlandsche Bank",
+    "source_country": "NL",
+    "country_name": "Netherlands"
+  },
+  {
+    "id": "global-extra-035",
+    "name": "ESB Economisch Statistische Berichten",
+    "source_country": "NL",
+    "country_name": "Netherlands"
+  },
+  {
+    "id": "global-extra-036",
+    "name": "Nova Ekonomija",
+    "source_country": "RS",
+    "country_name": "Serbia"
+  },
+  {
+    "id": "global-extra-037",
+    "name": "Biznis.rs",
+    "source_country": "RS",
+    "country_name": "Serbia"
+  },
+  {
+    "id": "global-extra-038",
+    "name": "L'Echo",
+    "source_country": "BE",
+    "country_name": "Belgium"
+  },
+  {
+    "id": "global-extra-039",
+    "name": "De Tijd",
+    "source_country": "BE",
+    "country_name": "Belgium"
+  },
+  {
+    "id": "global-extra-040",
+    "name": "Vil\u00e1ggazdas\u00e1g",
+    "source_country": "HU",
+    "country_name": "Hungary"
+  },
+  {
+    "id": "global-extra-041",
+    "name": "G7 Hungary",
+    "source_country": "HU",
+    "country_name": "Hungary"
+  },
+  {
+    "id": "global-extra-042",
+    "name": "Finans Denmark",
+    "source_country": "DK",
+    "country_name": "Denmark"
+  },
+  {
+    "id": "global-extra-043",
+    "name": "Danmarks Nationalbank",
+    "source_country": "DK",
+    "country_name": "Denmark"
+  },
+  {
+    "id": "global-extra-044",
+    "name": "Business Post",
+    "source_country": "IE",
+    "country_name": "Ireland"
+  },
+  {
+    "id": "global-extra-045",
+    "name": "Silicon Republic",
+    "source_country": "IE",
+    "country_name": "Ireland"
+  },
+  {
+    "id": "global-extra-046",
+    "name": "Bank Underground",
+    "source_country": "GB",
+    "country_name": "United Kingdom"
+  },
+  {
+    "id": "global-extra-047",
+    "name": "FT Alphaville",
+    "source_country": "GB",
+    "country_name": "United Kingdom"
+  },
+  {
+    "id": "global-extra-048",
+    "name": "Tech.eu",
+    "source_country": "GB",
+    "country_name": "United Kingdom"
+  },
+  {
+    "id": "global-extra-049",
+    "name": "The Economist",
+    "source_country": "GB",
+    "country_name": "United Kingdom"
+  },
+  {
+    "id": "global-extra-050",
+    "name": "heise online",
+    "source_country": "DE",
+    "country_name": "Germany"
+  },
+  {
+    "id": "global-extra-051",
+    "name": "WirtschaftsWoche",
+    "source_country": "DE",
+    "country_name": "Germany"
+  },
+  {
+    "id": "global-extra-052",
+    "name": "Deutsche Bundesbank",
+    "source_country": "DE",
+    "country_name": "Germany"
+  },
+  {
+    "id": "global-extra-053",
+    "name": "finews.ch",
+    "source_country": "CH",
+    "country_name": "Switzerland"
+  },
+  {
+    "id": "global-extra-054",
+    "name": "Swiss National Bank",
+    "source_country": "CH",
+    "country_name": "Switzerland"
+  },
+  {
+    "id": "global-extra-055",
+    "name": "BIS RSS Publications",
+    "source_country": "CH",
+    "country_name": "Switzerland"
+  },
+  {
+    "id": "global-extra-056",
+    "name": "Kauppalehti",
+    "source_country": "FI",
+    "country_name": "Finland"
+  },
+  {
+    "id": "global-extra-057",
+    "name": "Talousel\u00e4m\u00e4",
+    "source_country": "FI",
+    "country_name": "Finland"
+  },
+  {
+    "id": "global-extra-058",
+    "name": "Paperjam",
+    "source_country": "LU",
+    "country_name": "Luxembourg"
+  },
+  {
+    "id": "global-extra-059",
+    "name": "Delano Luxembourg",
+    "source_country": "LU",
+    "country_name": "Luxembourg"
+  },
+  {
+    "id": "global-extra-060",
+    "name": "Cinco D\u00edas",
+    "source_country": "ES",
+    "country_name": "Spain"
+  },
+  {
+    "id": "global-extra-061",
+    "name": "Expansi\u00f3n Spain",
+    "source_country": "ES",
+    "country_name": "Spain"
+  },
+  {
+    "id": "global-extra-062",
+    "name": "Milano Finanza",
+    "source_country": "IT",
+    "country_name": "Italy"
+  },
+  {
+    "id": "global-extra-063",
+    "name": "Lavoce.info",
+    "source_country": "IT",
+    "country_name": "Italy"
+  },
+  {
+    "id": "global-extra-064",
+    "name": "La Tribune",
+    "source_country": "FR",
+    "country_name": "France"
+  },
+  {
+    "id": "global-extra-065",
+    "name": "Banque de France",
+    "source_country": "FR",
+    "country_name": "France"
+  },
+  {
+    "id": "global-extra-066",
+    "name": "Breakit",
+    "source_country": "SE",
+    "country_name": "Sweden"
+  },
+  {
+    "id": "global-extra-067",
+    "name": "Aff\u00e4rsv\u00e4rlden",
+    "source_country": "SE",
+    "country_name": "Sweden"
+  },
+  {
+    "id": "global-extra-068",
+    "name": "trend Austria",
+    "source_country": "AT",
+    "country_name": "Austria"
+  },
+  {
+    "id": "global-extra-069",
+    "name": "Trending Topics Austria",
+    "source_country": "AT",
+    "country_name": "Austria"
+  },
+  {
+    "id": "global-extra-070",
+    "name": "Arabian Business",
+    "source_country": "AE",
+    "country_name": "United Arab Emirates"
+  },
+  {
+    "id": "global-extra-071",
+    "name": "Zawya",
+    "source_country": "AE",
+    "country_name": "United Arab Emirates"
+  },
+  {
+    "id": "global-extra-072",
+    "name": "Arab Times Kuwait",
+    "source_country": "KW",
+    "country_name": "Kuwait"
+  },
+  {
+    "id": "global-extra-073",
+    "name": "Al Jarida",
+    "source_country": "KW",
+    "country_name": "Kuwait"
+  },
+  {
+    "id": "global-extra-074",
+    "name": "Argaam",
+    "source_country": "SA",
+    "country_name": "Saudi Arabia"
+  },
+  {
+    "id": "global-extra-075",
+    "name": "Asharq Business",
+    "source_country": "SA",
+    "country_name": "Saudi Arabia"
+  },
+  {
+    "id": "global-extra-076",
+    "name": "Calcalist",
+    "source_country": "IL",
+    "country_name": "Israel"
+  },
+  {
+    "id": "global-extra-077",
+    "name": "TheMarker",
+    "source_country": "IL",
+    "country_name": "Israel"
+  },
+  {
+    "id": "global-extra-078",
+    "name": "Moneyweb",
+    "source_country": "ZA",
+    "country_name": "South Africa"
+  },
+  {
+    "id": "global-extra-079",
+    "name": "TechCentral",
+    "source_country": "ZA",
+    "country_name": "South Africa"
+  },
+  {
+    "id": "global-extra-080",
+    "name": "Interest.co.nz",
+    "source_country": "NZ",
+    "country_name": "New Zealand"
+  },
+  {
+    "id": "global-extra-081",
+    "name": "Scoop Business",
+    "source_country": "NZ",
+    "country_name": "New Zealand"
+  },
+  {
+    "id": "global-extra-082",
+    "name": "Mint",
+    "source_country": "IN",
+    "country_name": "India"
+  },
+  {
+    "id": "global-extra-083",
+    "name": "Moneycontrol",
+    "source_country": "IN",
+    "country_name": "India"
+  },
+  {
+    "id": "global-extra-084",
+    "name": "Inc42",
+    "source_country": "IN",
+    "country_name": "India"
+  },
+  {
+    "id": "global-extra-085",
+    "name": "YourStory",
+    "source_country": "IN",
+    "country_name": "India"
+  },
+  {
+    "id": "global-extra-086",
+    "name": "Yicai Global",
+    "source_country": "CN",
+    "country_name": "China"
+  },
+  {
+    "id": "global-extra-087",
+    "name": "36Kr",
+    "source_country": "CN",
+    "country_name": "China"
+  },
+  {
+    "id": "global-extra-088",
+    "name": "China Daily Business",
+    "source_country": "CN",
+    "country_name": "China"
+  },
+  {
+    "id": "global-extra-089",
+    "name": "Hong Kong Free Press",
+    "source_country": "HK",
+    "country_name": "Hong Kong"
+  },
+  {
+    "id": "global-extra-090",
+    "name": "Hong Kong Economic Journal",
+    "source_country": "HK",
+    "country_name": "Hong Kong"
+  },
+  {
+    "id": "global-extra-091",
+    "name": "Korea Economic Daily",
+    "source_country": "KR",
+    "country_name": "South Korea"
+  },
+  {
+    "id": "global-extra-092",
+    "name": "Pulse by Maeil Business",
+    "source_country": "KR",
+    "country_name": "South Korea"
+  },
+  {
+    "id": "global-extra-093",
+    "name": "Tech in Asia",
+    "source_country": "SG",
+    "country_name": "Singapore"
+  },
+  {
+    "id": "global-extra-094",
+    "name": "e27",
+    "source_country": "SG",
+    "country_name": "Singapore"
+  },
+  {
+    "id": "global-extra-095",
+    "name": "InnovationAus",
+    "source_country": "AU",
+    "country_name": "Australia"
+  },
+  {
+    "id": "global-extra-096",
+    "name": "The Conversation Australia",
+    "source_country": "AU",
+    "country_name": "Australia"
+  },
+  {
+    "id": "global-extra-097",
+    "name": "DigiTimes",
+    "source_country": "TW",
+    "country_name": "Taiwan"
+  },
+  {
+    "id": "global-extra-098",
+    "name": "United Daily News",
+    "source_country": "TW",
+    "country_name": "Taiwan"
+  },
+  {
+    "id": "global-extra-099",
+    "name": "Toyo Keizai",
+    "source_country": "JP",
+    "country_name": "Japan"
+  },
+  {
+    "id": "global-extra-100",
+    "name": "ITmedia",
+    "source_country": "JP",
+    "country_name": "Japan"
+  },
+  {
+    "id": "global-extra-101",
+    "name": "The Japan Times",
+    "source_country": "JP",
+    "country_name": "Japan"
+  },
+  {
+    "id": "global-extra-102",
+    "name": "Acento",
+    "source_country": "DO",
+    "country_name": "Dominican Republic"
+  },
+  {
+    "id": "global-extra-103",
+    "name": "Capital.gr",
+    "source_country": "GR",
+    "country_name": "Greece"
+  },
+  {
+    "id": "global-extra-104",
+    "name": "El Cronista",
+    "source_country": "AR",
+    "country_name": "Argentina"
+  },
+  {
+    "id": "global-extra-105",
+    "name": "Buenos Aires Times",
+    "source_country": "AR",
+    "country_name": "Argentina"
+  },
+  {
+    "id": "global-extra-106",
+    "name": "Jornal Econ\u00f3mico",
+    "source_country": "PT",
+    "country_name": "Portugal"
+  },
+  {
+    "id": "global-extra-107",
+    "name": "ECO Portugal",
+    "source_country": "PT",
+    "country_name": "Portugal"
+  },
+  {
+    "id": "global-extra-108",
+    "name": "E24 Norway",
+    "source_country": "NO",
+    "country_name": "Norway"
+  },
+  {
+    "id": "global-extra-109",
+    "name": "Finansavisen",
+    "source_country": "NO",
+    "country_name": "Norway"
+  },
+  {
+    "id": "global-extra-110",
+    "name": "Bankier.pl",
+    "source_country": "PL",
+    "country_name": "Poland"
+  },
+  {
+    "id": "global-extra-111",
+    "name": "Puls Biznesu",
+    "source_country": "PL",
+    "country_name": "Poland"
+  },
+  {
+    "id": "global-extra-112",
+    "name": "Hospod\u00e1\u0159sk\u00e9 noviny",
+    "source_country": "CZ",
+    "country_name": "Czechia"
+  },
+  {
+    "id": "global-extra-113",
+    "name": "Seznam Zpr\u00e1vy",
+    "source_country": "CZ",
+    "country_name": "Czechia"
+  },
+  {
+    "id": "global-extra-114",
+    "name": "TREND Slovakia",
+    "source_country": "SK",
+    "country_name": "Slovakia"
+  },
+  {
+    "id": "global-extra-115",
+    "name": "HNonline Slovakia",
+    "source_country": "SK",
+    "country_name": "Slovakia"
+  },
+  {
+    "id": "global-extra-116",
+    "name": "Ziarul Financiar",
+    "source_country": "RO",
+    "country_name": "Romania"
+  },
+  {
+    "id": "global-extra-117",
+    "name": "Economica.net",
+    "source_country": "RO",
+    "country_name": "Romania"
+  },
+  {
+    "id": "global-extra-118",
+    "name": "Capital Bulgaria",
+    "source_country": "BG",
+    "country_name": "Bulgaria"
+  },
+  {
+    "id": "global-extra-119",
+    "name": "Investor.bg",
+    "source_country": "BG",
+    "country_name": "Bulgaria"
+  },
+  {
+    "id": "global-extra-120",
+    "name": "Poslovni Dnevnik",
+    "source_country": "HR",
+    "country_name": "Croatia"
+  },
+  {
+    "id": "global-extra-121",
+    "name": "Lider Media",
+    "source_country": "HR",
+    "country_name": "Croatia"
+  },
+  {
+    "id": "global-extra-122",
+    "name": "Finance Slovenia",
+    "source_country": "SI",
+    "country_name": "Slovenia"
+  },
+  {
+    "id": "global-extra-123",
+    "name": "Delo",
+    "source_country": "SI",
+    "country_name": "Slovenia"
+  },
+  {
+    "id": "global-extra-124",
+    "name": "Ekonomim",
+    "source_country": "TR",
+    "country_name": "Turkey"
+  },
+  {
+    "id": "global-extra-125",
+    "name": "D\u00fcnya",
+    "source_country": "TR",
+    "country_name": "Turkey"
+  },
+  {
+    "id": "global-extra-126",
+    "name": "EnterpriseAM Egypt",
+    "source_country": "EG",
+    "country_name": "Egypt"
+  },
+  {
+    "id": "global-extra-127",
+    "name": "Daily News Egypt",
+    "source_country": "EG",
+    "country_name": "Egypt"
+  },
+  {
+    "id": "global-extra-128",
+    "name": "Medias24",
+    "source_country": "MA",
+    "country_name": "Morocco"
+  },
+  {
+    "id": "global-extra-129",
+    "name": "Le Desk",
+    "source_country": "MA",
+    "country_name": "Morocco"
+  },
+  {
+    "id": "global-extra-130",
+    "name": "Nairametrics",
+    "source_country": "NG",
+    "country_name": "Nigeria"
+  },
+  {
+    "id": "global-extra-131",
+    "name": "TechCabal",
+    "source_country": "NG",
+    "country_name": "Nigeria"
+  },
+  {
+    "id": "global-extra-132",
+    "name": "Business Daily Africa",
+    "source_country": "KE",
+    "country_name": "Kenya"
+  },
+  {
+    "id": "global-extra-133",
+    "name": "Techweez",
+    "source_country": "KE",
+    "country_name": "Kenya"
+  },
+  {
+    "id": "global-extra-134",
+    "name": "Citi Business News",
+    "source_country": "GH",
+    "country_name": "Ghana"
+  },
+  {
+    "id": "global-extra-135",
+    "name": "Graphic Online",
+    "source_country": "GH",
+    "country_name": "Ghana"
+  },
+  {
+    "id": "global-extra-136",
+    "name": "Daily Monitor",
+    "source_country": "UG",
+    "country_name": "Uganda"
+  },
+  {
+    "id": "global-extra-137",
+    "name": "Nile Post",
+    "source_country": "UG",
+    "country_name": "Uganda"
+  },
+  {
+    "id": "global-extra-138",
+    "name": "The Citizen Tanzania",
+    "source_country": "TZ",
+    "country_name": "Tanzania"
+  },
+  {
+    "id": "global-extra-139",
+    "name": "Daily News Tanzania",
+    "source_country": "TZ",
+    "country_name": "Tanzania"
+  },
+  {
+    "id": "global-extra-140",
+    "name": "Capital Ethiopia",
+    "source_country": "ET",
+    "country_name": "Ethiopia"
+  },
+  {
+    "id": "global-extra-141",
+    "name": "Addis Fortune",
+    "source_country": "ET",
+    "country_name": "Ethiopia"
+  },
+  {
+    "id": "global-extra-142",
+    "name": "The New Times Rwanda",
+    "source_country": "RW",
+    "country_name": "Rwanda"
+  },
+  {
+    "id": "global-extra-143",
+    "name": "L'Express Mauritius",
+    "source_country": "MU",
+    "country_name": "Mauritius"
+  },
+  {
+    "id": "global-extra-144",
+    "name": "The Peninsula Qatar",
+    "source_country": "QA",
+    "country_name": "Qatar"
+  },
+  {
+    "id": "global-extra-145",
+    "name": "Doha News",
+    "source_country": "QA",
+    "country_name": "Qatar"
+  },
+  {
+    "id": "global-extra-146",
+    "name": "Gulf Daily News",
+    "source_country": "BH",
+    "country_name": "Bahrain"
+  },
+  {
+    "id": "global-extra-147",
+    "name": "Oman Observer",
+    "source_country": "OM",
+    "country_name": "Oman"
+  },
+  {
+    "id": "global-extra-148",
+    "name": "Times of Oman",
+    "source_country": "OM",
+    "country_name": "Oman"
+  },
+  {
+    "id": "global-extra-149",
+    "name": "The Jordan Times",
+    "source_country": "JO",
+    "country_name": "Jordan"
+  },
+  {
+    "id": "global-extra-150",
+    "name": "L'Orient-Le Jour",
+    "source_country": "LB",
+    "country_name": "Lebanon"
+  },
+  {
+    "id": "global-extra-151",
+    "name": "Executive Magazine Lebanon",
+    "source_country": "LB",
+    "country_name": "Lebanon"
+  },
+  {
+    "id": "global-extra-152",
+    "name": "Profit Pakistan Today",
+    "source_country": "PK",
+    "country_name": "Pakistan"
+  },
+  {
+    "id": "global-extra-153",
+    "name": "The Business Standard",
+    "source_country": "BD",
+    "country_name": "Bangladesh"
+  },
+  {
+    "id": "global-extra-154",
+    "name": "The Daily Star Bangladesh",
+    "source_country": "BD",
+    "country_name": "Bangladesh"
+  },
+  {
+    "id": "global-extra-155",
+    "name": "EconomyNext",
+    "source_country": "LK",
+    "country_name": "Sri Lanka"
+  },
+  {
+    "id": "global-extra-156",
+    "name": "Kathmandu Post Money",
+    "source_country": "NP",
+    "country_name": "Nepal"
+  },
+  {
+    "id": "global-extra-157",
+    "name": "Bangkok Post Business",
+    "source_country": "TH",
+    "country_name": "Thailand"
+  },
+  {
+    "id": "global-extra-158",
+    "name": "Vietnam Investment Review",
+    "source_country": "VN",
+    "country_name": "Vietnam"
+  },
+  {
+    "id": "global-extra-159",
+    "name": "Vietcetera",
+    "source_country": "VN",
+    "country_name": "Vietnam"
+  },
+  {
+    "id": "global-extra-160",
+    "name": "The Edge Malaysia",
+    "source_country": "MY",
+    "country_name": "Malaysia"
+  },
+  {
+    "id": "global-extra-161",
+    "name": "Digital News Asia",
+    "source_country": "MY",
+    "country_name": "Malaysia"
+  },
+  {
+    "id": "global-extra-162",
+    "name": "Katadata",
+    "source_country": "ID",
+    "country_name": "Indonesia"
+  },
+  {
+    "id": "global-extra-163",
+    "name": "DailySocial",
+    "source_country": "ID",
+    "country_name": "Indonesia"
+  },
+  {
+    "id": "global-extra-164",
+    "name": "BusinessWorld Philippines",
+    "source_country": "PH",
+    "country_name": "Philippines"
+  },
+  {
+    "id": "global-extra-165",
+    "name": "Rappler",
+    "source_country": "PH",
+    "country_name": "Philippines"
+  },
+  {
+    "id": "global-extra-166",
+    "name": "Khmer Times",
+    "source_country": "KH",
+    "country_name": "Cambodia"
+  },
+  {
+    "id": "global-extra-167",
+    "name": "MONTSAME",
+    "source_country": "MN",
+    "country_name": "Mongolia"
+  },
+  {
+    "id": "global-extra-168",
+    "name": "Spot.uz",
+    "source_country": "UZ",
+    "country_name": "Uzbekistan"
+  },
+  {
+    "id": "global-extra-169",
+    "name": "Kursiv Media",
+    "source_country": "KZ",
+    "country_name": "Kazakhstan"
+  },
+  {
+    "id": "global-extra-170",
+    "name": "Business Media Georgia",
+    "source_country": "GE",
+    "country_name": "Georgia"
+  },
+  {
+    "id": "global-extra-171",
+    "name": "Report.az",
+    "source_country": "AZ",
+    "country_name": "Azerbaijan"
+  },
+  {
+    "id": "global-extra-172",
+    "name": "Ekonomichna Pravda",
+    "source_country": "UA",
+    "country_name": "Ukraine"
+  },
+  {
+    "id": "global-extra-173",
+    "name": "Iceland Review",
+    "source_country": "IS",
+    "country_name": "Iceland"
+  },
+  {
+    "id": "global-extra-174",
+    "name": "Cyprus Mail",
+    "source_country": "CY",
+    "country_name": "Cyprus"
+  },
+  {
+    "id": "global-extra-175",
+    "name": "Times of Malta",
+    "source_country": "MT",
+    "country_name": "Malta"
+  },
+  {
+    "id": "global-extra-176",
+    "name": "\u00c4rip\u00e4ev",
+    "source_country": "EE",
+    "country_name": "Estonia"
+  },
+  {
+    "id": "global-extra-177",
+    "name": "Dienas Bizness",
+    "source_country": "LV",
+    "country_name": "Latvia"
+  },
+  {
+    "id": "global-extra-178",
+    "name": "Verslo \u017dinios",
+    "source_country": "LT",
+    "country_name": "Lithuania"
+  },
+  {
+    "id": "global-extra-179",
+    "name": "La Naci\u00f3n Costa Rica",
+    "source_country": "CR",
+    "country_name": "Costa Rica"
+  },
+  {
+    "id": "global-extra-180",
+    "name": "La Prensa Panama",
+    "source_country": "PA",
+    "country_name": "Panama"
+  },
+  {
+    "id": "global-extra-181",
+    "name": "Primicias Ecuador",
+    "source_country": "EC",
+    "country_name": "Ecuador"
+  },
+  {
+    "id": "global-extra-182",
+    "name": "El Observador Uruguay",
+    "source_country": "UY",
+    "country_name": "Uruguay"
+  },
+  {
+    "id": "global-extra-183",
+    "name": "5 D\u00edas Paraguay",
+    "source_country": "PY",
+    "country_name": "Paraguay"
+  },
+  {
+    "id": "global-extra-184",
+    "name": "El Deber",
+    "source_country": "BO",
+    "country_name": "Bolivia"
+  },
+  {
+    "id": "global-extra-185",
+    "name": "Prensa Libre Guatemala",
+    "source_country": "GT",
+    "country_name": "Guatemala"
+  },
+  {
+    "id": "global-extra-186",
+    "name": "El Salvador.com",
+    "source_country": "SV",
+    "country_name": "El Salvador"
+  },
+  {
+    "id": "global-extra-187",
+    "name": "La Prensa Honduras",
+    "source_country": "HN",
+    "country_name": "Honduras"
+  },
+  {
+    "id": "global-extra-188",
+    "name": "Jamaica Gleaner",
+    "source_country": "JM",
+    "country_name": "Jamaica"
+  },
+  {
+    "id": "global-extra-189",
+    "name": "Trinidad Guardian",
+    "source_country": "TT",
+    "country_name": "Trinidad and Tobago"
+  },
+  {
+    "id": "global-extra-190",
+    "name": "The Tribune Bahamas",
+    "source_country": "BS",
+    "country_name": "Bahamas"
+  },
+  {
+    "id": "global-extra-191",
+    "name": "Fiji Times",
+    "source_country": "FJ",
+    "country_name": "Fiji"
+  },
+  {
+    "id": "global-extra-192",
+    "name": "Post-Courier PNG",
+    "source_country": "PG",
+    "country_name": "Papua New Guinea"
+  },
+  {
+    "id": "global-extra-193",
+    "name": "Seneweb",
+    "source_country": "SN",
+    "country_name": "Senegal"
+  },
+  {
+    "id": "global-extra-194",
+    "name": "Abidjan.net",
+    "source_country": "CI",
+    "country_name": "C\u00f4te d'Ivoire"
+  },
+  {
+    "id": "global-extra-195",
+    "name": "Zambia Business Times",
+    "source_country": "ZM",
+    "country_name": "Zambia"
+  },
+  {
+    "id": "global-extra-196",
+    "name": "NewsDay Zimbabwe",
+    "source_country": "ZW",
+    "country_name": "Zimbabwe"
+  },
+  {
+    "id": "global-extra-197",
+    "name": "The Namibian",
+    "source_country": "NA",
+    "country_name": "Namibia"
+  },
+  {
+    "id": "global-extra-198",
+    "name": "Mmegi",
+    "source_country": "BW",
+    "country_name": "Botswana"
+  },
+  {
+    "id": "global-extra-199",
+    "name": "Expans\u00e3o Angola",
+    "source_country": "AO",
+    "country_name": "Angola"
+  },
+  {
+    "id": "global-extra-200",
+    "name": "O Pa\u00eds Mozambique",
+    "source_country": "MZ",
+    "country_name": "Mozambique"
+  },
+  {
+    "id": "global-extra-201",
+    "name": "TSA Alg\u00e9rie",
+    "source_country": "DZ",
+    "country_name": "Algeria"
+  },
+  {
+    "id": "global-extra-202",
+    "name": "Business News Tunisia",
+    "source_country": "TN",
+    "country_name": "Tunisia"
+  },
+  {
+    "id": "global-extra-203",
+    "name": "Financial Tribune",
+    "source_country": "IR",
+    "country_name": "Iran"
+  },
+  {
+    "id": "global-extra-204",
+    "name": "Shafaq News",
+    "source_country": "IQ",
+    "country_name": "Iraq"
+  },
+  {
+    "id": "global-extra-205",
+    "name": "Hetq",
+    "source_country": "AM",
+    "country_name": "Armenia"
+  },
+  {
+    "id": "global-extra-206",
+    "name": "The Bell English",
+    "source_country": "RU",
+    "country_name": "Russia"
+  },
+  {
+    "id": "global-extra-207",
+    "name": "Frontier Myanmar",
+    "source_country": "MM",
+    "country_name": "Myanmar"
+  }
+]

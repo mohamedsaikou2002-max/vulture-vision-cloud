@@ -13,11 +13,11 @@ interface Crypto {
   symbol: string;
   name: string;
   price: number;
-  change_1h: number;
-  change_24h: number;
-  change_7d: number;
-  market_cap: number;
-  volume_24h: number;
+  change_1h: number | null;
+  change_24h: number | null;
+  change_7d: number | null;
+  market_cap: number | null;
+  volume_24h: number | null;
 }
 interface Asset {
   symbol: string;
@@ -43,12 +43,12 @@ interface Full {
   ts?: string;
 }
 
-const fP = (n?: number) => (n == null || isNaN(n) ? "—" : n > 1000 ? "$" + n.toLocaleString("en-US", { maximumFractionDigits: 0 }) : n > 1 ? "$" + n.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "$" + n.toFixed(4));
-const fPct = (n?: number) => (n == null || isNaN(n) ? "—" : (n >= 0 ? "+" : "") + n.toFixed(2) + "%");
-const fBig = (n?: number) => (!n ? "—" : n >= 1e12 ? "$" + (n / 1e12).toFixed(2) + "T" : n >= 1e9 ? "$" + (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? "$" + (n / 1e6).toFixed(2) + "M" : "$" + n.toLocaleString());
-const f2 = (n?: number) => (n == null || isNaN(n) ? "—" : n.toFixed(2));
-const f4 = (n?: number) => (n == null || isNaN(n) ? "—" : n.toFixed(4));
-const dir = (n?: number) => (n != null && n >= 0 ? "up" : "down");
+const fP = (n?: number | null) => (n == null || isNaN(n) ? "—" : n > 1000 ? "$" + n.toLocaleString("en-US", { maximumFractionDigits: 0 }) : n > 1 ? "$" + n.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "$" + n.toFixed(4));
+const fPct = (n?: number | null) => (n == null || isNaN(n) ? "—" : (n >= 0 ? "+" : "") + n.toFixed(2) + "%");
+const fBig = (n?: number | null) => (!n ? "—" : n >= 1e12 ? "$" + (n / 1e12).toFixed(2) + "T" : n >= 1e9 ? "$" + (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? "$" + (n / 1e6).toFixed(2) + "M" : "$" + n.toLocaleString());
+const f2 = (n?: number | null) => (n == null || isNaN(n) ? "—" : n.toFixed(2));
+const f4 = (n?: number | null) => (n == null || isNaN(n) ? "—" : n.toFixed(4));
+const dir = (n?: number | null) => (n != null && n >= 0 ? "up" : "down");
 
 const regimeBadge = (r?: string) => {
   const cls = ({ BULL: "badge-green", BEAR: "badge-red", VOLATILE: "badge-yellow", SIDEWAYS: "badge-navy" } as Record<string,string>)[r || ""] || "badge-dim";

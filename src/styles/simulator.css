@@ -85,3 +85,5 @@
 .autosim-workspace .sim-legend .stress { background:var(--red); }
 .autosim-workspace .sim-legend .relief { background:var(--green); }
 .autosim-workspace .sim-legend .unchanged { background:var(--gold-dim); }
+
+.autosim-workspace .sim-scenario-card { order: -1; }

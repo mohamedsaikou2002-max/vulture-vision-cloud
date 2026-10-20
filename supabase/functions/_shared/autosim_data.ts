@@ -18,12 +18,18 @@ async function fred(series: string, key: string, limit = 14): Promise<{ date: st
   const j = await r.json();
   return (j.observations ?? []).filter((o: { value: string }) => o.value !== ".").map((o: { date: string; value: string }) => ({ date: o.date, value: parseFloat(o.value) }));
 }
+async function fredPublic(series: string, limit: number): Promise<{date:string;value:number}[]> {
+  const start=new Date();start.setUTCFullYear(start.getUTCFullYear()-2);
+  const response=await fetch(`https://fred.stlouisfed.org/graph/graph.csv?id=${series}&cosd=${start.toISOString().slice(0,10)}`,{signal:timeoutSignal(8000)});
+  if(!response.ok)throw new Error(`FRED public ${response.status}`);
+  const text=await response.text();if(text.length>300000)throw new Error('FRED response too large');
+  return text.trim().split(/\r?\n/).slice(1).map(line=>{const [date,value]=line.split(',');return {date,value:parseFloat(value)};}).filter(row=>/^\d{4}-\d{2}-\d{2}$/.test(row.date)&&Number.isFinite(row.value)).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,limit);
+}
 const yoy = (obs: { date: string; value: number }[]) => (obs.length > 12 ? obs[0].value / obs[12].value - 1 : NaN);
 
 export async function loadMacroObservables(): Promise<{ obs: Observables; status: SourceStatus[] }> {
   const key = Deno.env.get("FRED_API_KEY");
   const obs: Observables = {}; const status: SourceStatus[] = [];
-  if (!key) return { obs, status: [{ id: "fred", ok: false, detail: "FRED_API_KEY not set — macro dimensions use neutral defaults" }] };
   const jobs: [string, string, (o: { date: string; value: number }[]) => number, number][] = [
     ["vix", "VIXCLS", o => o[0].value, 5], ["hy_spread", "BAMLH0A0HYM2", o => o[0].value, 5],
     ["curve_10y2y", "T10Y2Y", o => o[0].value, 5], ["unrate", "UNRATE", o => o[0].value, 3],
@@ -32,7 +38,7 @@ export async function loadMacroObservables(): Promise<{ obs: Observables; status
   ];
   await Promise.all(jobs.map(async ([id, series, pick, limit]) => {
     try {
-      const rows = await fred(series, key, limit);
+      const rows = key ? await fred(series, key, limit).catch(()=>fredPublic(series,limit)) : await fredPublic(series,limit);
       const v = rows.length ? pick(rows) : NaN;
       if (!Number.isFinite(v)) throw new Error("no usable observations");
       const maxAge=['unrate','cpi_yoy','umcsent','retail_yoy'].includes(id)?70:id==='nfci'?21:7;
@@ -63,6 +69,7 @@ export function validCandles(payload: unknown, now = Date.now()) {
     if (typeof t !== "number" || !Number.isInteger(t) || v === null) continue; // market holiday placeholder
     if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) throw new Error("Invalid chart observation");
     const day = Math.floor(t / 86400) * 86400;
+    if(day >= Math.floor(now/86400000)*86400)continue;
     if (completed.has(day)) throw new Error("Duplicate candle date");
     completed.set(day, v);
   }
@@ -72,12 +79,14 @@ export function validCandles(payload: unknown, now = Date.now()) {
   return { closes: sorted.map(r => r[1]), dates: sorted.map(r => new Date(r[0] * 1000).toISOString().slice(0, 10)) };
 }
 export async function loadNasdaqCandles(): Promise<{ closes: number[]; dates: string[]; status: SourceStatus }> {
-  try {
-    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(NASDAQ_MARKET.symbol)}?interval=1d&range=1y`, { headers: { "User-Agent": "vulture-vision" }, signal: timeoutSignal(8000) });
+  let lastError = "Market provider unavailable";
+  for(const host of ["query1.finance.yahoo.com","query2.finance.yahoo.com"]) try {
+    const r = await fetch(`https://${host}/v8/finance/chart/${encodeURIComponent(NASDAQ_MARKET.symbol)}?interval=1d&range=1y`, { headers: { "User-Agent": "vulture-vision" }, signal: timeoutSignal(8000) });
     if (!r.ok) throw new Error(`Yahoo ${r.status}`);
     const { closes, dates } = validCandles(await r.json());
     return { closes, dates, status: { id: "yahoo:NASDAQ", ok: true, detail: `${closes.length} completed daily closes to ${dates.at(-1)}` } };
   } catch (e) {
-    return { closes: [], dates: [], status: { id: "yahoo:NASDAQ", ok: false, detail: (e as Error).message } };
+    lastError=(e as Error).message;
   }
+  return {closes:[],dates:[],status:{id:"yahoo:NASDAQ",ok:false,detail:lastError}};
 }

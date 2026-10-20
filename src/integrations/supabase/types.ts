@@ -14,6 +14,13 @@ export type Database = {
   }
   public: {
     Tables: {
+      news_source_status: {
+        Row: {source_id:string;source:string;status:string;articles:number;checked_at:string;error_kind:string|null}
+        Insert: {source_id:string;source:string;status:string;articles?:number;checked_at:string;error_kind?:string|null}
+        Update: {source_id?:string;source?:string;status?:string;articles?:number;checked_at?:string;error_kind?:string|null}
+        Relationships: []
+      }
+
       autosim_jobs: {
         Row: {
           completed_at: string | null

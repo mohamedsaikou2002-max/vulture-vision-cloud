@@ -1,8 +1,9 @@
 // Vulture Vision — Socio-Economics Backend API Client
 // Connects to socioeconomics_backend.py on VITE_SOCIO_HOST (default localhost:5002)
 
+import { observedSocio, currentWorld } from './workspaceData';
 import { backendOrigin } from './backendOrigin';
-const BASE_URL = backendOrigin(import.meta.env.VITE_SOCIO_HOST, import.meta.env.DEV, 5002, typeof location !== 'undefined' && location.protocol === 'https:');
+const BASE_URL = backendOrigin(import.meta.env.VITE_SOCIO_HOST, false, 5002, typeof location !== 'undefined' && location.protocol === 'https:');
 
 export const SOCIO_DIMS = [
   "fear", "trust", "liquidity", "volatility",
@@ -36,6 +37,7 @@ export interface MonteCarlo {
 }
 
 export interface SocioFull {
+  observations?:Record<string,{value:number;source:string;observed_at:string}>;
   signals: Record<string, number>;
   confidence: Record<string, number> & { overall?: number };
   graph_updates: { version: number; prior_version: number };
@@ -55,7 +57,7 @@ export interface SocioResult {
 }
 
 export async function fetchSocioFull(): Promise<SocioResult> {
-  if (!BASE_URL) return { data: null, error: { kind: "configuration", message: "The socioeconomic service is not connected to this workspace." } };
+  if (!BASE_URL) { try { return {data:await observedSocio()}; } catch { return {data:null,error:{kind:"offline",message:"Live economic observations are unavailable. Refresh after the world-state service is connected."}}; } }
   try {
     const res = await fetch(`${BASE_URL}/api/socioeconomics/full`, { signal: AbortSignal.timeout(60000) });
     if (!res.ok) {
@@ -82,7 +84,7 @@ export async function fetchSocioFull(): Promise<SocioResult> {
 }
 
 export async function fetchSocioHealth(): Promise<boolean> {
-  if (!BASE_URL) return false;
+  if (!BASE_URL) { try { await currentWorld();return true; } catch {return false;} }
   try {
     const r = await fetch(`${BASE_URL}/api/socioeconomics/health`, { signal: AbortSignal.timeout(3000) });
     if (!r.ok) return false;

@@ -80,3 +80,8 @@ describe('Safe numerical results and headline handoff',()=>{
     expect(()=>parseAutoSimRequest({...request,article_ids:['arbitrary-reference']})).toThrow();
   });
 });
+
+it('rejects legacy results that would replay a different market under a Nasdaq label',()=>{
+ const result=simulationFixture();result.market.asset='BTC-USD';
+ expect(()=>validateAutoSimResult(result)).toThrow('not a Nasdaq simulation');
+});

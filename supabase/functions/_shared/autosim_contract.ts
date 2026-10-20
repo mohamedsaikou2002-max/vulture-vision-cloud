@@ -30,6 +30,9 @@ export function validateWorldState(value: unknown) {
     if (!finite(baseline[d], 0, 1) || !finite(row.value, 0, 1) || typeof row.source !== 'string') throw new Error('Invalid world state dimension');
   }
   if (w.data_status.some(s => { const r = object(s); return typeof r.id !== 'string' || typeof r.ok !== 'boolean' || typeof r.detail !== 'string'; })) throw new Error('Invalid source status');
+  if(w.observations !== undefined){
+    for(const raw of Object.values(object(w.observations))){const observation=object(raw);if(!finite(observation.value)||typeof observation.source!=="string"||typeof observation.observed_at!=="string"||!Number.isFinite(Date.parse(observation.observed_at)))throw new Error("Invalid market observation");}
+  }
   if(w.world_pulse !== undefined){
     const pulse=object(w.world_pulse);
     if(pulse.kind!=='derived_market_snapshot'||!['partial','available','unavailable'].includes(String(pulse.status))||!['positive','negative','neutral','unavailable'].includes(String(pulse.world_mood))||(pulse.shock_level!==null&&!finite(pulse.shock_level,0,1))||(pulse.market_risk_appetite!==null&&!finite(pulse.market_risk_appetite,0,1))||typeof pulse.note!=='string'||!Array.isArray(pulse.top_shocks))throw new Error('Invalid world pulse');
@@ -70,6 +73,7 @@ export function validateAutoSimResult(value: unknown) {
     for (const raw of h.strategies) { const s=object(raw); if(typeof s.id!=='string'||typeof s.available!=='boolean'||(s.available&&!finite(s.total_return,-1))) throw new Error('Invalid historical strategy'); }
   }
   const market = object(r.market);
+  if(market.asset !== 'NASDAQ Composite' || object(r.interpretation).asset !== 'NASDAQ Composite')throw new Error('This result is not a Nasdaq simulation. Start a new Nasdaq baseline.');
   if (typeof market.asset!=='string'||typeof market.price_source!=='string'||!finite(market.base_daily_vol,0)||!finite(market.risk_off_shift)||!finite(market.direction_bias,-1,1)) throw new Error('Invalid market model');
   for (const raw of [object(r.shocks).applied, object(r.shocks).injected]) if(Object.entries(object(raw)).some(([k,v])=>!(DIMENSIONS as readonly string[]).includes(k)||!finite(v,-.25,.25)))throw new Error('Invalid shocks');
   if (r.replay_spec !== undefined) {

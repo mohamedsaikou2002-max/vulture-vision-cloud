@@ -34,9 +34,9 @@ function fixture(malformed=false){
   let priceOffset=0;
   const fetcher=vi.fn().mockImplementation(async(input:string|URL,init:RequestInit)=>{
     const url=String(input);
-    if(url.includes('api.exchange.coinbase.com')){
+    if(url.includes('finance.yahoo.com/v8/finance/chart/')){
       const day=Math.floor(Date.now()/86400000)*86400;
-      return Response.json(Array.from({length:150},(_,i)=>[day-(150-i)*86400,99+i+priceOffset,101+i+priceOffset,100+i+priceOffset,100+i+priceOffset,10]));
+      return Response.json({chart:{result:[{timestamp:Array.from({length:150},(_,i)=>day-(150-i)*86400),indicators:{quote:[{close:Array.from({length:150},(_,i)=>15000+i+priceOffset)}]}}]}});
     }
     if(url.includes('generativelanguage.googleapis.com')){
       const body=JSON.parse(String(init.body));const prompt=body.contents[0].parts[0].text;
@@ -57,6 +57,7 @@ describe('AutoSim real handler and shared engine',()=>{
     const f=fixture();const initial=await f.call({action:'run',job_id:job1,scenario:'A funding liquidity crunch'});
     expect(initial.status).toBe(200);
     const base=initial.data.result as AutoSimResult;
+    expect(base.market.asset).toBe('NASDAQ Composite');expect(base.interpretation.asset).toBe('NASDAQ Composite');expect(base.market.price_source).toBe('yahoo_nasdaq_daily_candles');
     f.changePrice();f.env.VV_DIM_PATHS='600';f.env.VV_STRAT_PATHS='200';f.env.VV_DEFAULT_FEE_BPS='50';f.fetcher.mockClear();
     const variant=await f.call({action:'run',job_id:job2,parent_job_id:job1,scenario:base.scenario,inject:{dimension:'liquidity',delta:0}});
     expect(variant.status).toBe(200);
@@ -90,7 +91,7 @@ describe('AutoSim real handler and shared engine',()=>{
     f.fetcher.mockImplementation(async(input:string|URL,init:RequestInit)=>{
       if(String(input).includes('ai.gateway.lovable.dev')){
         const body=JSON.parse(String(init.body));
-        const data=body.messages.at(-1).content.includes('Return JSON: headline')?{headline:'Gateway explanation',drivers:['Funding context']}:{event_type:'liquidity_crunch',horizon_days:3,asset:'BTC-USD',search_keywords:['funding'],risk_profile:'balanced',confidence:.5};
+        const data=body.messages.at(-1).content.includes('Return JSON: headline')?{headline:'Gateway explanation',drivers:['Funding context']}:{event_type:'liquidity_crunch',horizon_days:3,asset:'NASDAQ Composite',search_keywords:['funding'],risk_profile:'balanced',confidence:.5};
         expect((init.headers as Record<string,string>).Authorization).toBe('Bearer gateway-fixture');
         return Response.json({choices:[{message:{content:JSON.stringify(data)}}]});
       }

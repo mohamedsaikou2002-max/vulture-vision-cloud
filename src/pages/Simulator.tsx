@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Mic, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VVLayout from "@/components/VVLayout";
+import RecentNews from "@/components/sim/RecentNews";
 import WorldState from "@/components/sim/WorldState";
 import DimensionCanvas, { label } from "@/components/sim/DimensionCanvas";
 import corpus from "@/data/historicalCorpus.json";
@@ -29,7 +30,9 @@ const EXAMPLES = [
 export default function Simulator() {
   const [params] = useSearchParams();
   const articleIds = useMemo(() => (params.get('articles') || '').split(',').filter(id => /^[a-f0-9]{64}$/i.test(id)).slice(0,8), [params]);
+  const [voiceArmed,setVoiceArmed]=useState(false);
   const [scenario, setScenario] = useState(() => (params.get('scenario') || '').slice(0,2000));
+  useEffect(()=>{const selected=params.get("scenario");if(selected)setScenario(selected.slice(0,2000));},[params]);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
   const [error, setError] = useState("");
@@ -122,7 +125,7 @@ export default function Simulator() {
   const voice = useVoiceInput({
     onFinal: (text, confidence) => {
       setScenario(text);
-      if (handsFree && confidence >= 0.75 && !busyRef.current && !pendingJob) setCountdown(3);
+      if (handsFree && (voice.engine === "whisper.cpp" || confidence >= 0.75) && !busyRef.current && !pendingJob) setCountdown(3);
       else setCountdown(null);
     },
   });
@@ -140,31 +143,41 @@ export default function Simulator() {
       if (r) { setCompleted({result:r,jobId:id}); setParent(null); setScenario(r.scenario); setTab("forecast"); }
     } catch (e) { setError(e instanceof Error ? e.message : "Could not open simulation"); }
   };
+  useEffect(()=>{
+    if(!handsFree || !voiceArmed)return;
+    const timer=setInterval(()=>{if(!busyRef.current && !pendingJob && countdown===null && !voice.listening && !voice.processing && !voice.error && !window.speechSynthesis?.speaking)voice.start();},700);
+    return()=>clearInterval(timer);
+  },[handsFree,voiceArmed,pendingJob,countdown,voice]);
   const corpusRows = useMemo(() => (corpus as { event_id: string; name: string; start_date: string; category: string }[]).filter(e => (e.name + e.category).toLowerCase().includes(corpusQ.toLowerCase())), [corpusQ]);
   const stageIdx = STAGES.findIndex(([k]) => k === stage);
 
   return (
     <VVLayout status={{ label: busy ? "SIMULATING" : "RESEARCH", tone: busy ? "cyan" : "gold" }}>
       <div className="scroll-inner autosim-workspace">
-      <div className="autosim-header"><h1>Scenario simulator</h1><Link to="/simulations/pilot">MiroFish pilot & research chat ↗</Link></div>
+      <div className="autosim-header"><h1>Nasdaq scenario simulator</h1><Link to="/simulations/pilot">MiroFish pilot & research chat ↗</Link></div>
+      <p className="sim-note">Market: Nasdaq Composite (^IXIC). Strategy tests and forecasts use Nasdaq daily history; synthetic fallback is explicitly labelled.</p>
       <div className="sim-root">
         <aside className="sim-left">
+          <RecentNews />
           <section className="panel sim-card">
             <div className="panel-title">World state</div>
             <WorldState />
           </section>
 
-          <section className="panel sim-card">
+          <section className="panel sim-card sim-scenario-card">
             <div className="panel-title">Scenario</div>
             <textarea className="sim-input" rows={4} value={scenario} maxLength={2000} placeholder="Describe what happens. Type it or tap the mic and say it." onChange={e => setScenario(e.target.value)} aria-label="Scenario" />
             {voice.listening && <p className="sim-note sim-live">Listening… {voice.interim}</p>}
             {countdown !== null && <p className="sim-note sim-live">Running in {countdown}… <Button variant="ghost" className="sim-link" onClick={() => setCountdown(null)}>Cancel</Button></p>}
+            {voice.processing && <p className="sim-note">Transcribing with {voice.engine}…</p>}
+            <p className="sim-note">Voice engine: {voice.engine}. Recording ends after a pause or 15 seconds.</p>
             {voice.error && <p className="sim-note sim-warn">{voice.error}</p>}
             <div className="sim-row">
-              <Button variant="ghost" className={`sim-mic${voice.listening ? " on" : ""}`} disabled={!voice.supported || busy} onClick={voice.listening ? voice.stop : voice.start} aria-label={voice.listening ? "Stop recording" : "Start voice input"} title={voice.supported ? "Tap to speak" : "Voice input isn't supported in this browser"}>{voice.listening ? <Square size={18} /> : <Mic size={18} />}</Button>
+              <Button variant="ghost" className={`sim-mic${voice.listening ? " on" : ""}`} disabled={!voice.supported || busy || voice.processing} onClick={()=>{if(voice.listening){setVoiceArmed(false);voice.stop();}else{setVoiceArmed(true);voice.start();}}} aria-label={voice.listening ? "Stop recording" : "Start voice input"} title={voice.supported ? "Tap to speak" : "Voice input isn't supported in this browser"}>{voice.listening ? <Square size={18} /> : <Mic size={18} />}</Button>
               <Button variant="ghost" className="sim-go" disabled={busy || !!pendingJob || scenario.trim().length < 8} onClick={() => execute(scenario)}>{busy ? "Simulating…" : "Simulate scenario"}</Button>
             </div>
-            <label className="sim-check"><input type="checkbox" checked={handsFree} onChange={e => setHandsFree(e.target.checked)} /> Hands-free: run automatically after I speak</label>
+            <label className="sim-check"><input type="checkbox" checked={handsFree} onChange={e => {setHandsFree(e.target.checked);if(!e.target.checked){setVoiceArmed(false);voice.stop();}}} /> Hands-free: run automatically after I speak</label>
+            {voiceArmed && handsFree && <Button variant="ghost" className="sim-ghost" onClick={()=>{setVoiceArmed(false);voice.stop();setCountdown(null);}}>Stop hands-free listening</Button>}
             <label className="sim-check"><input type="checkbox" checked={speakOn} onChange={e => setSpeakOn(e.target.checked)} /> Read the summary aloud</label>
             {!scenario && <div className="sim-chips">{EXAMPLES.map(x => <Button variant="ghost" key={x} className="sim-chip-btn" onClick={() => setScenario(x)}>{x}</Button>)}</div>}
             {articleIds.length > 0 && <p className="sim-note">{articleIds.length} selected headline reference(s) will be checked for freshness and included as related context.</p>}

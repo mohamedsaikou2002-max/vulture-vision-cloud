@@ -219,6 +219,15 @@ def upload(items):
         if not r.ok: raise RuntimeError(f'Ingestion write failed: HTTP {r.status_code}')
 
 
+def upload_report(report):
+    base=os.environ.get('SUPABASE_URL');key=os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+    if not base or not key or not base.startswith('https://') or not urlsplit(base).hostname.endswith('.supabase.co'):
+        raise ValueError('Configure server-side Supabase ingestion credentials')
+    row=dict(source_id=report['source_id'],source=report['source'],status=report['status'],articles=report.get('articles',0),checked_at=report.get('checked_at',datetime.now(timezone.utc).isoformat()),error_kind=report.get('error','').split(':',1)[0] or None)
+    response=requests.post(base.rstrip('/')+'/rest/v1/news_source_status?on_conflict=source_id',headers={'apikey':key,'Authorization':'Bearer '+key,'Prefer':'resolution=merge-duplicates,return=minimal'},json=[row],timeout=15)
+    if not response.ok:raise RuntimeError('Source heartbeat write failed: HTTP '+str(response.status_code))
+
+
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--sources', help='Comma-separated registry IDs');parser.add_argument('--audit-only',action='store_true');parser.add_argument('--upload',action='store_true');parser.add_argument('--output',default='crawl-result.json');parser.add_argument('--cache',default='crawler-cache.sqlite');parser.add_argument('--limit',type=int,default=20)
     args=parser.parse_args(); registry=json.loads(Path(__file__).with_name('sources.json').read_text())

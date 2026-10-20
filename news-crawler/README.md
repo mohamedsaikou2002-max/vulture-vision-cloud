@@ -1,4 +1,38 @@
-# Global publisher ingestion
+# Continuous global metadata collection
+
+The owner requested all 207 additional candidates on top of the existing 80-source
+registry. `catalog.load_sources()` enables that runtime selection; the original
+research catalog is retained with its historical review flags. Collection remains
+bounded, public metadata only, and robots/access restrictions still apply.
+
+Run a one-shot sweep:
+
+```
+news-crawler/.venv/bin/python news-crawler/run_catalog.py --global-only --workers 4 --output /tmp/news-207.json
+```
+
+Add `--upload` only with server-side `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` configured. Use `live_pipeline.py` for supervised
+continuous collection, with `NEWS_INCLUDE_GLOBAL=true` (default), four workers,
+and a five-minute minimum-default per-source schedule. Publisher crawl delays
+are enforced across threads. `NEWS_SOURCE_IDS` selects a diagnostic subset.
+`NEWS_INCLUDE_GLOBAL=false` selects only the original enabled registry.
+
+The worker publishes deduplicated articles and source heartbeat rows, and calls
+the existing context worker using `NEWS_CONTEXT_WORKER_TOKEN`. Apply the additive
+`news_source_status` migration through the release process. The frontend pages
+through all recent collected articles, displays individual source status, polls
+every minute and supports realtime inserts when enabled in Supabase. New dated
+headlines also appear in the simulator and can seed a scenario without starting
+a paid run.
+
+The cloud task attempted all 207 sources: all failed public DNS resolution; zero
+articles were collected and no upload was possible without server credentials.
+This is a real failed sweep, not a verified operational catalog. No system can
+promise all possible news; unavailable publishers remain visible as failures.
+See `deployment/whisper/README.md` for the supervised service deployment.
+
+## Original registry research and crawler behavior
 
 The office footprint is grounded in BlackRock's corporate contacts and careers location pages, checked October 11, 2026. Their named office lists cover 40 distinct news markets when combined. Hong Kong is tracked separately, and Scotland is grouped under the United Kingdom. BlackRock reports 41 countries globally; these pages do not enumerate a matching complete 41-country set. The remaining aggregate-count discrepancy is unresolved. Product availability, distributors, custody banks and complaint-handling contacts are not treated as proof of a physical office.
 

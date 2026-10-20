@@ -68,7 +68,7 @@ async function worldState(sb: SupabaseClient) {
   if (candles.closes.length) all.market_vol_ann = { value: dailyLogVol(candles.closes, 30) * Math.sqrt(252), observed_at: candles.dates.at(-1), source: "yahoo:NASDAQ realized vol" };
   const b = buildBaseline(all);
   const evidence = await retrieveEvidence(sb, [], [], true);
-  return json({ world_pulse: buildWorldPulse(b.baseline, b.neutral, evidence.selected), ok: true, as_of: new Date().toISOString(), baseline: b.baseline, detail: b.detail, neutral_dimensions: b.neutral, data_status: [...status, candles.status] });
+  return json({ observations: all, world_pulse: buildWorldPulse(b.baseline, b.neutral, evidence.selected), ok: true, as_of: new Date().toISOString(), baseline: b.baseline, detail: b.detail, neutral_dimensions: b.neutral, data_status: [...status, candles.status] });
 }
 
 // ── interpretation helpers ───────────────────────────────────

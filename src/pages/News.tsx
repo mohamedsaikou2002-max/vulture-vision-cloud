@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import newsSources from "@/data/newsSources.json";
+import { useEffect, useRef, useState } from "react";
 import { functionError } from "@/lib/functionError";
 import VVLayout from "@/components/VVLayout";
 import marketRegistry from "@/data/newsMarkets.json";
@@ -36,7 +38,15 @@ function timeAgo(iso?: string) {
 }
 
 export default function News() {
+  const [collector,setCollector]=useState<Record<string,{status:string;checked_at:string;articles:number}>>({});
+  const [hasMore, setHasMore] = useState(false);
+  const [page, setPage] = useState(0);
+  const [moreBusy, setMoreBusy] = useState(false);
   const [country, setCountry] = useState("");
+  const filterRef=useRef(country);filterRef.current=country;
+  const pageRef=useRef(0);
+  const lastLiveRefresh=useRef(0);
+  const loadedCountry=useRef<string|null>(null);
   const [publisherItems, setPublisherItems] = useState<Item[]>([]);
   const [publisherStatus, setPublisherStatus] = useState("loading");
   const [data, setData] = useState<NewsData>({ irl: [], dark: [], tech: [] });
@@ -50,7 +60,9 @@ export default function News() {
 
   useEffect(() => {
     let alive = true;
+    let loading=false;
     async function load() {
+      if(loading)return;loading=true;
       try {
         const { data: res, error } = await supabase.functions.invoke("vv-news", { body: { country } });
         if (error) {
@@ -65,19 +77,37 @@ export default function News() {
         if (alive && res) {
           setFeedStatus(res.status || "degraded"); setFeedError(res.error || null); setSourceHealth(res.source_health || []);
           setData({ irl: res.irl || [], dark: res.dark || [], tech: res.tech || [] });
-          setPublisherItems(res.publisher_news || []);
+          setPublisherItems(old=>[...new Map([...(res.publisher_news || []),...old].map(it=>[it.id||it.link,it])).values()]); if(pageRef.current===0)setHasMore(!!res.has_more);
           setPublisherStatus(res.publisher_status || "ingestion_not_available");
         }
       } catch { if (alive) { setPublisherStatus("ingestion_not_available"); setFeedStatus("unavailable"); setFeedError("News sources are unavailable."); } }
+      finally{loading=false;}
     }
-    setPublisherStatus("loading"); setPublisherItems([]); setFeedStatus("loading");
+    if(loadedCountry.current!==country){setPublisherItems([]);setPage(0);pageRef.current=0;loadedCountry.current=country;}
+    setPublisherStatus("loading");setFeedStatus("loading");
     load();
+    void supabase.from('news_source_status').select('source_id,status,checked_at,articles').abortSignal(AbortSignal.timeout(8000)).then(({data})=>{if(alive&&data)setCollector(Object.fromEntries(data.map(s=>[s.source_id,s])));});
     fetchLatestBrief().then(b => alive && b && setBrief(b));
-    const id = setInterval(load, 5 * 60 * 1000);
+    const id = setInterval(load, 60000);
+    const channel = supabase.channel("news-feed-updates").on("postgres_changes", {event:"INSERT",schema:"public",table:"news_articles"}, () => { if (alive && Date.now()-lastLiveRefresh.current>15000){lastLiveRefresh.current=Date.now();setRefresh(n=>n+1);} }).subscribe();
     const bId = setInterval(() => fetchLatestBrief().then(b => alive && b && setBrief(b)), 15 * 60 * 1000);
     const unsub = subscribeToIntelBriefs(b => { if (alive) setBrief(b); });
-    return () => { alive = false; clearInterval(id); clearInterval(bId); unsub(); };
+    return () => { alive = false; void supabase.removeChannel(channel); clearInterval(id); clearInterval(bId); unsub(); };
   }, [country, refresh]);
+
+  async function loadMore() {
+    if (moreBusy) return;
+    setMoreBusy(true);
+    try {
+      const {data:res,error}=await supabase.functions.invoke('vv-news',{body:{country,page:page+1,publisher_only:true}});
+      if(filterRef.current!==country)return;
+      if(error)throw error;
+      if(res.publisher_status !== 'available' && res.publisher_status !== 'no_recent_articles')throw new Error();
+      setPublisherItems(old=>[...new Map([...old,...res.publisher_news].map(it=>[it.id||it.link,it])).values()]);
+      pageRef.current=page+1;setPage(n=>n+1);setHasMore(!!res.has_more);
+    } catch { setFeedError('Could not load the next page. Your current headlines are retained.'); }
+    finally {setMoreBusy(false);}
+  }
 
   async function onSynthesize() {
     if (synthBusy) return;
@@ -107,8 +137,10 @@ export default function News() {
         {sourceHealth.length > 0 && <details className="source-health"><summary>{sourceHealth.filter(s => s.status === 'available' || s.status === 'empty').length} of {sourceHealth.length} sources responded — view source status</summary><ul>{sourceHealth.map((s, i) => <li key={i}>{s.source}: {s.status.replace(/_/g, ' ')} ({s.count} items)</li>)}</ul></details>}
       </div>
       <section className="mx-4 my-6 rounded-xl border border-border bg-background/90 p-5 md:mx-8">
-        <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">Global publisher desk</h2><p className="mt-1 text-xs text-muted-foreground">Local reporting across {marketRegistry.length} office markets · country tags identify the publisher, not the subject of the story.</p></div><div><label htmlFor="news-country" className="sr-only">Publisher country or market</label><select id="news-country" value={country} onChange={e => setCountry(e.target.value)} className="rounded-lg border border-border bg-background p-2 text-sm"><option value="">All markets</option>{marketRegistry.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select></div></div>
-        {publisherItems.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{publisherItems.map(it => <article key={it.link} className="rounded-lg border border-border p-4 hover:border-primary"><p className="mb-2 text-xs text-primary">{it.source_country} · {it.source} · {it.language}</p><a href={it.link} target="_blank" rel="noopener noreferrer" className="text-sm leading-relaxed hover:underline">{decodeEntities(it.title)}</a><p className="mt-3 text-xs text-muted-foreground">{it.time ? timeAgo(it.time) : "Publication time unavailable"}</p></article>)}</div> : <p role="status" className="mt-5 text-sm text-muted-foreground">{publisherStatus === "loading" ? "Loading publisher headlines…" : publisherStatus === "no_recent_articles" ? "No recent publisher headlines for this market." : "Publisher ingestion is not available yet."}</p>}
+        <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">Global publisher desk</h2><p className="mt-1 text-xs text-muted-foreground">207 additional publishers across {new Set(newsSources.map(s=>s.source_country)).size} markets · country tags identify the publisher, not the subject of the story.</p></div><div><label htmlFor="news-country" className="sr-only">Publisher country or market</label><select id="news-country" value={country} onChange={e => setCountry(e.target.value)} className="rounded-lg border border-border bg-background p-2 text-sm"><option value="">All markets</option>{[...new Map([...marketRegistry,...newsSources.map(s=>({code:s.source_country,name:s.country_name}))].map(m=>[m.code,m])).values()].sort((a,b)=>a.name.localeCompare(b.name)).map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select></div></div>
+        {publisherItems.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{publisherItems.map(it => <article key={it.link} className="rounded-lg border border-border p-4 hover:border-primary"><p className="mb-2 text-xs text-primary">{it.source_country} · {it.source} · {it.language}</p><a href={it.link} target="_blank" rel="noopener noreferrer" className="text-sm leading-relaxed hover:underline">{decodeEntities(it.title)}</a><p className="mt-3 text-xs text-muted-foreground">{it.time ? timeAgo(it.time) : "Publication time unavailable"}</p>{it.id && <Link className="mt-3 inline-block text-xs text-primary underline" to={"/simulations?"+new URLSearchParams({scenario:"Explore the consequences of: "+it.title,articles:it.id})}>Explore in simulator</Link>}</article>)}</div> : <p role="status" className="mt-5 text-sm text-muted-foreground">{publisherStatus === "loading" ? "Loading publisher headlines…" : publisherStatus === "no_recent_articles" ? "No recent publisher headlines for this market." : "Publisher ingestion is not available yet."}</p>}
+        {hasMore && <button className="synthesize-btn" disabled={moreBusy} onClick={()=>void loadMore()}>{moreBusy?'Loading…':'Load more headlines'}</button>}
+        <details className="mt-4 text-xs"><summary>207-source catalog and collection status</summary><p>Collected metadata appears above. Restricted or unreachable publishers are skipped; no feed can guarantee all news. Headlines are ordered by publication time and refresh every minute.</p><ul>{newsSources.map(s=><li key={s.id}>{s.name} · {s.country_name} · {collector[s.id] ? `${collector[s.id].status} (${collector[s.id].articles} items) · ${new Date(collector[s.id].checked_at).toLocaleString()}` : "No collector report yet"}</li>)}</ul></details>
       </section>
       <div className="news-grid">
         <Column title="IRL News" tone="red" items={data.irl} badge="badge-red" badgeText="FEED" unavailable={feedStatus === "unavailable"} />
@@ -133,6 +165,7 @@ export default function News() {
 function Column({ title, tone, items, badge, badgeText, unavailable }: {
   title: string; tone: "red" | "gold" | "cyan"; items: Item[]; badge: string; badgeText: string; unavailable: boolean;
 }) {
+  const [visible,setVisible]=useState(20);
   return (
     <div className="news-col">
       <div className="col-header">
@@ -141,7 +174,7 @@ function Column({ title, tone, items, badge, badgeText, unavailable }: {
       </div>
       <div className="col-body">
         {items.length === 0 && <div className="news-item"><div className="news-title dim-text">{unavailable ? "Source connection unavailable. Headlines could not be refreshed." : "No feed items available."}</div></div>}
-        {items.slice(0, 20).map((it, i) => {
+        {items.slice(0, visible).map((it, i) => {
           let sourceHref = it.source_url;
           if (!sourceHref && it.link) {
             try { sourceHref = new URL(it.link).origin; } catch { sourceHref = undefined; }
@@ -178,6 +211,7 @@ function Column({ title, tone, items, badge, badgeText, unavailable }: {
             </div>
           );
         })}
+        {visible<items.length && <button className="synthesize-btn" onClick={()=>setVisible(n=>n+20)}>Show more headlines ({items.length-visible} remaining)</button>}
       </div>
     </div>
   );
@@ -317,7 +351,7 @@ function IntelSynthesisColumn({ brief, synthBusy, onSynthesize }: {
 function decodeEntities(s: string = ""): string {
   const map: Record<string, string> = { amp: "&", apos: "'", quot: '"', lt: "<", gt: ">", nbsp: " " };
   return s.replace(/&(?:amp;)?(#x?[0-9a-f]+|[a-z]+);/gi, (m, e: string) => {
-    if (e[0] === "#") { const n = e[1].toLowerCase() === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return Number.isFinite(n) ? String.fromCodePoint(n) : m; }
+    if (e[0] === "#") { const n = e[1].toLowerCase() === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return Number.isFinite(n) && n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : m; }
     return map[e.toLowerCase()] ?? m;
   });
 }

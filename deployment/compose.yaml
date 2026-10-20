@@ -1,0 +1,39 @@
+services:
+  whisper:
+    build:
+      context: ..
+      dockerfile: deployment/whisper/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ${WHISPER_MODEL_DIR:?Set model directory}:/models:ro
+    # Only the authenticated gateway reaches this private service.
+  voice:
+    build:
+      context: ..
+      dockerfile: services/voice/Dockerfile
+    restart: unless-stopped
+    environment:
+      WHISPER_URL: http://whisper:8081
+      SUPABASE_URL: ${SUPABASE_URL:?Set Supabase URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:?Set public project key}
+      VOICE_ALLOWED_ORIGINS: ${VOICE_ALLOWED_ORIGINS:?Set exact frontend HTTPS origin}
+    ports:
+      - "127.0.0.1:8090:8090"
+    depends_on:
+      - whisper
+  news:
+    build:
+      context: ..
+      dockerfile: news-crawler/Dockerfile
+    restart: unless-stopped
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL:?Set Supabase URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?Set server credential}
+      NEWS_CONTEXT_WORKER_TOKEN: ${NEWS_CONTEXT_WORKER_TOKEN:?Set worker token}
+      NEWS_INCLUDE_GLOBAL: "true"
+      NEWS_CRAWL_WORKERS: "4"
+      NEWS_CRAWL_INTERVAL_SECONDS: "300"
+    volumes:
+      - crawler-data:/data
+volumes:
+  crawler-data:

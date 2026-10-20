@@ -29,3 +29,8 @@ news-crawler/__pycache__/
 news-crawler/tests/__pycache__/
 news-crawler/*.sqlite
 news-crawler/crawl-result.json
+
+# Voice gateway runtime
+services/voice/__pycache__/
+services/voice/tests/__pycache__/
+*.ggml

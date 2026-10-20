@@ -16,7 +16,7 @@ class SchedulingTests(unittest.TestCase):
         def crawl(source):
             if source['id']=='slow':release.wait(5)
             else:fast.set()
-        with patch.object(live_pipeline.Path,'read_text',return_value=json.dumps({'sources':sources})),patch.object(live_pipeline,'crawl_source',side_effect=crawl),patch.dict(live_pipeline.os.environ,{'NEWS_CRAWL_WORKERS':'2','NEWS_SOURCE_IDS':''}):
+        with patch.object(live_pipeline,'load_sources',return_value=sources),patch.object(live_pipeline,'crawl_source',side_effect=crawl),patch.dict(live_pipeline.os.environ,{'NEWS_CRAWL_WORKERS':'2','NEWS_SOURCE_IDS':''}):
             thread=threading.Thread(target=live_pipeline.ingest_loop,args=(stop,))
             thread.start()
             try:self.assertTrue(fast.wait(3),'Fast publisher blocked by slow publisher')

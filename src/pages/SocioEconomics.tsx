@@ -45,7 +45,7 @@ export default function SocioEconomics() {
   }, []);
 
   const status = {
-    label: online === null ? "CONNECTING" : online ? "SYSTEM ONLINE" : "BACKEND OFFLINE",
+    label: online === null ? "CONNECTING" : online ? "OBSERVATIONS CONNECTED" : "BACKEND OFFLINE",
     tone: (online ? "green" : "red") as "green" | "red",
   };
 
@@ -125,26 +125,28 @@ export default function SocioEconomics() {
 
 
 
+        <p className="service-notice">{data?.narrative || "Waiting for dated economic observations. Missing values are not measurements."}</p>
+        {data?.observations && <section className="panel" style={{margin:'14px 24px',padding:14,overflowX:'auto'}}><h2 className="panel-title">DATED ECONOMIC OBSERVATIONS</h2><table className="data-table"><thead><tr><th>Metric</th><th>Value</th><th>Source</th><th>Observed</th></tr></thead><tbody>{Object.entries(data.observations).map(([id,o])=><tr key={id}><td>{id.replace(/_/g,' ')}</td><td>{['cpi_yoy','retail_yoy','market_vol_ann'].includes(id)?(o.value*100).toFixed(2)+'%':o.value.toFixed(2)}</td><td>{o.source}</td><td>{o.observed_at}</td></tr>)}</tbody></table></section>}
         {/* PRIMARY GAUGES */}
         <div className="se-stat-row">
           {["fear", "trust", "liquidity", "volatility"].map(dim => {
-            const v = signals[dim] ?? 0.5;
-            const col = colorForDim(dim, v);
+            const v = signals[dim];
+            const col = colorForDim(dim, v ?? 0.5);
             return (
               <div key={dim} className="se-gauge panel">
                 <div className="se-gauge-label">{dim}</div>
-                <div className="se-gauge-value" style={{ color: col }}>{v.toFixed(3)}</div>
+                <div className="se-gauge-value" style={{ color: col }}>{v == null ? "—" : (v*100).toFixed(1)+"%"}</div>
                 <div className="se-gauge-track">
-                  <div className="se-gauge-fill" style={{ width: `${(v * 100).toFixed(1)}%`, background: col }} />
+                  <div className="se-gauge-fill" style={{ width: `${((v ?? 0) * 100).toFixed(1)}%`, background: col }} />
                 </div>
-                <div className="se-gauge-sub">confidence {((confidence[dim] ?? 0) * 100).toFixed(0)}%</div>
+                <div className="se-gauge-sub">{confidence[dim] == null ? "Derived dimension · not calibrated" : `confidence ${(confidence[dim]*100).toFixed(0)}%`}</div>
               </div>
             );
           })}
           <div className="se-gauge panel">
             <div className="se-gauge-label">Overall Confidence</div>
             <div className="se-gauge-value" style={{ color: overall > 0.6 ? "#00ff88" : overall > 0.35 ? "#f0c040" : "#ff9d4d" }}>
-              {(overall * 100).toFixed(0)}%
+              {confidence.overall == null ? "—" : (overall * 100).toFixed(0)+"%"}
             </div>
             <div className="se-gauge-track">
               <div className="se-gauge-fill" style={{ width: `${(overall * 100).toFixed(1)}%`, background: overall > 0.6 ? "#00ff88" : "#f0c040" }} />
@@ -158,14 +160,14 @@ export default function SocioEconomics() {
         {/* SECONDARY DIMENSIONS */}
         <div className="se-stat-row secondary-stat-row">
           {["credit", "consumer", "inflation", "employment", "growth", "default"].map(dim => {
-            const v = signals[dim] ?? 0.5;
-            const col = colorForDim(dim, v);
+            const v = signals[dim];
+            const col = colorForDim(dim, v ?? 0.5);
             return (
               <div key={dim} className="se-gauge panel">
                 <div className="se-gauge-label">{dim === "default" ? "Default Risk" : dim}</div>
-                <div className="se-gauge-value" style={{ color: col }}>{v.toFixed(3)}</div>
+                <div className="se-gauge-value" style={{ color: col }}>{v == null ? "—" : (v*100).toFixed(1)+"%"}</div>
                 <div className="se-gauge-track">
-                  <div className="se-gauge-fill" style={{ width: `${(v * 100).toFixed(1)}%`, background: col }} />
+                  <div className="se-gauge-fill" style={{ width: `${((v ?? 0) * 100).toFixed(1)}%`, background: col }} />
                 </div>
               </div>
             );

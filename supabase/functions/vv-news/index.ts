@@ -162,7 +162,7 @@ async function fetchFeeds(feeds: { url: string; source: string }[], health: Sour
   results.forEach((result, i) => health.push({ source: feeds[i].source, status: result.status === "rejected" ? "unavailable" : result.value.length ? "available" : "empty", count: result.status === "fulfilled" ? result.value.length : 0 }));
   const items = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
   items.sort(newestFirst);
-  return items.slice(0, 40);
+  return items;
 }
 
 async function fetchNewsApi(health: SourceHealth[], signal: AbortSignal): Promise<Item[]> {
@@ -263,7 +263,7 @@ async function fetchJournalistTweets(health: SourceHealth[], signal: AbortSignal
   return out;
 }
 
-async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: string) {
+async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: string, page = 0) {
   const authorization = req.headers.get("authorization") || "";
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authorization }, fetch: (input, init) => fetch(input, { ...init, signal }) } });
   const { data: { user }, error: authError } = await db.auth.getUser();
@@ -271,17 +271,17 @@ async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: s
   let query = db.from("news_articles").select("id,title,source,canonical_url,published_at,fetched_at,source_country,language,source_id")
     .gte("fetched_at", new Date(Date.now() - 48 * 3600_000).toISOString())
     .or("published_at.is.null,published_at.gte." + new Date(Date.now() - 72 * 3600_000).toISOString())
-    .order("published_at", { ascending: false, nullsFirst: false }).limit(100).abortSignal(signal);
+    .order("published_at", { ascending: false, nullsFirst: false }).order("id").range(page * 100, page * 100 + 100).abortSignal(signal);
   if (country) query = query.eq("source_country", country);
   const { data, error } = await query;
   if (error) return { items: [], status: "ingestion_not_available" };
-  return { items: (data || []).map(row => ({ id: row.id, title: row.title, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
+  return { has_more: (data?.length || 0) > 100, items: (data || []).slice(0,100).map(row => ({ id: row.id, title: row.title, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "GET" && req.method !== "POST") return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
-  let body: { country?: unknown } = {};
+  let body: { country?: unknown; page?: unknown; publisher_only?: unknown } = {};
   if (req.method === "POST") {
     const raw = await req.text();
     if (new TextEncoder().encode(raw).byteLength > 1024) return new Response(JSON.stringify({ error: "News request too large" }), { status: 413, headers: corsHeaders });
@@ -292,6 +292,11 @@ Deno.serve(async (req) => {
     const selectedCountry = body.country || new URL(req.url).searchParams.get("country");
     const country = typeof selectedCountry === "string" && /^[A-Z]{2}$/.test(selectedCountry) ? selectedCountry : undefined;
     const signal = AbortSignal.timeout(12000);
+    const page = typeof body.page === 'number' && Number.isInteger(body.page) ? Math.max(0, Math.min(10000, body.page)) : 0;
+    if (body.publisher_only === true) {
+      const publisher = await fetchPublisherNews(req, signal, country, page);
+      return new Response(JSON.stringify({publisher_news:publisher.items,publisher_status:publisher.status,has_more:'has_more' in publisher && publisher.has_more,page}), {headers:{...corsHeaders,'Content-Type':'application/json'}});
+    }
     const source_health: SourceHealth[] = [];
     const [irlRss, dark, tech, newsApi, tor, journalists, publisher] = await Promise.all([
       fetchFeeds(FEEDS.irl, source_health, signal),
@@ -305,27 +310,24 @@ Deno.serve(async (req) => {
 
     const irl = [...newsApi, ...irlRss, ...journalists.irl]
       .sort(newestFirst)
-      .slice(0, 30)
       .map(enrich);
 
     const darkOut = [...dark, ...tor, ...journalists.dark]
       .sort(newestFirst)
-      .slice(0, 30)
       .map(enrich);
 
     const techOut = [...tech, ...journalists.tech]
       .sort(newestFirst)
-      .slice(0, 30)
       .map(enrich);
 
     const all = [...irl, ...darkOut, ...techOut, ...publisher.items]
       .sort(newestFirst)
-      .slice(0, 80);
+;
 
     source_health.push({ source: "Publisher database", status: publisher.status === "available" ? "available" : publisher.status === "no_recent_articles" ? "empty" : "unavailable", count: publisher.items.length });
     const usable = source_health.some(source => source.status === "available" || source.status === "empty") || publisher.status === "available" || publisher.status === "no_recent_articles";
     const status = !usable ? "unavailable" : source_health.some(source => source.status === "unavailable") ? "degraded" : "available";
-    return new Response(JSON.stringify({ status, source_health, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status }), {
+    return new Response(JSON.stringify({ status, source_health, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more }), {
       status: usable ? 200 : 503,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

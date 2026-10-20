@@ -8,7 +8,7 @@ const asset = z.object({
 });
 const schema = z.object({
   status: z.enum(['available', 'degraded', 'unavailable']).optional(),
-  crypto: z.array(z.object({ symbol: z.string(), name: z.string(), price: finite.positive(), change_1h: finite, change_24h: finite, change_7d: finite, market_cap: finite.min(0), volume_24h: finite.min(0), as_of: z.string().optional() })),
+  crypto: z.array(z.object({ symbol: z.string(), name: z.string(), price: finite.positive(), change_1h: finite.nullable(), change_24h: finite.nullable(), change_7d: finite.nullable(), market_cap: finite.min(0).nullable(), volume_24h: finite.min(0).nullable(), as_of: z.string().optional() })),
   assets: z.array(asset),
   portfolio: z.object({ dominant_regime: z.string(), avg_prob_up_30d: probability, avg_sharpe: finite }).nullable(),
   narrative: z.string().optional(), ts: z.string(),

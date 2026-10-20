@@ -1,3 +1,4 @@
+import { useWhisperInput, whisperConfigured } from "./useWhisperInput";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // Browser speech recognition. Starts only after the user taps the mic; nothing is recorded otherwise.
@@ -5,7 +6,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type Rec = any;
 export interface VoiceOptions { lang?: string; onFinal: (text: string, confidence: number) => void }
 
-export function useVoiceInput({ lang = "en-US", onFinal }: VoiceOptions) {
+export function useVoiceInput(options: VoiceOptions) {
+  const whisper = useWhisperInput(options);
+  const browser = useBrowserVoiceInput(options);
+  return whisperConfigured ? whisper : { ...browser, processing: false, engine: "browser speech" };
+}
+
+function useBrowserVoiceInput({ lang = "en-US", onFinal }: VoiceOptions) {
   const W = typeof window !== "undefined" ? (window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec }) : {};
   const Ctor = W.SpeechRecognition ?? W.webkitSpeechRecognition;
   const supported = !!Ctor;
@@ -13,6 +20,7 @@ export function useVoiceInput({ lang = "en-US", onFinal }: VoiceOptions) {
   const [interim, setInterim] = useState("");
   const [error, setError] = useState("");
   const rec = useRef<Rec>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cb = useRef(onFinal);
   cb.current = onFinal;
 
@@ -34,12 +42,12 @@ export function useVoiceInput({ lang = "en-US", onFinal }: VoiceOptions) {
     r.onerror = (e: { error: string }) => {
       setError(e.error === "not-allowed" ? "Microphone permission was denied. Allow it in your browser's site settings." : e.error === "no-speech" ? "Didn't hear anything. Tap the mic and try again." : `Voice input error: ${e.error}`);
     };
-    r.onend = () => { setListening(false); setInterim(""); if (finalText.trim()) cb.current(finalText.trim(), conf); };
+    r.onend = () => { if(timer.current)clearTimeout(timer.current); setListening(false); setInterim(""); if (finalText.trim()) cb.current(finalText.trim(), conf); };
     rec.current = r;
-    try { r.start(); setListening(true); } catch { setError("Couldn't start the microphone."); }
+    try { r.start(); setListening(true);timer.current=setTimeout(()=>{try{r.stop();}catch{/* Already stopped. */}},15000); } catch { setError("Couldn't start the microphone."); }
   }, [Ctor, lang]);
 
-  useEffect(() => () => { try { rec.current?.abort(); } catch { /* noop */ } }, []);
+  useEffect(() => () => { if(timer.current)clearTimeout(timer.current);try { rec.current?.abort(); } catch { /* noop */ } }, []);
   return { supported, listening, interim, error, start, stop };
 }
 

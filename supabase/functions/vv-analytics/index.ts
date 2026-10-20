@@ -10,8 +10,8 @@ const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-
 
 interface Crypto {
   symbol: string; name: string; price: number;
-  change_1h: number; change_24h: number; change_7d: number;
-  market_cap: number; volume_24h: number; as_of: string;
+  change_1h: number | null; change_24h: number | null; change_7d: number | null;
+  market_cap: number | null; volume_24h: number | null; as_of: string;
 }
 interface Asset {
   symbol: string; type: string; regime: string;
@@ -20,7 +20,7 @@ interface Asset {
   mc_30d: { p50: number; prob_up: number; prob_down: number };
 }
 
-async function fetchCrypto(): Promise<Crypto[]> {
+async function fetchCryptoPrimary(): Promise<Crypto[]> {
   const ids = "bitcoin,ethereum,solana,cardano,ripple,dogecoin,polkadot,chainlink";
   const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&price_change_percentage=1h,24h,7d`;
   const r = await fetchMarket(url, { headers: { "User-Agent": "VultureVision/1.0" } });
@@ -31,13 +31,33 @@ async function fetchCrypto(): Promise<Crypto[]> {
     symbol: d.symbol.toUpperCase(),
     name: d.name,
     price: d.current_price,
-    change_1h: d.price_change_percentage_1h_in_currency ?? 0,
-    change_24h: d.price_change_percentage_24h_in_currency ?? 0,
-    change_7d: d.price_change_percentage_7d_in_currency ?? 0,
+    change_1h: d.price_change_percentage_1h_in_currency ?? null,
+    change_24h: d.price_change_percentage_24h_in_currency ?? null,
+    change_7d: d.price_change_percentage_7d_in_currency ?? null,
     market_cap: d.market_cap,
     volume_24h: d.total_volume,
     as_of: d.last_updated,
   }));
+}
+
+async function fetchCrypto(): Promise<Crypto[]> {
+  try{const primary=await fetchCryptoPrimary();if(primary.length)return primary;}catch{/* Independent public quote provider below. */}
+  const rows=await Promise.allSettled(['BTC','ETH','SOL'].map(async symbol=>{
+    const chart=await yahooChart(symbol+'-USD','1d');const meta=chart.meta;
+    const asOf=Number(meta?.regularMarketTime)*1000,price=Number(meta?.regularMarketPrice);
+    if(!Number.isFinite(price)||price<=0||!Number.isFinite(asOf)||Date.now()-asOf>3600000||asOf>Date.now()+60000)throw new Error('Quote stale');
+    return {symbol,name:symbol,price,change_1h:null,change_24h:null,change_7d:null,market_cap:null,volume_24h:null,as_of:new Date(asOf).toISOString()};
+  }));
+  return rows.flatMap(r=>r.status==='fulfilled'?[r.value]:[]);
+}
+async function yahooChart(symbol:string, range:string){
+  for(const host of ['query1.finance.yahoo.com','query2.finance.yahoo.com']){
+    try{const response=await fetchMarket(`https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=${range}`);
+      if(!response.ok)continue;
+      const data=await response.json();if(data?.chart?.result?.[0])return data.chart.result[0];
+    }catch{/* Read-only requests can fail over to another market host. */}
+  }
+  throw new Error('Market history unavailable');
 }
 
 async function fetchHistory(geckoId: string, days = 60): Promise<number[]> {
@@ -51,7 +71,17 @@ async function fetchHistory(geckoId: string, days = 60): Promise<number[]> {
   return observations.map(p => p[1]);
 }
 
-async function fetchStooq(symbol: string): Promise<number[]> {
+async function yahooHistory(symbol: string): Promise<number[]> {
+  const chart=await yahooChart(symbol,'6mo');
+  const pairs=(chart?.timestamp||[]).map((t:number,i:number)=>[t,chart.indicators?.quote?.[0]?.close?.[i]]).filter((p:number[])=>Number.isFinite(p[0])&&Number.isFinite(p[1])&&p[1]>0);
+  if(pairs.length<35 || Date.now()/1000-pairs.at(-1)[0]>5*86400)throw new Error('History unavailable or stale');
+  return pairs.map((p:number[])=>p[1]);
+}
+async function fetchStooq(symbol:string):Promise<number[]> {
+  try{return await yahooHistory(symbol.replace(/\.us$/i,''));}
+  catch {return await stooqHistory(symbol);}
+}
+async function stooqHistory(symbol: string): Promise<number[]> {
   // Daily CSV — last ~6 months
   const r = await fetchMarket(`https://stooq.com/q/d/l/?s=${symbol}&i=d`);
   if (!r.ok) throw new Error("Market source unavailable");
@@ -70,6 +100,7 @@ function rsi(prices: number[], period = 14): number {
     const d = prices[i] - prices[i - 1];
     if (d >= 0) gains += d; else losses -= d;
   }
+  if (gains === 0 && losses === 0) return 50;
   const rs = gains / Math.max(losses, 1e-9);
   return 100 - 100 / (1 + rs);
 }
@@ -165,7 +196,7 @@ async function aiNarrative(crypto: Crypto[], assets: Asset[], port: {dominant_re
   const prompt = `VULTURE VISION INTEL BRIEF — ${new Date().toISOString()}
 
 Top crypto:
-${crypto.slice(0, 5).map(c => `${c.symbol} ${c.price} 24h:${c.change_24h.toFixed(2)}%`).join("\n")}
+${crypto.slice(0, 5).map(c => `${c.symbol} ${c.price} 24h:${c.change_24h == null ? 'unavailable' : c.change_24h.toFixed(2)}%`).join("\n")}
 
 Asset signals (regime, RSI):
 ${assets.map(a => `${a.symbol} ${a.regime} RSI:${a.rsi.toFixed(1)}`).join("\n")}
@@ -223,13 +254,13 @@ Deno.serve(async (req) => {
         return [];
       }
     }
-    const crypto = await collect("CoinGecko prices", fetchCrypto);
+    const crypto = await collect("Crypto prices (CoinGecko / Yahoo)", fetchCrypto);
     const assets: Asset[] = [];
     await Promise.all([
       ...["BTC", "ETH", "SOL", "ADA"].map(async sym => {
         const c = crypto.find(row => row.symbol === sym);
         if (!c) { sources.push({ source: sym + " history", status: "unavailable", count: 0 }); return; }
-        const history = await collect(sym + " history", () => fetchHistory(SYMBOL_TO_GECKO[sym]), 35);
+        const history = await collect(sym + " history", () => fetchHistory(SYMBOL_TO_GECKO[sym]).catch(()=>yahooHistory(sym+"-USD")), 35);
         if (history.length) assets.push(await buildAsset(sym, "CRYPTO", c.price, history));
       }),
       ...[{ sym: "SPY", stooq: "spy.us" }, { sym: "QQQ", stooq: "qqq.us" }, { sym: "GLD", stooq: "gld.us" }].map(async asset => {

@@ -60,6 +60,7 @@ export const interrogateAgent = (job_id: string, agent: string, question: string
 export interface WorldStateResult {
   ok: true; as_of: string; baseline: Record<Dim, number>; detail: AutoSimResult['state']['detail']; neutral_dimensions: Dim[];
   data_status: { id: string; ok: boolean; detail: string }[];
+  observations?: Record<string,{value:number;source:string;observed_at:string}>;
   world_pulse?: ReturnType<typeof buildWorldPulse>;
 }
 export async function fetchWorldState(): Promise<WorldStateResult> {

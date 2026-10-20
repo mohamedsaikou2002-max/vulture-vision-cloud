@@ -6,7 +6,8 @@ import threading
 import time
 from pathlib import Path
 import requests
-from crawler import Crawler, open_cache, upload
+from crawler import Crawler, open_cache, upload, upload_report
+from catalog import load_sources
 
 
 def refresh_context():
@@ -18,12 +19,16 @@ def refresh_context():
 
 
 def context_loop(stop):
+    failures=0
     while not stop.is_set():
         try:
             result=refresh_context()
+            failures=0
             if result.get('status')=='published': print(json.dumps(result),flush=True)
-        except Exception as e: print(json.dumps({'context_status':'retrying','error':str(e)}),flush=True)
-        stop.wait(2)
+        except Exception as e:
+            failures+=1
+            print(json.dumps({'context_status':'retrying','error':str(e)}),flush=True)
+        stop.wait(min(60,2**min(6,failures)) if failures else 2)
 
 
 def crawl_source(source):
@@ -32,18 +37,21 @@ def crawl_source(source):
         db=open_cache(os.environ.get('NEWS_CRAWLER_CACHE','crawler-cache.sqlite'))
         items,report=Crawler(source,db).crawl(limit=20)
         upload(items)
+        upload_report(report)
         print(json.dumps({'source':source['id'],'items':len(items),'status':report['status']}),flush=True)
     except Exception as e:
+        try: upload_report(dict(source_id=source['id'],source=source.get('name',source['id']),status='skipped',error=type(e).__name__))
+        except Exception: pass  # Preserve the primary failure without claiming heartbeat delivery.
         print(json.dumps({'source':source['id'],'status':'skipped','error':str(e)}),flush=True)
     finally:
         if db is not None:db.close()
 
 
 def ingest_loop(stop):
-    registry=json.loads(Path(__file__).with_name('sources.json').read_text())['sources']
+    registry=load_sources(os.environ.get('NEWS_INCLUDE_GLOBAL','true').lower()=='true')
     selected=set(os.environ.get('NEWS_SOURCE_IDS','').split(','))- {''}
     sources=[s for s in registry if s['enabled'] and (not selected or s['id'] in selected)]
-    interval=max(15,int(os.environ.get('NEWS_CRAWL_INTERVAL_SECONDS','60')))
+    interval=max(60,int(os.environ.get('NEWS_CRAWL_INTERVAL_SECONDS','300')))
     workers=max(1,min(8,int(os.environ.get('NEWS_CRAWL_WORKERS','4'))))
     due={s['id']:0.0 for s in sources};pending={}
     with ThreadPoolExecutor(max_workers=workers) as pool:

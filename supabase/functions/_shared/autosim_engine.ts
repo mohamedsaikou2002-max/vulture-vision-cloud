@@ -73,7 +73,7 @@ export const ENGINE_ASSUMPTIONS = {
   coefficients: "Illustrative and uncalibrated. Agent responses are bounded heuristics, not observed behavior.",
   deviations_measured_from: "the estimated starting state (not a fixed 0.5)",
 };
-export const ENGINE_VERSION = "autosim-1.1.0";
+export const ENGINE_VERSION = "autosim-1.2.0";
 
 // ── helpers ──────────────────────────────────────────────────
 export const clamp = (v: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
