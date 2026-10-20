@@ -1,9 +1,12 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { transferableAbortController } from 'node:util';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { additionalTechFeeds } from '../../supabase/functions/vv-news/additional_sources';
 import { loadEdgeHandler } from './helpers/edgeHarness';
 
 const catalog = JSON.parse(readFileSync('news-crawler/source-pack/global_blog_candidates.json', 'utf8'));
+beforeAll(() => vi.stubGlobal('AbortSignal', transferableAbortController().signal.constructor));
+afterAll(() => vi.unstubAllGlobals());
 
 describe('Uploaded publisher candidates', () => {
   it('retains all 207 candidates without silently enabling unreviewed crawling', () => {
