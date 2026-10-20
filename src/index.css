@@ -942,3 +942,13 @@ h1, h2, h3, h4, h5, h6 { color: white; }
 .sim-summary { color: var(--green-bright); max-width: 320px; }
 .sim-narratives { color: var(--dim); max-width: 260px; }
 .sim-footer { font-size: 9px; color: var(--dim); letter-spacing: 0.12em; padding: 6px 0 20px; }
+
+/* News page: scroll the whole page so the publisher desk never squeezes the feed columns */
+.news-page { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 48px; }
+.news-page .news-grid { height: auto; min-height: 0; overflow: visible; }
+.news-page .news-col { height: 75vh; min-height: 420px; }
+@media (max-width: 1200px) { .news-page .news-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 720px) {
+  .news-page .news-grid { grid-template-columns: 1fr; padding: 12px; }
+  .news-page .news-col { height: 60vh; border-right: none; }
+}
