@@ -15,7 +15,9 @@
 - [ ] AI market brief blocked by the configured Gemini key free-tier quota (20/day exhausted); options: enable billing on the key, or cache the brief so one call serves many page loads.
 - [ ] On-chain panel empty: Sepolia gas oracle returns nothing and the whale query targets an address with no transactions.
 - [x] Add and deploy secure Gemini key failover across six existing services; 43 focused tests passed and preview build OK.
-- [ ] Collect seven backup Gemini keys securely (eight total including the existing key), then verify live failover; awaiting secure entries.
+- [x] Collect seven backup Gemini keys securely (eight total including the existing key).
+- [ ] Verify AI on Intel, Analytics, synthesis and Nasdaq simulations with eight configured keys; preserve MiroFish operator permissions and payment state.
+- [ ] Remove publisher desk and route the combined publisher catalog through bounded Cloud collection into existing news columns and simulator evidence.
 - [x] Added Cloudflare Blog, Ethereum Foundation Blog, and The Register to live News feeds; deployed vv-news; signed-in response HTTP 200 with 15 items from each added source; 16 focused tests passed. Uploaded 207-source catalog retained disabled pending source rights review; no external Python worker deployed or UI changes.
 - [x] Socio-economics page removed: /socioeconomics route, nav link, page file, API client, its stylesheet block and the dead news_source_status lookup are gone; 116 tests pass, build OK, the address now shows the not-found page and the nav has four links.
 - [ ] MiroFish pilot/research-chat removal, breaking-news surfacing and 207-source activation were reported done earlier but are absent from the current source (project restored to an earlier snapshot); confirm before re-applying. news_articles index is empty (0 rows), so the publisher desk shows no headlines until the external crawler runs.
