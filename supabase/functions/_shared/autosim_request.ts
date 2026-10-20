@@ -25,6 +25,12 @@ export function parseAutoSimRequest(value: unknown): Record<string, unknown> {
     const i = b.inject as { dimension?: unknown; delta?: unknown } | null;
     if (!i || !DIMS.includes(String(i.dimension)) || typeof i.delta !== "number" || !Number.isFinite(i.delta) || Math.abs(i.delta) > 0.2) throw new Error("Invalid shock");
   }
+  if(b.constraints!==undefined){
+    const c=b.constraints as Record<string,unknown>;
+    if(!c||typeof c!=='object'||Array.isArray(c)||Object.keys(c).some(k=>!['horizon_days','risk_profile'].includes(k)))throw new Error('Invalid socioeconomic constraints');
+    if(c.horizon_days!==undefined&&(!Number.isInteger(c.horizon_days)||Number(c.horizon_days)<1||Number(c.horizon_days)>30))throw new Error('Horizon must be 1–30 days');
+    if(c.risk_profile!==undefined&&!['conservative','balanced','aggressive'].includes(String(c.risk_profile)))throw new Error('Invalid risk profile');
+  }
   if (b.article_ids !== undefined && (!Array.isArray(b.article_ids) || b.article_ids.length > 8 || b.article_ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{64}$/i.test(id)))) throw new Error('Invalid headline references');
-  return { ...(b.article_ids ? { article_ids: b.article_ids } : {}), action, job_id: b.job_id, scenario: b.scenario.trim(), ...(b.parent_job_id ? { parent_job_id: b.parent_job_id } : {}), ...(b.inject ? { inject: b.inject } : {}) };
+  return { ...(b.constraints?{constraints:b.constraints}:{}), ...(b.article_ids ? { article_ids: b.article_ids } : {}), action, job_id: b.job_id, scenario: b.scenario.trim(), ...(b.parent_job_id ? { parent_job_id: b.parent_job_id } : {}), ...(b.inject ? { inject: b.inject } : {}) };
 }

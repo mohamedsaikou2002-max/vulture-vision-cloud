@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
-import BackgroundVideo from "./BackgroundVideo";
+import "@/styles/belicia-theme.css";
 import { NavLink } from "react-router-dom";
 
 interface Props {
@@ -15,7 +15,7 @@ const links = [
   { to: "/news", label: "NEWS FEED" },
 ];
 
-export default function VVLayout({ children, status, blurred = true }: Props) {
+export default function VVLayout({ children, status }: Props) {
   const [newIntel, setNewIntel] = useState(false);
   const navRef = useRef<HTMLElement>(null);
   const [navHeight, setNavHeight] = useState(64);
@@ -42,19 +42,7 @@ export default function VVLayout({ children, status, blurred = true }: Props) {
   const statusLabel = newIntel ? "NEW INTEL" : (status?.label || "STATUS UNVERIFIED");
 
   return (
-    <>
-      <div className={`video-bg${blurred ? " blurred" : ""}`}>
-        <BackgroundVideo />
-      </div>
-      <div className="video-overlay" />
-      <div className="scanlines" />
-      <div className="noise" />
-
-      <div className="corner corner-tl" />
-      <div className="corner corner-tr" />
-      <div className="corner corner-bl" />
-      <div className="corner corner-br" />
-
+    <div className="belicia-workspace">
       <nav className="nav" ref={navRef} aria-label="Main navigation">
         <NavLink to="/" className="nav-logo">VULTURE VISION</NavLink>
         <div className="nav-links">
@@ -71,6 +59,6 @@ export default function VVLayout({ children, status, blurred = true }: Props) {
       </nav>
 
       <main id="main-content" className="page-content" style={{ paddingTop: navHeight }}>{children}</main>
-    </>
+    </div>
   );
 }

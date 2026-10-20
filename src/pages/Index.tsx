@@ -1,3 +1,4 @@
+import "@/styles/belicia-theme.css";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BackgroundVideo from "@/components/BackgroundVideo";
@@ -12,10 +13,6 @@ export default function Index() {
   return <>
     <div className="video-bg"><BackgroundVideo /></div>
     <div className="video-overlay" />
-    <div className="scanlines" />
-    <div className="noise" />
-    <div className="corner corner-tl" /><div className="corner corner-tr" />
-    <div className="corner corner-bl" /><div className="corner corner-br" />
     <main className="landing-wrap" onClick={go} onKeyDown={e => e.key === "Enter" && go()} role="button" tabIndex={0} aria-label="Continue to Vulture Vision">
       <h1 className="eagle-title">VULTURE VISION</h1>
       <p className="eagle-sub">Intelligence Dominance</p>

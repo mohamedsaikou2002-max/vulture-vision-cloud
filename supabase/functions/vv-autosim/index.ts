@@ -129,6 +129,9 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
     if (scenario !== parentResult.scenario) return fail('invalid_parent', 'A controlled variant must retain the original scenario', 400);
   }
 
+  const constraints=body.constraints as {horizon_days?:number;risk_profile?:RiskProfile}|undefined;
+  if(parentResult&&constraints&&((constraints.horizon_days!==undefined&&constraints.horizon_days!==parentResult.horizon_days)||(constraints.risk_profile!==undefined&&constraints.risk_profile!==parentResult.interpretation.risk_profile)))return fail('invalid_parent','Controlled variants must preserve the original horizon and risk constraints',400);
+
   const { data: claim, error: claimError } = await sb.rpc("vv_claim_autosim", {
     p_user_id: userId, p_job_id: jobId, p_scenario: scenario, p_parent_id: parent,
     p_limit: dailyLimit(Deno.env.get("VV_DAILY_SIM_LIMIT")),
@@ -169,6 +172,8 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
       warnings.push(`Gemini interpretation unavailable (${(e as Error).message}); used keyword rules and default event shocks instead.`);
       interp = heuristicInterp(scenario, horizonHint);
     }
+
+    if(!parentResult&&constraints){interp={...interp,...(constraints.horizon_days?{horizon_days:constraints.horizon_days}:{}),...(constraints.risk_profile?{risk_profile:constraints.risk_profile}:{})};}
 
     // 2 — evidence
     await stage("retrieving_evidence");

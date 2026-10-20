@@ -78,6 +78,13 @@ describe('AutoSim real handler and shared engine',()=>{
     expect(r.status).toBe(200);expect(r.data.result.analysis).toBeNull();expect(r.data.result.strategies.scenario).toHaveLength(6);
     expect(r.data.result.warnings.join(' ')).toContain('invalid structure');
   });
+  it('enforces explicit horizon and risk constraints and keeps variants frozen',async()=>{
+    const f=fixture();const root=await f.call({action:'run',job_id:job1,scenario:'A funding liquidity crunch',constraints:{horizon_days:7,risk_profile:'conservative'}});
+    expect(root.status).toBe(200);expect(root.data.result.horizon_days).toBe(7);expect(root.data.result.interpretation.risk_profile).toBe('conservative');expect(root.data.result.execution.cost.leverage).toBeLessThanOrEqual(2);
+    f.fetcher.mockClear();
+    const variant=await f.call({action:'run',job_id:job2,parent_job_id:job1,scenario:'A funding liquidity crunch',constraints:{horizon_days:30,risk_profile:'aggressive'}});
+    expect(variant.status).toBe(400);expect(f.fetcher).not.toHaveBeenCalled();
+  });
   it('uses the Belicia-style market pulse without invoking an ungrounded AI snapshot',async()=>{
     const f=fixture();const r=await f.call({action:'world_state'});
     expect(r.status).toBe(200);expect(r.data.world_pulse.kind).toBe('derived_market_snapshot');

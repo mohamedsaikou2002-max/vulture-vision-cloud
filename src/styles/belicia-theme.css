@@ -1,0 +1,58 @@
+/* Belicia Pod Room visual language, scoped to Vulture page roots. */
+.belicia-workspace,.public-site,.landing-wrap {
+  --gold:#e7e7ea;--gold-bright:#fff;--gold-dim:#777781;--text:#eeeeF2;--dim:#96969f;
+  --green:#71d6a0;--green-bright:#71d6a0;--green-dim:#779d8a;--red:#e28383;--cyan:#a5c8e4;
+  --dark:#0c0c10;--dark2:#111116;
+  --background:0 0% 0%;--foreground:0 0% 96%;--card:240 8% 5%;--card-foreground:0 0% 96%;
+  --primary:0 0% 96%;--primary-foreground:0 0% 4%;--secondary:240 5% 12%;--secondary-foreground:0 0% 90%;
+  --muted:240 5% 10%;--muted-foreground:240 4% 65%;--accent:240 5% 16%;--accent-foreground:0 0% 98%;
+  --border:240 4% 20%;--input:240 4% 20%;--ring:0 0% 90%;--radius:.5rem;
+  color:var(--text);font-family:'Tektur',system-ui,sans-serif;
+}
+.belicia-workspace {position:fixed;inset:0;background:radial-gradient(ellipse at 20% 0%,#ffffff08,transparent 55%),#030304;overflow:hidden;}
+.belicia-workspace .nav {position:absolute;inset:0 0 auto;min-height:76px;height:auto;display:flex;justify-content:space-between;align-items:center;gap:24px;padding:20px 28px;background:#08080bbf;backdrop-filter:blur(20px);border-bottom:1px solid #ffffff1a;}
+.belicia-workspace .nav-logo {color:#f6f6f7;font-family:'Tektur',sans-serif;font-size:15px;letter-spacing:.26em;font-weight:500;white-space:nowrap;text-shadow:0 0 18px #ffffff26;}
+.belicia-workspace .nav-links {display:flex;gap:23px;flex:0 1 auto;align-items:center;}
+.belicia-workspace .nav-link {font-family:inherit;font-size:10px;letter-spacing:.22em;color:#ffffff82;background:none;border:0;border-bottom:1px solid transparent;padding:8px 0;white-space:nowrap;}
+.belicia-workspace .nav-link.active,.belicia-workspace .nav-link:hover {color:white;border-bottom-color:#fff;background:none;box-shadow:none;text-shadow:none;}
+.belicia-workspace .nav-status {font-size:9px;letter-spacing:.16em;color:#b7b7c1;white-space:nowrap;}
+.belicia-workspace .status-dot {width:5px;height:5px;box-shadow:none;}
+.belicia-workspace .page-content {inset:0;overflow-y:auto;overflow-x:hidden;height:100%;background:none;}
+.belicia-workspace .panel {background:#10101585;border:1px solid #ffffff1c;border-radius:8px;box-shadow:none;backdrop-filter:blur(12px);}
+.belicia-workspace .panel-title {font-family:inherit;font-weight:400;letter-spacing:.22em;color:#ffffff99;font-size:10px;line-height:1.6;margin-bottom:13px;}
+.belicia-workspace .stat-label,.belicia-workspace .col-header {font-family:inherit;letter-spacing:.16em;color:#b2b2bc;}
+.belicia-workspace .stat-value,.belicia-workspace .stat-delta,.belicia-workspace .regime-val {font-family:inherit;}
+.belicia-workspace .data-table th {background:#ffffff04;color:#acacb9;border-color:#ffffff12;letter-spacing:.12em;}
+.belicia-workspace .data-table td {border-color:#ffffff0b;}
+.belicia-workspace .service-notice {border-color:#ffffff15;color:#aaaab5;background:#ffffff03;font-size:11px;line-height:1.8;}
+.belicia-workspace input,.belicia-workspace textarea,.belicia-workspace select {color:#f1f1f5;accent-color:#ddd;}
+.belicia-workspace button {font-family:inherit;}
+.belicia-workspace .synthesize-btn,.belicia-workspace .send-btn {background:#ffffff12;border:1px solid #ffffff2b;color:#eee;border-radius:5px;}
+.belicia-workspace .news-grid {gap:18px;padding:18px 26px;}
+.belicia-workspace .news-col {border:1px solid #ffffff1a;border-radius:8px;background:#10101580;}
+.belicia-workspace .col-header {border-color:#ffffff15;background:#ffffff02;font-size:10px;}
+.belicia-workspace .news-item {border-color:#ffffff10;}
+.belicia-workspace .news-title {color:#dedee6;font-size:12px;line-height:1.8;}
+.belicia-workspace .news-meta {color:#9696a3;}
+.belicia-workspace .ticker-bar {border-color:#ffffff15;background:#070709;}
+.belicia-workspace .badge,.belicia-workspace .tag {border-radius:20px;border-color:#ffffff20;background:#ffffff05;font-family:inherit;}
+.belicia-workspace .chat-input,.belicia-workspace .chat-input-wrap {background:#111116;border-color:#ffffff22;border-radius:8px;}
+.belicia-workspace .chat-msg,.belicia-workspace .msg-bubble {border-color:#ffffff18;border-radius:8px;}
+.public-site {--public-ink:#f5f5f7;--public-soft:#a4a4ae;--public-line:#ffffff20;font-family:'Tektur',sans-serif;}
+.public-site .public-wordmark,.public-site h1,.public-site h2 {font-family:'Tektur',sans-serif;color:#f4f4f7;font-weight:500;}
+.public-site .public-header {background:#08080b99;backdrop-filter:blur(18px);}
+.public-site .membership-offer {border-radius:10px;background:#0b0b10b8;border-color:#ffffff24;}
+.public-site .public-video video {opacity:.18;}
+.public-site .public-shade {background:#030305bb;}
+.landing-wrap .eagle-title,.landing-wrap .eagle-sub,.landing-wrap .click-hint {font-family:'Tektur',sans-serif;color:#f5f5f7;text-shadow:0 0 24px #ffffff30;}
+@media(max-width:900px){
+ .belicia-workspace .nav {padding:16px 20px;gap:12px;flex-wrap:wrap;}
+ .belicia-workspace .nav-logo {font-size:13px;}
+ .belicia-workspace .nav-status {margin-left:auto;}
+ .belicia-workspace .nav-links {order:3;width:100%;justify-content:space-between;gap:12px;}
+ .belicia-workspace .nav-link {font-size:9px;letter-spacing:.12em;}
+ .belicia-workspace .news-grid {padding:14px;}
+}
+@media(prefers-reduced-motion:reduce){.belicia-workspace *, .public-site *{scroll-behavior:auto;animation:none!important;}}
+
+.sys-clock {font-family:Tektur,sans-serif;color:#92929e;font-size:10px;}

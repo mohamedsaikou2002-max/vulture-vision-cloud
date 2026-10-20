@@ -5,7 +5,7 @@ import { DIMENSIONS } from '../../../supabase/functions/_shared/autosim_engine';
 import { fetchWorldState } from '@/lib/autoSimApi';
 import { label } from './DimensionCanvas';
 type WS = Awaited<ReturnType<typeof fetchWorldState>>;
-export default function WorldState() {
+export default function WorldState({compact=false}:{compact?:boolean}) {
   const [ws,setWs]=useState<WS|null>(null), [err,setErr]=useState(''), [loading,setLoading]=useState(false);
   const active=useRef(false);
   const load=useCallback(async()=>{
@@ -30,9 +30,11 @@ export default function WorldState() {
         <ul className="sim-news">{pulse.top_shocks.map(h=><li key={h.url}><a href={h.url} target="_blank" rel="noopener noreferrer">{h.title}</a><p>{h.source} · {h.published_at?new Date(h.published_at).toLocaleString():'Publication time unknown'}</p></li>)}</ul>
         {!pulse.top_shocks.length && <p className="sim-note">No recent indexed headlines are available for this snapshot.</p>}
       </section>}
+      <details className="world-details" open={!compact}><summary>Economic observations & dimensions</summary>
       {!!Object.keys(ws.observations||{}).length && <section aria-label="Dated market measurements"><h3 className="sim-h3">Observed market data</h3><ul className="sim-news">{Object.entries(ws.observations||{}).map(([id,o])=><li key={id}>{id.replace(/_/g,' ')}: {['cpi_yoy','retail_yoy','market_vol_ann','nasdaq_daily_return','nasdaq_20_session_return'].includes(id)?pct(o.value,2):o.value.toFixed(2)}<p>{o.source} · {o.observed_at}</p></li>)}</ul></section>}
       <p className="sim-fine">Normalized model dimensions below are derived estimates, not direct measurements.</p>
       <div className="sim-dims">{DIMENSIONS.map(d=><div key={d} className="sim-dim" title={`${ws.detail[d].source}${ws.detail[d].observed_at?' · '+ws.detail[d].observed_at:''}`}><span>{label(d)}</span><div className="sim-track"><div style={{width:`${ws.baseline[d]*100}%`}} className={ws.detail[d].source==='neutral_default'?'sim-fill dim':'sim-fill'}/></div><b>{ws.neutral_dimensions.includes(d)?"—":pct(ws.baseline[d], 0)}</b></div>)}</div>
+      </details>
       <div className="sim-sources">{ws.data_status.map(s=><span key={s.id} className={s.ok?'sim-chip ok':'sim-chip bad'} title={s.detail}>{s.id.replace('fred:','')}</span>)}</div>
     </>}
   </div>;

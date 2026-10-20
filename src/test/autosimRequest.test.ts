@@ -8,3 +8,7 @@ describe("AutoSim request limits", () => {
   it("rejects nonfinite or oversized shocks", () => { expect(() => parseAutoSimRequest({ ...base, inject: { dimension: "fear", delta: Infinity } })).toThrow(); expect(() => parseAutoSimRequest({ ...base, inject: { dimension: "fear", delta: 0.21 } })).toThrow(); expect(parseAutoSimRequest({ ...base, inject: { dimension: "fear", delta: 0.2 } }).inject).toEqual({ dimension: "fear", delta: 0.2 }); });
   it("limits agent questions to 400 characters", () => { expect(() => parseAutoSimRequest({ action: "interrogate", job_id: base.job_id, agent: "banks", question: "x".repeat(401) })).toThrow(); });
 });
+it('validates the Pod Room socioeconomic constraints before a job is claimed',()=>{
+ expect(parseAutoSimRequest({...base,constraints:{horizon_days:7,risk_profile:'conservative'}}).constraints).toEqual({horizon_days:7,risk_profile:'conservative'});
+ for(const constraints of [{horizon_days:31},{horizon_days:NaN},{horizon_days:1.5},{risk_profile:'unlimited'},{leverage:100},[]])expect(()=>parseAutoSimRequest({...base,constraints})).toThrow();
+});

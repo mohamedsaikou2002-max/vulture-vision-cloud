@@ -87,3 +87,77 @@
 .autosim-workspace .sim-legend .unchanged { background:var(--gold-dim); }
 
 .autosim-workspace .sim-scenario-card { order: -1; }
+/* Belicia's active Pod Room: narrow setup column, framed square swarm, quiet tabs. */
+.belicia-workspace .autosim-header {padding:28px 28px 12px;align-items:center;border:0;}
+.belicia-workspace .room-eyebrow {font-size:9px;letter-spacing:.25em;color:#777785;}
+.belicia-workspace .autosim-header h1 {font-family:inherit;font-size:21px;letter-spacing:.18em;font-weight:400;margin-top:7px;}
+.belicia-workspace .autosim-header a {font-size:10px;color:#92929e;}
+.belicia-workspace .autosim-header + .sim-note {padding:0 28px;font-size:9px;letter-spacing:.15em;}
+.belicia-workspace .autosim-workspace .sim-root {grid-template-columns:minmax(300px,2fr) minmax(0,3fr);gap:24px;padding:22px 28px 40px;}
+.belicia-workspace .sim-card {padding:18px;}
+.belicia-workspace .sim-scenario-card {order:0;}
+.belicia-workspace .sim-left .sim-card:first-child {order:3;}
+.belicia-workspace .sim-input,.belicia-workspace .sim-select {background:#0606088c;border:1px solid #ffffff25;border-radius:5px;font-family:inherit;font-size:12px;line-height:1.7;color:#e9e9ed;padding:10px 12px;}
+.belicia-workspace .sim-input:focus,.belicia-workspace .sim-select:focus {outline:1px solid #b5b5c4;outline-offset:2px;}
+.belicia-workspace .sim-field-label,.belicia-workspace .pod-constraints label {font-size:10px;color:#b4b4bf;display:block;letter-spacing:.05em;margin-bottom:8px;}
+.belicia-workspace .pod-constraints {display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0 4px;}
+.belicia-workspace .pod-constraints label>select,.belicia-workspace .pod-constraints label>input {display:block;width:100%;margin-top:8px;}
+.belicia-workspace .pod-constraints label>span {float:right;color:white;}
+.belicia-workspace .sim-go {background:#eeeeef;color:#080809;border-radius:5px;border:1px solid #fff;font-family:inherit;font-size:11px;letter-spacing:.08em;}
+.belicia-workspace .sim-go:hover {background:#fff;}
+.belicia-workspace .sim-mic,.belicia-workspace .sim-ghost,.belicia-workspace .sim-chip-btn {border:1px solid #ffffff26;background:#ffffff05;color:#c9c9d1;border-radius:5px;font-family:inherit;}
+.belicia-workspace .sim-mic.on {background:#ffffff1c;border-color:#ddd;}
+.belicia-workspace .sim-note {font-family:inherit;color:#9898a7;font-size:10px;line-height:1.8;}
+.belicia-workspace .sim-fine {font-family:inherit;color:#7f7f90;font-size:9px;line-height:1.8;}
+.belicia-workspace .sim-tabs {background:#11111680;border:1px solid #ffffff1a;display:flex;border-radius:6px;gap:2px;overflow-x:auto;padding:4px;}
+.belicia-workspace .sim-tabs button {border:0;border-radius:4px;padding:8px 10px;font-family:inherit;letter-spacing:.07em;font-size:10px;color:#9696a7;white-space:nowrap;}
+.belicia-workspace .sim-tabs button.on {background:#ffffff15;color:#fff;box-shadow:0 0 12px #ffffff06;}
+.belicia-workspace .sim-body {padding:16px;}
+.belicia-workspace .sim-right {align-self:start;position:sticky;top:16px;}
+.belicia-workspace .sim-h3 {font-family:inherit;font-size:11px;letter-spacing:.1em;}
+.belicia-workspace .sim-news a {color:#c7c7d3;text-decoration:none;font-size:11px;}
+.belicia-workspace .sim-news a:hover {color:white;text-decoration:underline;}
+.belicia-workspace .sim-news li {padding:7px 0;border-bottom:1px solid #ffffff09;}
+.belicia-workspace .sim-chip {border:1px solid #ffffff20;background:#ffffff05;color:#c0c0cd;border-radius:20px;}
+.belicia-workspace .sim-warnbox {background:#b49a580a;border:1px solid #b49a5830;border-radius:6px;font-size:10px;line-height:1.8;color:#cbb986;}
+.belicia-workspace .sim-check {font-size:10px;color:#a7a7b4;}
+.belicia-workspace .sim-link {color:#d2d2df;font-family:inherit;}
+.belicia-workspace .world-details {margin:12px 0;}
+.belicia-workspace .world-details summary {font-size:10px;color:#b7b7c8;cursor:pointer;margin-bottom:12px;}
+.swarm-stage {position:relative;border:1px solid #ffffff1a;border-radius:8px;overflow:hidden;background:#080818;}
+.swarm-stage svg {display:block;width:100%;aspect-ratio:1;}
+.swarm-stage circle {cursor:pointer;transition:fill .4s,opacity .3s;}
+.swarm-stage-label,.swarm-stage-caption {position:absolute;inset:14px 15px auto;display:flex;justify-content:space-between;gap:12px;font-size:9px;letter-spacing:.16em;color:#aaaabc;pointer-events:none;}
+.swarm-stage-caption {inset:auto 15px 14px;font-size:8px;}
+.swarm-controls {display:flex;flex-wrap:wrap;gap:8px;margin:15px 0;}
+.swarm-controls button,.swarm-selection button {display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #ffffff25;border-radius:5px;color:#d2d2df;background:#ffffff06;font-size:10px;}
+.swarm-controls button:disabled,.swarm-selection button:disabled {opacity:.35;cursor:not-allowed;}
+.swarm-scrubber {display:flex;align-items:center;gap:12px;font-size:9px;letter-spacing:.1em;color:#9292a5;}
+.swarm-scrubber input {flex:1;min-width:0;}
+.swarm-stats {display:flex;flex-wrap:wrap;gap:14px;margin:16px 0;font-size:9px;color:#b1b1c0;}
+.swarm-stats i {display:inline-block;width:5px;height:5px;border-radius:100%;margin-right:6px;}
+.swarm-cohorts {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;}
+.swarm-cohorts button {padding:9px;background:#ffffff03;color:#9999ac;border:1px solid #ffffff13;border-radius:5px;font-size:9px;text-transform:capitalize;text-align:left;}
+.swarm-cohorts button[aria-pressed=true] {background:#ffffff0c;border-color:#ffffff40;color:white;}
+.swarm-cohorts span {display:block;font-size:13px;margin-top:5px;color:#d2d2df;}
+.swarm-selection {display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:15px 0;padding:13px;border:1px solid #ffffff18;border-radius:6px;background:#ffffff03;}
+.swarm-selection h3 {text-transform:capitalize;font-size:12px;}
+.swarm-selection p {font-size:9px;color:#8d8da1;max-width:35ch;margin-top:5px;line-height:1.8;}
+@media(max-width:900px){
+ .belicia-workspace .autosim-workspace .sim-root {grid-template-columns:1fr;padding:16px;gap:18px;}
+ .belicia-workspace .autosim-header {padding:22px 16px 10px;align-items:flex-start;gap:12px;}
+ .belicia-workspace .autosim-header h1 {font-size:17px;letter-spacing:.1em;}
+ .belicia-workspace .autosim-header + .sim-note {padding:0 16px;font-size:8px;}
+ .belicia-workspace .sim-right {position:static;}
+ .belicia-workspace .sim-left {display:contents;}
+ .belicia-workspace .sim-right {grid-row:2;}
+ .belicia-workspace .sim-scenario-card {order:-2;grid-row:1;}
+ .belicia-workspace .sim-left .sim-card:first-child {order:0;}
+ .swarm-cohorts {grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+
+.swarm-brief {margin-top:18px;padding-top:16px;border-top:1px solid #ffffff18;}
+.swarm-brief h3 {font-size:13px;color:#e0e0eb;}
+.swarm-brief p {font-size:11px;line-height:1.9;color:#9999ad;margin-top:8px;}
+.belicia-workspace .sim-warnbox p {overflow-wrap:anywhere;}
+@media(prefers-reduced-motion:reduce){.swarm-stage circle{transition:none;}}

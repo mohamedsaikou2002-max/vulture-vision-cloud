@@ -3,6 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Mic, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VVLayout from "@/components/VVLayout";
+import SwarmCanvas from "@/components/sim/SwarmCanvas";
+import type { Agent, RiskProfile } from "../../supabase/functions/_shared/autosim_engine";
 import RecentNews from "@/components/sim/RecentNews";
 import WorldState from "@/components/sim/WorldState";
 import DimensionCanvas, { label } from "@/components/sim/DimensionCanvas";
@@ -20,7 +22,8 @@ const STAGES = [
   ["simulating", "Running scenarios and testing six strategies"],
   ["analyzing", "Writing the explanation"],
 ] as const;
-const TABS = ["canvas", "forecast", "strategies", "agents", "history"] as const;
+const TABS = ["canvas", "agents", "dimensions", "forecast", "strategies", "history"] as const;
+const TAB_LABELS={canvas:"Canvas",agents:"Archetypes",dimensions:"Constraints",forecast:"Prediction",strategies:"Strategies",history:"History"};
 const EXAMPLES = [
   "What happens to Nasdaq tech valuations if semiconductor export restrictions expand?",
   "Fed hikes rates 50 bps unexpectedly next week",
@@ -30,6 +33,10 @@ const EXAMPLES = [
 export default function Simulator() {
   const [params] = useSearchParams();
   const articleIds = useMemo(() => (params.get('articles') || '').split(',').filter(id => /^[a-f0-9]{64}$/i.test(id)).slice(0,8), [params]);
+  const [horizon,setHorizon]=useState(0);
+  const [risk,setRisk]=useState<RiskProfile>("balanced");
+  const [samples,setSamples]=useState(500);
+  const [selectedCohort,setSelectedCohort]=useState<Agent>("investors");
   const [voiceArmed,setVoiceArmed]=useState(false);
   const [scenario, setScenario] = useState(() => (params.get('scenario') || '').slice(0,2000));
   useEffect(()=>{const selected=params.get("scenario");if(selected)setScenario(selected.slice(0,2000));},[params]);
@@ -86,11 +93,11 @@ export default function Simulator() {
     }, 2000);
     try {
       const prev = extra.parent_job_id ? result : null;
-      const payload = { scenario: trimmed, job_id: id, ...(!extra.parent_job_id && articleIds.length ? {article_ids:articleIds} : {}), ...extra };
+      const payload = { scenario: trimmed, job_id: id, ...(!extra.parent_job_id && articleIds.length ? {article_ids:articleIds} : {}), ...extra, ...(!extra.parent_job_id?{constraints:{...(horizon?{horizon_days:horizon}:{}),risk_profile:risk}}:{}) };
       pendingPayload.current = payload;
       const response = await runSimulation(payload, controller.signal);
       if (!mounted.current) return;
-      setParent(prev); setCompleted({jobId:response.job_id,result:response.result}); setPendingJob(null); setTab('forecast'); refreshJobs();
+      setParent(prev); setCompleted({jobId:response.job_id,result:response.result}); setPendingJob(null); setTab('canvas'); refreshJobs();
       if (speakOn && response.result.analysis?.spoken_summary) speak(response.result.analysis.spoken_summary);
     } catch (e) {
       if (!mounted.current) return;
@@ -101,7 +108,7 @@ export default function Simulator() {
       busyRef.current=false;
       if(mounted.current){setBusy(false);setStage('');}
     }
-  }, [result, refreshJobs, speakOn, pendingJob, articleIds]);
+  }, [result, refreshJobs, speakOn, pendingJob, articleIds, horizon, risk]);
 
   const recoverPending = async () => {
     if (!pendingJob || busyRef.current) return;
@@ -110,11 +117,11 @@ export default function Simulator() {
       const status = await jobStatus(pendingJob);
       if(status==='completed') {
         const recovered=await loadJob(pendingJob);
-        if(recovered){setCompleted({jobId:pendingJob,result:recovered});setParent(null);setPendingJob(null);setError('');setTab('forecast');refreshJobs();}
+        if(recovered){setCompleted({jobId:pendingJob,result:recovered});setParent(null);setPendingJob(null);setError('');setTab('canvas');refreshJobs();}
       } else if(status === null && pendingPayload.current?.job_id === pendingJob) {
         // Reuse the same atomic claim ID if the first request never reached the server.
         const recovered = await runSimulation(pendingPayload.current);
-        if (mounted.current) { setCompleted({jobId:recovered.job_id,result:recovered.result});setParent(null);setPendingJob(null);setError('');setTab('forecast');refreshJobs(); }
+        if (mounted.current) { setCompleted({jobId:recovered.job_id,result:recovered.result});setParent(null);setPendingJob(null);setError('');setTab('canvas');refreshJobs(); }
       } else if(status==='failed'||status==='cancelled') {setPendingJob(null);setError('The previous run failed. You can start a new request.');}
       else setError('The previous request may still be running. Check again before starting another.');
     } catch(e){setError(e instanceof Error?e.message:'Could not check the pending run.');}
@@ -140,7 +147,7 @@ export default function Simulator() {
     if (busyRef.current || pendingJob) return;
     try {
       const r = await loadJob(id);
-      if (r) { setCompleted({result:r,jobId:id}); setParent(null); setScenario(r.scenario); setTab("forecast"); }
+      if (r) { setCompleted({result:r,jobId:id}); setParent(null); setScenario(r.scenario); setTab("canvas"); }
     } catch (e) { setError(e instanceof Error ? e.message : "Could not open simulation"); }
   };
   useEffect(()=>{
@@ -154,19 +161,27 @@ export default function Simulator() {
   return (
     <VVLayout status={{ label: busy ? "SIMULATING" : "RESEARCH", tone: busy ? "cyan" : "gold" }}>
       <div className="scroll-inner autosim-workspace">
-      <div className="autosim-header"><h1>Nasdaq scenario simulator</h1><Link to="/simulations/pilot">MiroFish pilot & research chat ↗</Link></div>
-      <p className="sim-note">Market: Nasdaq Composite (^IXIC). Strategy tests and forecasts use Nasdaq daily history; synthetic fallback is explicitly labelled.</p>
+      <div className="autosim-header"><div><span className="room-eyebrow">VULTURE VISION / RESEARCH</span><h1>Socioeconomic Pod Room</h1></div><Link to="/simulations/pilot">MiroFish pilot & research chat ↗</Link></div>
+      <p className="sim-note">NASDAQ COMPOSITE · ECONOMIC ACTOR SWARM · DATED WORLD STATE</p>
       <div className="sim-root">
         <aside className="sim-left">
           <RecentNews />
           <section className="panel sim-card">
             <div className="panel-title">World state</div>
-            <WorldState />
+            <WorldState compact />
           </section>
 
           <section className="panel sim-card sim-scenario-card">
-            <div className="panel-title">Scenario</div>
-            <textarea className="sim-input" rows={4} value={scenario} maxLength={2000} placeholder="Describe what happens. Type it or tap the mic and say it." onChange={e => setScenario(e.target.value)} aria-label="Scenario" />
+            <div className="panel-title">SETUP / NASDAQ SCENARIO</div>
+            <label className="sim-field-label" htmlFor="scenario-narrative">Narrative</label>
+            <textarea id="scenario-narrative" className="sim-input" rows={5} value={scenario} maxLength={2000} placeholder="Describe what happens. Type it or tap the mic and say it." onChange={e => setScenario(e.target.value)} aria-label="Scenario" />
+            <div className="pod-constraints">
+              <label>Market<select className="sim-select" disabled aria-label="Simulated market"><option>Nasdaq Composite · ^IXIC</option></select></label>
+              <label>Horizon<select className="sim-select" value={horizon} onChange={e=>setHorizon(Number(e.target.value))} disabled={busy||!!pendingJob} aria-label="Simulation horizon"><option value={0}>Derive from scenario</option>{[7,14,30].map(d=><option key={d} value={d}>{d} days</option>)}</select></label>
+              <label>Risk constraint<select className="sim-select" value={risk} onChange={e=>setRisk(e.target.value as RiskProfile)} disabled={busy||!!pendingJob} aria-label="Risk constraint">{['conservative','balanced','aggressive'].map(p=><option key={p} value={p}>{p}</option>)}</select></label>
+              <label>Canvas samples <span>{samples}</span><input type="range" min={100} max={1000} step={100} value={samples} onChange={e=>setSamples(Number(e.target.value))} aria-label="Canvas samples"/></label>
+            </div>
+            <p className="sim-fine">Seven actor cohorts · ten economic dimensions. Risk settings constrain execution costs and leverage; sampled dots change the visualization only.</p>
             {voice.listening && <p className="sim-note sim-live">Listening… {voice.interim}</p>}
             {countdown !== null && <p className="sim-note sim-live">Running in {countdown}… <Button variant="ghost" className="sim-link" onClick={() => setCountdown(null)}>Cancel</Button></p>}
             {voice.processing && <p className="sim-note">Transcribing with {voice.engine}…</p>}
@@ -212,14 +227,15 @@ export default function Simulator() {
           </section>
         </aside>
 
-        <main className="sim-right">
-          <div className="sim-tabs" role="tablist">{TABS.map(t => <Button variant="ghost" key={t} role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t}</Button>)}</div>
-          <div className="panel sim-body">
+        <section className="sim-right" aria-label="Swarm workspace">
+          <div className="sim-tabs" role="tablist" aria-label="Pod room views">{TABS.map(t => <Button variant="ghost" key={t} role="tab" id={`pod-tab-${t}`} aria-controls="pod-panel" tabIndex={tab===t?0:-1} onKeyDown={e=>{const direction=e.key==="ArrowRight"?1:e.key==="ArrowLeft"?-1:0;if(direction||e.key==="Home"||e.key==="End"){e.preventDefault();const next=e.key==="Home"?TABS[0]:e.key==="End"?TABS[TABS.length-1]:TABS[(TABS.indexOf(t)+direction+TABS.length)%TABS.length];setTab(next);document.getElementById(`pod-tab-${next}`)?.focus();}}} aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{TAB_LABELS[t]}</Button>)}</div>
+          <div className="panel sim-body" id="pod-panel" role="tabpanel" aria-labelledby={`pod-tab-${tab}`}>
             {result && result.warnings.length > 0 && <div className="sim-warnbox">{result.warnings.map((w, i) => <p key={i}>{w}</p>)}</div>}
-            {tab === "canvas" && <DimensionCanvas result={result} />}
+            {tab === "canvas" && <><SwarmCanvas result={result} count={samples} onInspect={agent=>{setSelectedCohort(agent);setTab("agents");}} />{result?.analysis && <section className="swarm-brief"><h3>{result.analysis.headline}</h3><p>{result.analysis.summary}</p></section>}</>}
+            {tab === "dimensions" && <><h2 className="sim-h3">Economic transmission & constraints</h2><p className="sim-note">Ten bounded dimensions connect seven actor cohorts. Links use the shared engine’s interaction coefficients. Fresh observations inform the baseline; missing inputs remain explicit.</p><DimensionCanvas result={result}/></>}
             {tab === "forecast" && <Forecast r={result} parent={parent} />}
             {tab === "strategies" && <Strategies r={result} />}
-            {tab === "agents" && <Agents r={result} jobId={jobId} />}
+            {tab === "agents" && <Agents r={result} jobId={jobId} initialAgent={selectedCohort} />}
             {tab === "history" && (
               <ul className="sim-history">
                 {historyError && <li role="alert" className="sim-warn">{historyError}</li>}
@@ -229,7 +245,7 @@ export default function Simulator() {
             )}
             {result && <p className="sim-fine">{result.disclaimer} Engine {result.engine_version} · seed {result.seed} · model {result.model}</p>}
           </div>
-        </main>
+        </section>
       </div>
       </div>
     </VVLayout>
@@ -283,8 +299,8 @@ function Strategies({ r }: { r: AutoSimResult | null }) {
   );
 }
 
-function Agents({ r, jobId }: { r: AutoSimResult | null; jobId: string | null }) {
-  const [agent, setAgent] = useState<typeof AGENTS[number]>("investors");
+function Agents({ r, jobId, initialAgent="investors" }: { r: AutoSimResult | null; jobId: string | null; initialAgent?:Agent }) {
+  const [agent, setAgent] = useState<typeof AGENTS[number]>(initialAgent);
   const [q, setQ] = useState("");
   const [ans, setAns] = useState("");
   const [busy, setBusy] = useState(false);

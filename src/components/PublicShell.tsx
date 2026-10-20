@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import BackgroundVideo from "@/components/BackgroundVideo";
 import PublicContours from "./PublicContours";
 import "@/styles/public-info.css";
+import "@/styles/belicia-theme.css";
 
 export function SocialLinks() {
   return <div className="public-socials">

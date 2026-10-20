@@ -50,7 +50,7 @@ export async function callAutoSim<T = Record<string, unknown>>(payload: Record<s
 }
 
 export const parseResult = (value: unknown): AutoSimResult => validateAutoSimResult(value) as unknown as AutoSimResult;
-export async function runSimulation(p: { scenario: string; job_id: string; parent_job_id?: string; article_ids?: string[]; inject?: { dimension: string; delta: number } }, signal?: AbortSignal) {
+export async function runSimulation(p: { scenario: string; job_id: string; constraints?: {horizon_days?:number;risk_profile?:"conservative"|"balanced"|"aggressive"}; parent_job_id?: string; article_ids?: string[]; inject?: { dimension: string; delta: number } }, signal?: AbortSignal) {
   const r = await callAutoSim<{ ok: true; job_id: string; result: unknown }>({ action: 'run', ...p }, signal);
   if (r.job_id !== p.job_id) throw new ApiError('invalid_response', 'The returned result belongs to a different request.', 502);
   return { ...r, result: parseResult(r.result) };
