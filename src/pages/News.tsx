@@ -132,7 +132,7 @@ function Column({ title, tone, items, badge, badgeText }: {
               <div className="news-title">
                 {it.link ? (
                   <a href={it.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
-                    {it.title}
+                    {decodeEntities(it.title)}
                   </a>
                 ) : it.title}
               </div>
@@ -292,4 +292,12 @@ function IntelSynthesisColumn({ brief, synthBusy, onSynthesize }: {
       )}
     </div>
   );
+}
+
+function decodeEntities(s: string = ""): string {
+  const map: Record<string, string> = { amp: "&", apos: "'", quot: '"', lt: "<", gt: ">", nbsp: " " };
+  return s.replace(/&(?:amp;)?(#x?[0-9a-f]+|[a-z]+);/gi, (m, e: string) => {
+    if (e[0] === "#") { const n = e[1].toLowerCase() === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return Number.isFinite(n) ? String.fromCodePoint(n) : m; }
+    return map[e.toLowerCase()] ?? m;
+  });
 }
