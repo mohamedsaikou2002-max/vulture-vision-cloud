@@ -1,0 +1,43 @@
+.public-site { position:fixed; inset:0; overflow-y:auto; overflow-x:hidden; color:var(--public-ink); font-family:'Share Tech Mono',monospace; scroll-behavior:smooth; }
+.public-site .public-video { position:fixed; inset:0; overflow:hidden; z-index:0; pointer-events:none; }
+.public-site .public-video video { width:100%; height:100%; object-fit:cover; opacity:.45; }
+.public-site .public-shade { position:fixed; inset:0; background:var(--public-scrim); pointer-events:none; z-index:1; }
+.public-site .public-contours { position:fixed; inset:0; z-index:2; pointer-events:none; }
+.public-site .public-header, .public-site main, .public-site .public-footer { position:relative; z-index:3; }
+.public-site .public-header { display:flex; justify-content:space-between; gap:20px; align-items:center; padding:22px 5%; border-bottom:1px solid var(--public-line); }
+.public-site .public-wordmark { display:flex; gap:14px; align-items:center; font-family:Orbitron,monospace; color:var(--gold); font-weight:800; font-size:23px; }
+.public-site .public-wordmark span { font-size:12px; }
+.public-site nav { display:flex; align-items:center; gap:24px; font-size:12px; }
+.public-site .welcome-main { max-width:1200px; margin:0 auto; padding:0 5%; }
+.public-site .welcome-heading { min-height:calc(82svh - 80px); display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:25px; padding:52px 0; }
+.public-site .section-index { color:var(--gold); font-size:11px; }
+.public-site h1 { font-family:Orbitron,monospace; font-size:52px; line-height:1.2; font-weight:800; }
+.public-site h1 span { color:var(--public-soft); font-size:32px; }
+.public-site p { line-height:1.8; font-size:16px; max-width:65ch; }
+.public-site .welcome-heading p { max-width:55ch; }
+.public-site h2 { font-family:Orbitron,monospace; font-size:30px; line-height:1.3; }
+.public-site .welcome-story { padding:70px 0; border-top:1px solid var(--public-line); display:grid; gap:24px; }
+.public-site .welcome-story p { color:var(--public-soft); }
+.public-site .welcome-story strong { color:var(--public-ink); }
+.public-site .welcome-capabilities { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:36px; padding:60px 0; border-top:1px solid var(--public-line); }
+.public-site .welcome-capabilities article { display:grid; align-content:start; gap:20px; }
+.public-site .welcome-capabilities article>span { color:var(--gold); font-size:12px; }
+.public-site .welcome-capabilities h2 { font-size:20px; }
+.public-site .welcome-capabilities p { font-size:14px; color:var(--public-soft); }
+.public-site .membership-section { scroll-margin-top:25px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:70px; padding:70px 0; border-top:1px solid var(--public-line); }
+.public-site .membership-section>div { display:flex; flex-direction:column; align-items:flex-start; gap:22px; }
+.public-site .membership-section p { font-size:14px; }
+.public-site small { color:var(--public-soft); font-size:11px; line-height:1.6; }
+.public-site .membership-offer { border:1px solid var(--public-line); background:var(--public-surface); padding:30px; border-radius:4px; }
+.public-site .membership-price { font-family:Orbitron,monospace; font-size:48px; display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; }
+.public-site .membership-price span { font-size:12px; font-family:'Share Tech Mono',monospace; color:var(--public-soft); }
+.public-site ul { list-style:none; display:grid; gap:12px; font-size:13px; }
+.public-site li, .public-site .signed-in-note { display:flex; gap:10px; align-items:center; }
+.public-site .membership-offer button { width:100%; white-space:normal; height:auto; min-height:44px; }
+.public-site .payment-note { color:var(--public-soft); font-size:11px; }
+.public-site .public-footer { padding:35px 5%; border-top:1px solid var(--public-line); display:flex; align-items:center; justify-content:space-between; gap:22px; flex-wrap:wrap; }
+.public-site .public-footer p { font-size:12px; }
+.public-site .public-socials { display:flex; gap:20px; flex-wrap:wrap; }
+.public-site .public-socials a { display:flex; gap:7px; align-items:center; font-size:12px; }
+@media(max-width:760px) { .public-site h1 { font-size:36px; } .public-site h1 span { font-size:24px; } .public-site .public-header { padding:18px 5%; } .public-site .public-header nav>a { display:none; } .public-site .public-wordmark span { display:none; } .public-site .welcome-capabilities, .public-site .membership-section { grid-template-columns:1fr; gap:32px; } .public-site .welcome-heading { min-height:calc(82svh - 70px); gap:20px; } .public-site .membership-offer { padding:24px; width:100%; } }
+@media(prefers-reduced-motion:reduce) { .public-site { scroll-behavior:auto; } }

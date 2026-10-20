@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import video from "@/assets/vulture-video.asset.json";
+import PublicContours from "./PublicContours";
+import "@/styles/public-info.css";
 
 export function SocialLinks() {
   return <div className="public-socials">
@@ -27,6 +29,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
   }}>
     <div className="public-video"><video ref={media} autoPlay muted loop playsInline preload="auto" src={video.url} /></div>
     <div className="public-shade" />
+    <PublicContours />
     <header className="public-header">
       <Link className="public-wordmark" to="/">VV<span>VULTURE VISION</span></Link>
       <nav aria-label="Main navigation"><Link to="/welcome">The perspective</Link><Button asChild variant="outline" size="sm"><Link to="/welcome#membership">Get access <ArrowUpRight /></Link></Button></nav>
