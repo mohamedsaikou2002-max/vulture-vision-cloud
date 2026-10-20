@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { parseAnalyticsData } from "@/lib/analyticsData";
 import { functionError } from "@/lib/functionError";
 import VVLayout from "@/components/VVLayout";
-import QuantumBilling from "@/components/QuantumBilling";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchLatestBrief, fetchRegime, subscribeToIntelBriefs,
@@ -26,13 +25,11 @@ interface Asset {
   regime: string;
   rsi: number;
   macd_hist: number;
-  quantum: { score: number; interference: number; entanglement: number };
   stats: { sharpe_ratio: number; ann_volatility: number };
   mc_30d: { p50: number; prob_up: number; prob_down: number };
 }
 interface Portfolio {
   dominant_regime: string;
-  avg_quantum_score: number;
   avg_prob_up_30d: number;
   avg_sharpe: number;
 }
@@ -161,7 +158,6 @@ export default function Analytics() {
             <div className="stat-value regime-val">
               <span className={`badge ${reg.cls}`}>{reg.label}</span>
             </div>
-            <div className="stat-delta">quantum score: {f4(port?.avg_quantum_score)}</div>
           </div>
           <div className="stat-card panel">
             <div className="stat-label">AVG PROB UP 30D</div>
@@ -222,28 +218,6 @@ export default function Analytics() {
         )}
 
         <div className="analytics-wrap">
-          <div className="panel" style={{ padding: 14 }}>
-            <div className="panel-title">CLASSICAL INDICATOR SCORES — quantum-inspired heuristic</div>
-            <div className="quantum-wrap">
-              {!data?.assets.length && <div className="q-loading">{online === null ? "Loading quantitative signals…" : "No quantitative signals available."}</div>}
-              {data?.assets.map(a => {
-                const q = a.quantum?.score || 0;
-                const pct = (q * 100).toFixed(1);
-                const col = q > 0.65 ? "#00e676" : q > 0.4 ? "#00bcd4" : "#ff3d3d";
-                return (
-                  <div className="q-row" key={a.symbol}>
-                    <span className="q-sym">{a.symbol}</span>
-                    <div className="q-track">
-                      <div className="q-fill" style={{ width: `${pct}%`, background: `linear-gradient(90deg,#1565c0,${col})` }} />
-                    </div>
-                    <span className="q-score" style={{ color: col }}>{f4(q)}</span>
-                    <span className="q-detail">INT:{f4(a.quantum.interference)} ENT:{f4(a.quantum.entanglement)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
           <div className="panel" style={{ padding: 14, marginTop: 14 }}>
             <div className="panel-title">ASSET OVERVIEW — {data?.assets.length || 0} ASSETS</div>
             <div style={{ overflowX: "auto" }}>
@@ -251,12 +225,12 @@ export default function Analytics() {
                 <thead>
                   <tr>
                     <th>SYMBOL</th><th>TYPE</th><th>REGIME</th>
-                    <th>RSI</th><th>MACD HIST</th><th>QUANTUM</th>
+                    <th>RSI</th><th>MACD HIST</th>
                     <th>SHARPE</th><th>ANN VOL</th><th>P↑ 30D</th><th>P↓ 30D</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {!data?.assets.length && <tr><td colSpan={10} className="empty-cell">{online === null ? "Loading asset data…" : "Asset history is unavailable."}</td></tr>}
+                  {!data?.assets.length && <tr><td colSpan={9} className="empty-cell">{online === null ? "Loading asset data…" : "Asset history is unavailable."}</td></tr>}
                   {data?.assets.map(a => {
                     const r = regimeBadge(a.regime);
                     const ti = tickerImpl(a.symbol);
@@ -281,7 +255,6 @@ export default function Analytics() {
                         </td>
                         <td>{f2(a.rsi)}</td>
                         <td className={dir(a.macd_hist)}>{f4(a.macd_hist)}</td>
-                        <td>{f4(a.quantum.score)}</td>
                         <td>{f2(a.stats.sharpe_ratio)}</td>
                         <td>{f2(a.stats.ann_volatility)}</td>
                         <td className="up">{(a.mc_30d.prob_up * 100).toFixed(1)}%</td>
@@ -339,7 +312,6 @@ export default function Analytics() {
             </div>
           </div>
 
-          <QuantumBilling />
         </div>
       </div>
     </VVLayout>

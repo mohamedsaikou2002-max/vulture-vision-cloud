@@ -5,9 +5,8 @@ const fetchMarket: typeof fetch = (input, init = {}) => fetch(input, { ...init, 
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 // Live market analytics. CoinGecko for crypto, Stooq for SPY/equities (no key).
-// Computes derived signals (RSI/MACD-hist proxies, quantum-style amplitude,
-// Monte Carlo bands, Sharpe, vol, regime) and an optional Gemini narrative.
-// These are classical indicators, not calibrated predictions or quantum hardware output.
+// Computes classical indicators and illustrative scenario estimates.
+// These are not calibrated predictions.
 
 interface Crypto {
   symbol: string; name: string; price: number;
@@ -17,7 +16,6 @@ interface Crypto {
 interface Asset {
   symbol: string; type: string; regime: string;
   rsi: number; macd_hist: number;
-  quantum: { score: number; interference: number; entanglement: number };
   stats: { sharpe_ratio: number; ann_volatility: number };
   mc_30d: { p50: number; prob_up: number; prob_down: number };
 }
@@ -131,23 +129,6 @@ function monteCarlo30d(price: number, mu: number, sigma: number, days = 30) {
   return { p50, prob_up: probUp, prob_down: 1 - probUp };
 }
 
-function quantumScore(rsiV: number, macdH: number, sharpe: number, regime: string): { score: number; interference: number; entanglement: number } {
-  // Born-rule style amplitude: combine normalized indicators into [0,1].
-  const rsiN = Math.min(Math.max((rsiV - 30) / 40, 0), 1);          // 30→0, 70→1
-  const macdN = 1 / (1 + Math.exp(-macdH * 50));                    // sigmoid
-  const sharpeN = 1 / (1 + Math.exp(-sharpe));                      // sigmoid
-  // amplitudes
-  const a1 = Math.sqrt(rsiN), a2 = Math.sqrt(macdN), a3 = Math.sqrt(sharpeN);
-  // interference (cross terms)
-  const interference = 2 * (a1 * a2 + a2 * a3 + a1 * a3) / 6;
-  // entanglement proxy = product
-  const entanglement = a1 * a2 * a3;
-  // born probability via avg of squared amplitudes weighted by regime
-  const w = regime === "BULL" ? 1.1 : regime === "BEAR" ? 0.85 : 1.0;
-  const score = Math.min(1, w * ((a1 ** 2 + a2 ** 2 + a3 ** 2) / 3));
-  return { score, interference, entanglement };
-}
-
 function regimeFor(prices: number[], rsiV: number, periodsPerYear = 252): string {
   if (prices.length < 20) return "SIDEWAYS";
   const recent = prices.slice(-20);
@@ -169,18 +150,16 @@ async function buildAsset(symbol: string, type: "CRYPTO" | "EQUITY", price: numb
   const macdH = macdHist(prices);
   const s = statsFor(prices, type === "CRYPTO" ? 365 : 252);
   const reg = regimeFor(prices, rsiV, type === "CRYPTO" ? 365 : 252);
-  const q = quantumScore(rsiV, macdH, s.sharpe_ratio, reg);
   const mc = monteCarlo30d(price, s.mu, s.sigma, type === "CRYPTO" ? 30 : 21);
   return {
     symbol, type, regime: reg,
     rsi: rsiV, macd_hist: macdH,
-    quantum: q,
     stats: { sharpe_ratio: s.sharpe_ratio, ann_volatility: s.ann_volatility },
     mc_30d: mc,
   };
 }
 
-async function aiNarrative(crypto: Crypto[], assets: Asset[], port: {dominant_regime:string;avg_quantum_score:number;avg_prob_up_30d:number}): Promise<string> {
+async function aiNarrative(crypto: Crypto[], assets: Asset[], port: {dominant_regime:string;avg_prob_up_30d:number}): Promise<string> {
   if (!hasConfiguredAI()) return "AI synthesis unavailable — no provider is configured.";
 
   const prompt = `VULTURE VISION INTEL BRIEF — ${new Date().toISOString()}
@@ -188,10 +167,10 @@ async function aiNarrative(crypto: Crypto[], assets: Asset[], port: {dominant_re
 Top crypto:
 ${crypto.slice(0, 5).map(c => `${c.symbol} ${c.price} 24h:${c.change_24h.toFixed(2)}%`).join("\n")}
 
-Asset signals (regime, RSI, quantum score):
-${assets.map(a => `${a.symbol} ${a.regime} RSI:${a.rsi.toFixed(1)} Q:${a.quantum.score.toFixed(3)}`).join("\n")}
+Asset signals (regime, RSI):
+${assets.map(a => `${a.symbol} ${a.regime} RSI:${a.rsi.toFixed(1)}`).join("\n")}
 
-Portfolio: regime=${port.dominant_regime} avgQ=${port.avg_quantum_score.toFixed(3)} P↑30d=${(port.avg_prob_up_30d * 100).toFixed(1)}%
+Portfolio: regime=${port.dominant_regime} P↑30d=${(port.avg_prob_up_30d * 100).toFixed(1)}%
 
 Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, key risks, conviction. Tight clipped operational tone.`;
 
@@ -264,15 +243,14 @@ Deno.serve(async (req) => {
 
     // Portfolio aggregates
     const counts: Record<string, number> = {};
-    let qSum = 0, sSum = 0, pSum = 0, n = 0;
+    let sSum = 0, pSum = 0, n = 0;
     for (const a of assets) {
       counts[a.regime] = (counts[a.regime] || 0) + 1;
-      qSum += a.quantum.score; sSum += a.stats.sharpe_ratio; pSum += a.mc_30d.prob_up; n++;
+      sSum += a.stats.sharpe_ratio; pSum += a.mc_30d.prob_up; n++;
     }
     const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
     const portfolio = n ? {
       dominant_regime: dominant,
-      avg_quantum_score: n ? qSum / n : 0,
       avg_sharpe: n ? sSum / n : 0,
       avg_prob_up_30d: n ? pSum / n : 0,
     } : null;

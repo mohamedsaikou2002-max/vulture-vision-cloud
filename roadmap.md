@@ -1,4 +1,4 @@
-- [x] Import compatible AutoSim source and UI (39 focused tests passed): typed/voice scenarios, ten dimensions, strategy stress tests and history; preserve original splash, $1050 membership, MiroFish permissions and optional quantum. Live runs blocked until staged tables are accepted and service configuration is verified.
+- [x] Import compatible AutoSim source and UI (39 focused tests passed): typed/voice scenarios, ten dimensions, strategy stress tests and history; preserve original splash, $1050 membership, MiroFish permissions. Live runs blocked until staged tables are accepted and service configuration is verified.
 - [x] Simulations page (/simulations) powered by MiroFish
 - [x] Public entrance and information page updated with Grey Company story/socials and lazy Three.js contours; desktop/mobile pages checked. Original video pointer retained; playback unavailable in local browser checks.
 - [ ] Verify AutoSim live runs/history after draft acceptance and new service deployment; verify optional FRED/Gemini configuration.
@@ -6,8 +6,7 @@
 - [ ] Google member profiles and $1050/month Stripe subscriptions; activation depends on payment setup approval and accepting staged membership tables.
 - [x] Display $99.99 paid pilot followed by seven additional free trial days, then unchanged $1050/month membership; checkout remains inactive.
 - [x] Seed simulations from socio-economics corpus (events, agents, scenario blends)
-- [ ] IBM Quantum optional pay-per-job: schema (ledger, audit events, quotes), edge functions (quote, authorize, dispatch, webhook, reconcile), UI (toggle, cap, usage & billing page), tests
-- [ ] Keep $1050/mo copilot proposed-only (no Stripe activation); quantum strictly per-job PAYG; no auto-trading
+- [ ] Keep $1050/mo copilot proposed-only (no Stripe activation); no auto-trading
 - [x] Verify merged PR #5 files match merge commit, existing quota/RLS/service-only grants, secure Gemini secret, deployment, and 12 passing tests; signed-in chat returns 502 (Gemini upstream 404), signed-out returns 401; no allowlist changes, publishing, or charges.
 - [ ] Simulation chat live success blocked by configured Gemini model returning upstream 404; existing page clips Send question below viewport (Enter-to-send tested); Git sync refresh/status cannot be controlled by agent. Preserve merged code pending provider/configuration resolution.
 - [x] News feed page shows news only: scenario suggestions section and plug-into-simulation links removed; four feed columns verified live.

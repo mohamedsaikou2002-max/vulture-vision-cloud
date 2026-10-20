@@ -1,4 +1,4 @@
--- Additive only: preserve existing billing, quantum, operator access and user data.
+-- Additive only: preserve existing billing, operator access and user data.
 CREATE TABLE IF NOT EXISTS public.subscriptions (
   user_id uuid PRIMARY KEY,
   status text NOT NULL DEFAULT 'inactive',

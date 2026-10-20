@@ -3,13 +3,6 @@
   "dialect": "postgresql",
   "entries": [
     {
-      "idx": 0,
-      "version": "7",
-      "when": 1792093378020,
-      "tag": "0000_quantum_payg_ledger",
-      "breakpoints": true
-    },
-    {
       "idx": 1,
       "version": "7",
       "when": 1792461126231,

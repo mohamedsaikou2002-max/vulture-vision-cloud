@@ -61,7 +61,7 @@ describe('News freshness and failed sources', () => {
 describe('Honest market availability', () => {
   it('does not turn missing feeds into a sideways/zero market signal', () => {
     expect(summarizeMarketStatus(0, 0, [])).toBe('unavailable');
-    expect(() => parseAnalyticsData({ ...analytics(), crypto: [], portfolio: { dominant_regime: 'SIDEWAYS', avg_quantum_score: 0, avg_prob_up_30d: 0, avg_sharpe: 0 } })).toThrow('unavailable');
+    expect(() => parseAnalyticsData({ ...analytics(), crypto: [], portfolio: { dominant_regime: 'SIDEWAYS', avg_prob_up_30d: 0, avg_sharpe: 0 } })).toThrow('unavailable');
     expect(summarizeMarketStatus(1, 0, [])).toBe('degraded');
     expect(summarizeMarketStatus(1, 1, [{ source: 'history', status: 'unavailable', count: 0 }])).toBe('degraded');
   });

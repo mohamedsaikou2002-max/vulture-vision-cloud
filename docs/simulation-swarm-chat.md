@@ -26,7 +26,7 @@ The adaptation uses Vulture Vision's existing scenario inputs, news snapshots, M
 3. Deploy \`supabase/functions/vv-simulation-chat\`. Leave user-JWT verification and the database quota enabled.
 4. Check end-to-end from a signed-in test account. Ask before starting a MiroFish simulation, then after a completed test run with a real report. Ensure the response accurately states whether the engine has produced a report.
 5. Inspect billing/quota, 400 invalid payloads, 401 unauthenticated, 429 quota exhaustion, 502 Gemini failures, 503 missing secrets/migrations. Use a test project for provider calls.
-6. No live trades or simulation mutations occur through the chat endpoint. It has no IBM Quantum execution or Stripe charge privileges.
+6. No live trades or simulation mutations occur through the chat endpoint. It has no payment processing privileges.
 
 ## Limits
 The backend trusts neither user-supplied news nor simulation reports as external instructions. Chat answers are conditional research hypotheses rather than calibrated probabilities. This PR adds a **real functioning path** to Gemini when configured, but deployment, secret installation and live provider testing must be confirmed separately.

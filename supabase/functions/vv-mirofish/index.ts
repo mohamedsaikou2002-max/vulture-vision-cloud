@@ -1,7 +1,6 @@
 import { authorize } from '../_shared/access.ts';
 // vv-mirofish — regime/verdict engine.
-// Mirofish layer fuses market microstructure (OFI, vol, drift) with the
-// latest quantum coherence to produce a directional verdict + confidence.
+// Mirofish uses market drift and order-flow imbalance for a directional verdict.
 // Persisted to warm_state.mirofish_verdict for synthesis & UI.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -15,13 +14,13 @@ const corsHeaders = {
 const log = (event: string, data: Record<string, unknown> = {}) =>
   console.log(JSON.stringify({ ts: new Date().toISOString(), fn: "vv-mirofish", event, ...data }));
 
-function classify(ticks: {change_24h_pct?:number;ofi?:number}[], coherence: number) {
+function classify(ticks: {change_24h_pct?:number;ofi?:number}[]) {
   if (!ticks.length) return { verdict: "NO_DATA", confidence: 0, drift: 0, ofi: 0 };
   const drift = ticks.reduce((s, t) => s + (Number(t.change_24h_pct) || 0), 0) / ticks.length;
   const ofi = ticks.reduce((s, t) => s + (Number(t.ofi) || 0), 0) / ticks.length;
   const absDrift = Math.abs(drift);
-  // Confidence rises with coherence and signal magnitude.
-  const confidence = Math.min(1, coherence * 0.6 + Math.min(absDrift / 5, 1) * 0.4);
+  // Illustrative signal strength; not a calibrated probability.
+  const confidence = Math.min(1, Math.min(Math.abs(ofi), 1) * 0.6 + Math.min(absDrift / 5, 1) * 0.4);
   let verdict: string;
   if (absDrift < 0.3 && Math.abs(ofi) < 0.05) verdict = "RANGE";
   else if (drift > 0 && ofi > 0) verdict = "RISK_ON";
@@ -48,14 +47,10 @@ Deno.serve(async (req) => {
     }
 
     // POST → recompute
-    const [m, q] = await Promise.all([
-      sb.functions.invoke("vv-market"),
-      sb.from("warm_state").select("value").eq("key", "quantum_state").maybeSingle(),
-    ]);
+    const m = await sb.functions.invoke("vv-market");
     const ticks = (m.data?.ticks ?? []) as {change_24h_pct?:number;ofi?:number}[];
-    const coherence = Number(q.data?.value?.coherence ?? 0);
-    const v = classify(ticks, coherence);
-    const verdict = { ...v, coherence, instruments: ticks.length, ts: new Date().toISOString() };
+    const v = classify(ticks);
+    const verdict = { ...v, instruments: ticks.length, ts: new Date().toISOString() };
 
     await sb.from("warm_state").upsert(
       { key: "mirofish_verdict", value: verdict, expires_at: null },

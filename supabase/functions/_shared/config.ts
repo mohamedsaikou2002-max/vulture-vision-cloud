@@ -40,7 +40,6 @@ export const Secrets = {
   get POLYGON_KEY()    { return env("POLYGON_KEY"); },
   get NEWS_API_KEY()   { return env("NEWS_API_KEY"); },
   get ETHERSCAN_KEY()  { return env("ETHERSCAN_API_KEY"); },
-  get BLUEQUBIT_KEY()  { return env("BLUEQUBIT_KEY"); },
 };
 
 // ── instruments ─────────────────────────────────────────────
@@ -71,28 +70,15 @@ export const PAPER_GATE = {
   min_trades: 30,
 };
 
-// ── quantum (analytic-only in edge runtime) ─────────────────
-export const QUANTUM_BACKENDS = {
-  primary: "analytic_born_rule",
-  secondary: "analytic_born_rule",
-  tertiary: "analytic_born_rule",
-  cloud: "bluequbit",
-};
-export const N_QUBITS = 10;
-
 // ── loop cadences (seconds) — used by pg_cron schedules ─────
 export const INTERVALS = {
   TRADING_LOOP: 10,
   CORRELATION: 60,
   FEATURE: 5,
-  AMPLITUDE: 30,
-  QAOA: 60,
-  QAE: 60,
   LSTM_CRYPTO: 1,
   LSTM_SLOW: 60,
   HEGELIAN: 900,
   MIROFISH: 300,
-  HAMILTONIAN_UPDATE: 86400,
   ONCHAIN: 30,
   NEWS: 60,
   PORTFOLIO_SYNC: 30,
