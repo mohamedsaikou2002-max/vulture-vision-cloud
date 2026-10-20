@@ -181,9 +181,9 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
     await stage("estimating_state");
     const [{ obs, status: macroStatus }, candles] = parentResult
       ? [{ obs: {}, status: parentResult.state.data_status }, parentResult.replay_spec!.candles] as const
-      : await Promise.all([loadMacroObservables(), loadCandles(interp.asset)]);
+      : await Promise.all([loadMacroObservables(), loadNasdaqCandles()]);
     const all = { ...obs };
-    if (candles.closes.length) all.crypto_vol_ann = { value: dailyLogVol(candles.closes, 30) * Math.sqrt(365), observed_at: candles.dates.at(-1), source: `coinbase:${interp.asset} realized vol` };
+    if (candles.closes.length) all.market_vol_ann = { value: dailyLogVol(candles.closes, 30) * Math.sqrt(252), observed_at: candles.dates.at(-1), source: "yahoo:NASDAQ realized vol" };
     const { baseline, detail, neutral } = parentResult
       ? { baseline: parentResult.state.baseline, detail: parentResult.state.detail, neutral: parentResult.state.neutral_dimensions }
       : buildBaseline(all);
@@ -240,7 +240,7 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
       shocks: { applied, prior: EVENT_SHOCKS[interp.event_type], gemini: interp.shocks, injected },
       dimensions: { distribution: dimRes.distribution, trajectory: dimRes.trajectory },
       agents: dimRes.agent_response_mean,
-      market: { asset: interp.asset, price_source: synthetic ? "synthetic_start_100" : "coinbase_daily_candles", base_daily_vol: baseVol, risk_off_shift: mc.riskOffShift, direction_bias: bias },
+      market: { asset: NASDAQ_MARKET.label, price_source: synthetic ? "synthetic_start_100" : "yahoo_nasdaq_daily_candles", base_daily_vol: baseVol, risk_off_shift: mc.riskOffShift, direction_bias: bias },
       execution: { ...cfg, auto: true },
       strategies: { scenario: scen.strategies, buy_hold_scenario: scen.buy_hold, historical },
       assumptions: ENGINE_ASSUMPTIONS, calibration_status: "uncalibrated", disclaimer: DISCLAIMER,
