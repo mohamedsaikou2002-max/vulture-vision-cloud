@@ -1,22 +1,11 @@
 import { fetchWorldState } from './autoSimApi';
 import { supabase } from '@/integrations/supabase/client';
 import type { IntelBrief } from './intelApi';
-import type { SocioFull } from './socioApi';
 
 let world: ReturnType<typeof fetchWorldState> | null=null, expires=0;
 export function currentWorld(){
   if(!world || Date.now()>expires){expires=Date.now()+30000;world=fetchWorldState().catch(e=>{world=null;throw e;});}
   return world;
-}
-export async function observedSocio():Promise<SocioFull>{
-  const state=await currentWorld();
-  const signals:Record<string,number>={}, explanations:Record<string,string[]>={};
-  for(const [dim,detail] of Object.entries(state.detail)){
-    if(state.neutral_dimensions.includes(dim as never))continue;
-    const key=dim==='consumer_activity'?'consumer':dim==='default_risk'?'default':dim;
-    signals[key]=detail.value;explanations[key]=[`${detail.source} · ${detail.observed_at || 'date unavailable'} · normalized model dimension, not a direct measurement`];
-  }
-  return {observations:state.observations,signals,confidence:{},graph_updates:{version:0,prior_version:0},explanations,narrative:'Nasdaq Composite (^IXIC) daily closes and returns from Yahoo Finance, alongside available dated economic observations. Normalized dimensions are derived estimates; unavailable inputs are omitted. No measured psychological state or calibrated event probabilities are available.',metadata:{timestamp:state.as_of,sources:state.data_status.filter(s=>s.ok).map(s=>s.id)},telemetry:{mode:'observations_only'}};
 }
 /** A current sourced digest when the optional independent synthesis service is absent. */
 export async function indexedBrief():Promise<IntelBrief|null>{

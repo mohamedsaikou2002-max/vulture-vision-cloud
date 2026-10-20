@@ -992,19 +992,14 @@ h1, h2, h3, h4, h5, h6 { color: white; }
   .news-grid { grid-template-columns: minmax(0, 1fr); padding: 12px 16px; }
   .news-grid .col-body, .intel-column { max-height: none; overflow: visible; }
   .news-col { border: 1px solid rgba(201,168,76,.2); }
-  .stat-row, .se-stat-row, .se-stat-row.secondary-stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px 16px 0; }
-  .stat-card, .se-gauge { padding: 12px; }
+  .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px 16px 0; }
+  .stat-card { padding: 12px; }
   .stat-value { font-size: 1.05rem; }
   .analytics-wrap { padding: 14px 16px 24px; }
   .chat-wrap { padding: 16px; }
   .chat-header-title { font-size: .7rem; letter-spacing: .06em; }
   .morning-brief-strip, .regime-bar { padding-inline: 16px; gap: 8px; }
-  .se-charts-grid, .se-reasons-grid, .sim-row { grid-template-columns: minmax(0, 1fr); }
-  .se-charts-grid { padding-inline: 16px; }
-  .se-chart-panel.wide { grid-column: auto; }
-  .se-mc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .se-blend-name { width: 110px; overflow-wrap: anywhere; }
-  .se-narrative { margin-inline: 16px; padding: 14px; }
+  .sim-row { grid-template-columns: minmax(0, 1fr); }
   .service-notice, .service-note { margin-inline: 16px; }
   .corner { width: 24px; height: 24px; pointer-events: none; }
   .eagle-title { font-size: clamp(1.8rem, 9vw, 3.6rem); letter-spacing: .08em; text-align: center; }
