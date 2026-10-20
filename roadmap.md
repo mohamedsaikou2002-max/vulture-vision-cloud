@@ -14,4 +14,5 @@
 - [x] Analytics service: timeout crash fixed (per-source fetch catches, concurrent history loads), operator gate removed so members can load it, equity history moved to Yahoo (Stooq now serves an anti-bot page); verified 200 with SPY/QQQ/GLD live in the page.
 - [ ] AI market brief blocked by the configured Gemini key free-tier quota (20/day exhausted); options: enable billing on the key, or cache the brief so one call serves many page loads.
 - [ ] On-chain panel empty: Sepolia gas oracle returns nothing and the whale query targets an address with no transactions.
-- [ ] Add, test and deploy secure Gemini key failover across existing Gemini callers; collect additional keys securely.
+- [x] Add and deploy secure Gemini key failover across six existing services; 43 focused tests passed and preview build OK.
+- [ ] Collect seven backup Gemini keys securely (eight total including the existing key), then verify live failover; awaiting secure entries.
