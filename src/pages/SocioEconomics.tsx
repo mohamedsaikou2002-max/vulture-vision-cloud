@@ -184,7 +184,7 @@ export default function SocioEconomics() {
                 </div>
                 <div className="se-blend-pct">{(b.weight * 100).toFixed(1)}%</div>
               </div>
-            )) : <div className="q-loading">⬡ AWAITING PIPELINE OUTPUT...</div>}
+            )) : <div className="pipeline-loading">⬡ AWAITING PIPELINE OUTPUT...</div>}
           </div>
         </div>
 

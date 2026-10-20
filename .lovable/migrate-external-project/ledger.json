@@ -92,5 +92,8 @@
       "status": "partial",
       "next_action": "Accept draft, deploy vv-autosim with confirmation, verify live run/history and hosted video playback"
     }
+  ],
+  "current_user_overrides": [
+    "Quantum and IBM features removed at user request: UI, score calculations, provider endpoints, SDK helpers and staged ledger schema. Historical capability outcomes below record the earlier import only. Existing hosted records have not been deleted."
   ]
 }

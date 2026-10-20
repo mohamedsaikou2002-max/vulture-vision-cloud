@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useMemo, useState } from "react";
 import { AGENTS, AGENT_RESPONSES, DIMENSIONS, INTERACTIONS, type Dim } from "../../../supabase/functions/_shared/autosim_engine";
 import type { AutoSimResult } from "@/lib/autoSimApi";
+import { pct } from "@/lib/autosimFormat";
 
 // Nodes are the model's real entities: 10 economic dimensions (inner ring) and 7 agent groups (outer ring).
 // Edge weight = the engine's actual interaction / response coefficient. Colour = simulated change vs start.
@@ -25,10 +26,10 @@ export default function DimensionCanvas({ result }: { result: AutoSimResult | nu
     if (!sel || !result) return null;
     if ((DIMENSIONS as readonly string[]).includes(sel)) {
       const d = sel as Dim, x = result.dimensions.distribution[d];
-      return `${label(d)}: starts ${x.baseline.toFixed(2)} (${result.state.detail[d].source}) → median ${x.p50.toFixed(2)}, 5–95% range ${x.p5.toFixed(2)}–${x.p95.toFixed(2)}.${result.interpretation.shock_rationale[d] ? " Why: " + result.interpretation.shock_rationale[d] : ""}`;
+      return `${label(d)}: starts ${pct(x.baseline, 0)} (${result.state.detail[d].source}) → median ${pct(x.p50, 0)}, 5–95% range ${pct(x.p5, 0)}–${pct(x.p95, 0)}.${result.interpretation.shock_rationale[d] ? " Why: " + result.interpretation.shock_rationale[d] : ""}`;
     }
     const g = sel as typeof AGENTS[number];
-    return `${label(g)} (simulated): response score ${result.agents[g].toFixed(3)}. Reacts to ${Object.keys(AGENT_RESPONSES[g]).map(label).join(", ")}.`;
+    return `${label(g)} (simulated): response score ${pct(result.agents[g], 1)}. Reacts to ${Object.keys(AGENT_RESPONSES[g]).map(label).join(", ")}.`;
   })();
 
   return (

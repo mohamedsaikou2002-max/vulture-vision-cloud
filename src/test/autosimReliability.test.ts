@@ -1,6 +1,6 @@
-import { describe,it,expect } from 'vitest';
+import { describe,it,expect,vi,afterEach } from 'vitest';
 import { buildBaseline,backtest,DIMENSIONS,neutralVector } from '../../supabase/functions/_shared/autosim_engine';
-import { validCandles } from '../../supabase/functions/_shared/autosim_data';
+import { NASDAQ_MARKET,loadNasdaqCandles,validCandles } from '../../supabase/functions/_shared/autosim_data';
 import { validateAutoSimResult,parseAnalysis,validateWorldState } from '../../supabase/functions/_shared/autosim_contract';
 import { buildWorldPulse } from '../../supabase/functions/_shared/world_pulse';
 import { parseAutoSimRequest } from '../../supabase/functions/_shared/autosim_request';
@@ -22,14 +22,37 @@ describe('World-state provenance and freshness',()=>{
     const headline={title:'Liquidity update',source:'Publisher',url:'https://example.com/story',published_at:'2026-10-19T00:00:00Z',first_seen:'2026-10-19T00:10:00Z'};
     const pulse=buildWorldPulse(neutralVector(),['trust'],[headline]);expect(pulse.status).toBe('partial');expect(pulse.top_shocks).toEqual([headline]);
   });
-  it('accepts only complete, fresh, finite and unique daily candles',()=>{
+  it('accepts only complete, fresh, finite and unique daily candles, skipping weekend/holiday placeholders',()=>{
     const day=Math.floor(Date.now()/86400000)*86400;
-    const rows=Array.from({length:100},(_,i)=>[day-(100-i)*86400,99,101,100,100,10]);
-    expect(validCandles([...rows,[day,99,101,100,100,10]]).closes).toHaveLength(100);
-    expect(()=>validCandles([...rows,rows[0]])).toThrow('Duplicate');
-    expect(()=>validCandles(rows.map(r=>[r[0]-365*86400,...r.slice(1)]))).toThrow('stale');
-    expect(()=>validCandles(rows.map((r,i)=>i? r:[...r.slice(0,4),NaN,10]))).toThrow('Invalid');
+    const payload=(ts:number[],closes:(number|null)[])=>({chart:{result:[{timestamp:ts,indicators:{quote:[{close:closes}]}}]}});
+    const ts=Array.from({length:100},(_,i)=>day-(100-i)*86400);
+    const closes=ts.map((_,i)=>100+i);
+    expect(validCandles(payload(ts,closes)).closes).toHaveLength(100);
+    expect(validCandles(payload(ts,closes.map((c,i)=>i===50?null:c))).closes).toHaveLength(99);
+    const dupTs=[...ts];dupTs.splice(50,0,ts[50]);
+    expect(()=>validCandles(payload(dupTs,[...closes,closes[50]]))).toThrow('Duplicate');
+    expect(()=>validCandles(payload(ts.map(t=>t-365*86400),closes))).toThrow('stale');
+    expect(()=>validCandles(payload(ts,closes.map((c,i)=>i===5?NaN:c)))).toThrow('Invalid');
   });
+  it('simulates the Nasdaq Composite index, never a crypto asset',()=>{
+    expect(NASDAQ_MARKET.symbol).toBe('^IXIC');
+    expect(NASDAQ_MARKET.label).toMatch(/nasdaq/i);
+    expect(NASDAQ_MARKET.label).not.toMatch(/crypto|bitcoin|btc|coinbase/i);
+  });
+  it('loads Nasdaq daily candles from Yahoo and reports failures without throwing',async()=>{
+    const day=Math.floor(Date.now()/86400000)*86400;
+    const ts=Array.from({length:120},(_,i)=>day-(120-i)*86400);
+    const payload={chart:{result:[{timestamp:ts,indicators:{quote:[{close:ts.map((_,i)=>20000+i)}]}}]}};
+    vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>payload})));
+    const okRes=await loadNasdaqCandles();
+    expect(okRes.status.ok).toBe(true);expect(okRes.status.id).toBe('yahoo:NASDAQ');expect(okRes.closes).toHaveLength(120);expect(okRes.closes[0]).toBeGreaterThan(1000);
+    vi.stubGlobal('fetch',vi.fn(async()=>({ok:false,status:503,json:async()=>({})})));
+    const failRes=await loadNasdaqCandles();
+    expect(failRes.status.ok).toBe(false);expect(failRes.status.id).toBe('yahoo:NASDAQ');expect(failRes.closes).toHaveLength(0);
+    vi.stubGlobal('fetch',vi.fn(async()=>{throw new Error('offline');}));
+    expect((await loadNasdaqCandles()).status.ok).toBe(false);
+  });
+  afterEach(()=>vi.unstubAllGlobals());
 });
 describe('Safe numerical results and headline handoff',()=>{
   it('normalizes malformed optional AI explanations while keeping valid numerical results',()=>{

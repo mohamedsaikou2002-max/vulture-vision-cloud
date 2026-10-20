@@ -15,7 +15,7 @@ import {
   autoConfigure, backtest, buildBaseline, buyAndHold, clamp, dailyLogVol, marketConditions, mulberry32,
   runDimensionScenario, scenarioMonteCarlo, type Dim, type EventType, type RiskProfile, type Shock,
 } from "../_shared/autosim_engine.ts";
-import { SUPPORTED_ASSETS, loadCandles, loadMacroObservables, type SourceStatus } from "../_shared/autosim_data.ts";
+import { NASDAQ_MARKET, loadNasdaqCandles, loadMacroObservables, type SourceStatus } from "../_shared/autosim_data.ts";
 
 const cors = { ...corsHeaders, "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
@@ -63,9 +63,9 @@ Deno.serve(async (req) => {
 
 // ── world state (no Gemini, no quota) ────────────────────────
 async function worldState(sb: SupabaseClient) {
-  const [{ obs, status }, candles] = await Promise.all([loadMacroObservables(), loadCandles("BTC-USD")]);
+  const [{ obs, status }, candles] = await Promise.all([loadMacroObservables(), loadNasdaqCandles()]);
   const all = { ...obs };
-  if (candles.closes.length) all.crypto_vol_ann = { value: dailyLogVol(candles.closes, 30) * Math.sqrt(365), observed_at: candles.dates.at(-1), source: "coinbase:BTC-USD realized vol" };
+  if (candles.closes.length) all.market_vol_ann = { value: dailyLogVol(candles.closes, 30) * Math.sqrt(252), observed_at: candles.dates.at(-1), source: "yahoo:NASDAQ realized vol" };
   const b = buildBaseline(all);
   const evidence = await retrieveEvidence(sb, [], [], true);
   return json({ world_pulse: buildWorldPulse(b.baseline, b.neutral, evidence.selected), ok: true, as_of: new Date().toISOString(), baseline: b.baseline, detail: b.detail, neutral_dimensions: b.neutral, data_status: [...status, candles.status] });
@@ -90,7 +90,7 @@ function heuristicInterp(text: string, horizonHint: number): Interp {
     : pick(["liquidity", "credit crunch"]) ? "liquidity_crunch"
     : pick(["ban", "crackdown", "regulat"]) ? "regulatory_crackdown" : "generic";
   const words = Array.from(new Set(t.replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 4))).slice(0, 6);
-  return { event_type: type, summary: text.slice(0, 200), is_hypothetical: true, horizon_days: horizonHint, asset: "BTC-USD", regions: [], sectors: [], search_keywords: words, shocks: {}, shock_rationale: {}, risk_profile: "balanced", confidence: 0.3 };
+  return { event_type: type, summary: text.slice(0, 200), is_hypothetical: true, horizon_days: horizonHint, asset: NASDAQ_MARKET.label, regions: [], sectors: [], search_keywords: words, shocks: {}, shock_rationale: {}, risk_profile: "balanced", confidence: 0.3 };
 }
 function validateInterp(raw: Record<string, unknown>, horizonHint: number): Interp {
   const type = EVENT_TYPES.includes(raw.event_type as EventType) ? (raw.event_type as EventType) : "generic";
@@ -103,7 +103,7 @@ function validateInterp(raw: Record<string, unknown>, horizonHint: number): Inte
   return {
     event_type: type, summary: typeof raw.summary === "string" ? raw.summary.slice(0, 300) : "",
     is_hypothetical: true, horizon_days: clamp(h, 1, 30),
-    asset: SUPPORTED_ASSETS.includes(raw.asset as string) ? (raw.asset as string) : "BTC-USD",
+    asset: NASDAQ_MARKET.label,
     regions: arr(raw.regions, 6), sectors: arr(raw.sectors, 6), search_keywords: arr(raw.search_keywords, 8),
     shocks, shock_rationale: rationale,
     risk_profile: (["conservative", "balanced", "aggressive"] as const).includes(raw.risk_profile as RiskProfile) ? (raw.risk_profile as RiskProfile) : "balanced",
@@ -161,7 +161,7 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
     } else try {
       const { data, model: m } = await generateJSON<Record<string, unknown>>({
         system: "You convert a trader's scenario into structured economic inputs. Respond with JSON only.",
-        prompt: `Scenario: """${scenario}"""\n\nReturn JSON with keys: event_type (one of ${EVENT_TYPES.join(", ")}), summary (one sentence), is_hypothetical (true unless the scenario describes something already widely reported), horizon_days (1-30), asset (one of ${SUPPORTED_ASSETS.join(", ")}; the crypto asset most exposed, BTC-USD if unclear), regions (array), sectors (array), search_keywords (4-8 short lowercase words or phrases useful for searching news headlines), shocks (object: dimension -> number between -0.2 and 0.2 = how far the scenario moves that 0-1 dimension; omit unaffected dimensions), shock_rationale (object: dimension -> under 20 words), risk_profile ("balanced" unless the scenario text explicitly asks for conservative or aggressive), confidence (0-1).\nDimensions: ${DIMENSIONS.join(", ")}. Meaning: ${DIM_HELP}.`,
+        prompt: `Scenario: """${scenario}"""\n\nThe simulated market is the ${NASDAQ_MARKET.label} index (${NASDAQ_MARKET.symbol}) — do not pick or output any asset.\n\nReturn JSON with keys: event_type (one of ${EVENT_TYPES.join(", ")}), summary (one sentence), is_hypothetical (true unless the scenario describes something already widely reported), horizon_days (1-30), regions (array), sectors (array), search_keywords (4-8 short lowercase words or phrases useful for searching news headlines), shocks (object: dimension -> number between -0.2 and 0.2 = how far the scenario moves that 0-1 dimension; omit unaffected dimensions), shock_rationale (object: dimension -> under 20 words), risk_profile ("balanced" unless the scenario text explicitly asks for conservative or aggressive), confidence (0-1).\nDimensions: ${DIMENSIONS.join(", ")}. Meaning: ${DIM_HELP}.`,
         maxOutputTokens: 1500, temperature: 0.2,
       });
       interp = validateInterp(data, horizonHint); model = m;
@@ -181,9 +181,9 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
     await stage("estimating_state");
     const [{ obs, status: macroStatus }, candles] = parentResult
       ? [{ obs: {}, status: parentResult.state.data_status }, parentResult.replay_spec!.candles] as const
-      : await Promise.all([loadMacroObservables(), loadCandles(interp.asset)]);
+      : await Promise.all([loadMacroObservables(), loadNasdaqCandles()]);
     const all = { ...obs };
-    if (candles.closes.length) all.crypto_vol_ann = { value: dailyLogVol(candles.closes, 30) * Math.sqrt(365), observed_at: candles.dates.at(-1), source: `coinbase:${interp.asset} realized vol` };
+    if (candles.closes.length) all.market_vol_ann = { value: dailyLogVol(candles.closes, 30) * Math.sqrt(252), observed_at: candles.dates.at(-1), source: "yahoo:NASDAQ realized vol" };
     const { baseline, detail, neutral } = parentResult
       ? { baseline: parentResult.state.baseline, detail: parentResult.state.detail, neutral: parentResult.state.neutral_dimensions }
       : buildBaseline(all);
@@ -240,7 +240,7 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
       shocks: { applied, prior: EVENT_SHOCKS[interp.event_type], gemini: interp.shocks, injected },
       dimensions: { distribution: dimRes.distribution, trajectory: dimRes.trajectory },
       agents: dimRes.agent_response_mean,
-      market: { asset: interp.asset, price_source: synthetic ? "synthetic_start_100" : "coinbase_daily_candles", base_daily_vol: baseVol, risk_off_shift: mc.riskOffShift, direction_bias: bias },
+      market: { asset: NASDAQ_MARKET.label, price_source: synthetic ? "synthetic_start_100" : "yahoo_nasdaq_daily_candles", base_daily_vol: baseVol, risk_off_shift: mc.riskOffShift, direction_bias: bias },
       execution: { ...cfg, auto: true },
       strategies: { scenario: scen.strategies, buy_hold_scenario: scen.buy_hold, historical },
       assumptions: ENGINE_ASSUMPTIONS, calibration_status: "uncalibrated", disclaimer: DISCLAIMER,

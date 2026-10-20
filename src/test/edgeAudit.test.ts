@@ -61,6 +61,8 @@ describe('Audited edge handler regressions', () => {
     expect(response.status).toBe(200);
     expect(body.status).toBe('degraded');
     expect(body.assets[0].symbol).toBe('BTC');
+    expect(Object.keys(body.assets[0])).toEqual(['symbol', 'type', 'regime', 'rsi', 'macd_hist', 'stats', 'mc_30d']);
+    expect(Object.keys(body.portfolio)).toEqual(['dominant_regime', 'avg_sharpe', 'avg_prob_up_30d']);
     expect(body.onchain.chain).toBe('ethereum-mainnet');
     expect(body.onchain.gas_status).toBe('available');
     expect(body.onchain.whale_status).toBe('not_configured');

@@ -8,6 +8,7 @@ import DimensionCanvas, { label } from "@/components/sim/DimensionCanvas";
 import corpus from "@/data/historicalCorpus.json";
 import { AGENTS, DIMENSIONS, AGENT_RESPONSES, type Dim } from "../../supabase/functions/_shared/autosim_engine";
 import { ApiError, interrogateAgent, jobStatus, listJobs, loadJob, runSimulation, type AutoSimResult, type JobRow } from "@/lib/autoSimApi";
+import { pct, signedPct } from "@/lib/autosimFormat";
 import { speak, stopSpeaking, useVoiceInput } from "@/hooks/useVoiceInput";
 import "@/styles/simulator.css";
 
@@ -20,11 +21,10 @@ const STAGES = [
 ] as const;
 const TABS = ["canvas", "forecast", "strategies", "agents", "history"] as const;
 const EXAMPLES = [
-  "What happens to crypto liquidity if semiconductor export restrictions expand?",
+  "What happens to Nasdaq tech valuations if semiconductor export restrictions expand?",
   "Fed hikes rates 50 bps unexpectedly next week",
-  "A top-five crypto exchange halts withdrawals for 72 hours",
+  "A major Nasdaq listing freezes new IPOs for 72 hours",
 ];
-const pct = (v: number | null | undefined, d = 1) => (v == null || !Number.isFinite(v) ? "—" : `${(v * 100).toFixed(d)}%`);
 
 export default function Simulator() {
   const [params] = useSearchParams();
@@ -184,7 +184,7 @@ export default function Simulator() {
             <div className="sim-row">
               <select className="sim-select" value={injDim} onChange={e => setInjDim(e.target.value as Dim)} aria-label="Dimension">{DIMENSIONS.map(d => <option key={d} value={d}>{label(d)}</option>)}</select>
               <input type="range" min={-0.2} max={0.2} step={0.01} value={injDelta} onChange={e => setInjDelta(Number(e.target.value))} aria-label="Shock size" />
-              <b className="sim-num">{injDelta > 0 ? "+" : ""}{injDelta.toFixed(2)}</b>
+              <b className="sim-num">{signedPct(injDelta, 0)}</b>
             </div>
             <Button variant="ghost" className="sim-ghost" disabled={busy || !!pendingJob || !result || !jobId} onClick={() => { if (result && jobId) void execute(result.scenario, { parent_job_id: jobId, inject: { dimension: injDim, delta: injDelta } }); }}>Re-run with this change</Button>
             <p className="sim-note">Creates a new run you can compare. The original stays frozen.</p>
@@ -237,7 +237,7 @@ function Forecast({ r, parent }: { r: AutoSimResult | null; parent: AutoSimResul
           <div key={d} className="sim-range">
             <span>{label(d)}{r.state.neutral_dimensions.includes(d) && <em title="No live data, neutral default"> *</em>}</span>
             <div className="sim-rail"><div className="sim-band" style={{ left: `${x.p5 * 100}%`, width: `${Math.max(1, (x.p95 - x.p5) * 100)}%` }} /><div className="sim-mark start" style={{ left: `${x.baseline * 100}%` }} title="Start" /><div className="sim-mark" style={{ left: `${x.p50 * 100}%` }} title="Median" /></div>
-            <b>{x.p50.toFixed(2)}{dp !== null && <small className={dp > 0 ? "up" : "down"}> {dp > 0 ? "+" : ""}{dp.toFixed(2)} vs original</small>}</b>
+            <b>{pct(x.p50)}{dp !== null && <small className={dp > 0 ? "up" : "down"}> {signedPct(dp)} vs original</small>}</b>
           </div>); })}
       </div>
       <p className="sim-fine">Hollow marker = start, filled = median, band = 5th–95th percentile. * = neutral default (no live data).</p>
@@ -283,7 +283,7 @@ function Agents({ r, jobId }: { r: AutoSimResult | null; jobId: string | null })
     <div>
       <div className="sim-agents">{AGENTS.map(g => (
         <Button variant="ghost" key={g} className={`sim-agent${agent === g ? " on" : ""}`} onClick={() => setAgent(g)}>
-          <b>{label(g)}</b><span>response {r.agents[g].toFixed(3)}</span><small>{Object.keys(AGENT_RESPONSES[g]).map(label).join(" · ")}</small>
+          <b>{label(g)}</b><span>response {pct(r.agents[g], 0)}</span><small>{Object.keys(AGENT_RESPONSES[g]).map(label).join(" · ")}</small>
         </Button>))}</div>
       <div className="sim-row"><input className="sim-input" value={q} maxLength={400} onChange={e => setQ(e.target.value)} placeholder={`Ask the simulated ${label(agent)} group`} aria-label="Question" /><Button variant="ghost" className="sim-ghost" disabled={busy || !jobId || q.trim().length < 3} onClick={ask}>{busy ? "Asking…" : "Ask"}</Button></div>
       {err && <p className="sim-note sim-warn">{err}</p>}

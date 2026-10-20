@@ -1,3 +1,4 @@
+- [x] AutoSim is Nasdaq-based (Nasdaq Composite ^IXIC daily closes from Yahoo, no crypto) and every simulator number is shown as a percentage (world state, forecast, strategies, agents, inject slider); vv-autosim deployed; 115 tests pass; verified live — world state shows yahoo:NASDAQ and no crypto mentions. Live runs still blocked by the Gemini free-tier quota (below).
 - [x] Import compatible AutoSim source and UI (39 focused tests passed): typed/voice scenarios, ten dimensions, strategy stress tests and history; preserve original splash, $1050 membership, MiroFish permissions. Live runs blocked until staged tables are accepted and service configuration is verified.
 - [x] Simulations page (/simulations) powered by MiroFish
 - [x] Public entrance and information page updated with Grey Company story/socials and lazy Three.js contours; desktop/mobile pages checked. Original video pointer retained; playback unavailable in local browser checks.
@@ -15,3 +16,4 @@
 - [ ] On-chain panel empty: Sepolia gas oracle returns nothing and the whale query targets an address with no transactions.
 - [x] Add and deploy secure Gemini key failover across six existing services; 43 focused tests passed and preview build OK.
 - [ ] Collect seven backup Gemini keys securely (eight total including the existing key), then verify live failover; awaiting secure entries.
+- [x] Added Cloudflare Blog, Ethereum Foundation Blog, and The Register to live News feeds; deployed vv-news; signed-in response HTTP 200 with 15 items from each added source; 16 focused tests passed. Uploaded 207-source catalog retained disabled pending source rights review; no external Python worker deployed or UI changes.

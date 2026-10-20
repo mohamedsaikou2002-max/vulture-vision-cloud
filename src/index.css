@@ -1017,3 +1017,5 @@ h1, h2, h3, h4, h5, h6 { color: white; }
 
 .news-page { flex: 0 0 auto; overflow: visible; min-height: auto; }
 .news-page .news-col { height: auto; min-height: 0; }
+
+.pipeline-loading { color: var(--dim); font-size: .64rem; letter-spacing: .18em; padding: 10px 0; }
