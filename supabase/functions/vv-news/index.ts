@@ -1,3 +1,4 @@
+import { parseRss, newestFirst, publicationTime, safeNewsUrl, type SourceHealth } from "../_shared/news_feed.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -8,7 +9,7 @@ const corsHeaders = {
 interface Item {
   title: string;
   source: string;
-  time: string;
+  time?: string;
   link?: string;
   journalist?: string;
   journalist_url?: string;
@@ -147,78 +148,48 @@ const NITTER_INSTANCES = [
 
 const QUERY_TERMS = ["bitcoin","ethereum","crypto","fed","ecb","pboc","inflation","recession","rate"];
 
-function parseRss(xml: string, source: string, sourceUrl?: string): Item[] {
-  const out: Item[] = [];
-  const entryRe = /<(?:item|entry)[^>]*>([\s\S]*?)<\/(?:item|entry)>/g;
-  let m: RegExpExecArray | null;
-  while ((m = entryRe.exec(xml)) && out.length < 15) {
-    const block = m[1];
-    const t = block.match(/<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
-    const d = block.match(/<(?:pubDate|published|updated)[^>]*>([\s\S]*?)<\/(?:pubDate|published|updated)>/);
-    const l = block.match(/<link[^>]*?>([\s\S]*?)<\/link>/) || block.match(/<link[^>]*href="([^"]+)"/);
-    const a = block.match(/<dc:creator[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/dc:creator>/)
-           || block.match(/<author[^>]*>([\s\S]*?)<\/author>/);
-    const title = t ? t[1].replace(/<[^>]+>/g, "").trim() : "";
-    if (!title) continue;
-    const time = d ? new Date(d[1]).toISOString() : new Date().toISOString();
-    let journalist: string | undefined;
-    if (a) {
-      const raw = a[1].replace(/<[^>]+>/g, "").trim();
-      const nameMatch = raw.match(/<name[^>]*>([\s\S]*?)<\/name>/);
-      journalist = (nameMatch ? nameMatch[1] : raw).replace(/.*?\(([^)]+)\).*/, "$1").trim() || undefined;
-      if (journalist && journalist.length > 80) journalist = journalist.slice(0, 80);
-    }
-    const link = l ? l[1].trim() : undefined;
-    let journalist_url: string | undefined;
-    if (journalist && link) {
-      try {
-        const origin = new URL(link).origin;
-        journalist_url = `${origin}/search?q=${encodeURIComponent(journalist)}`;
-      } catch { /* Retain last successful state on transient failure. */ }
-    }
-    out.push({ title, source, time, link, journalist, journalist_url, source_url: sourceUrl });
-  }
-  return out;
-}
 
-async function fetchFeeds(feeds: { url: string; source: string }[]): Promise<Item[]> {
+async function fetchFeeds(feeds: { url: string; source: string }[], health: SourceHealth[], signal: AbortSignal): Promise<Item[]> {
   const results = await Promise.allSettled(feeds.map(async f => {
-    const r = await fetch(f.url, { headers: { "User-Agent": "VultureVision/1.0" } });
+    const r = await fetch(f.url, { headers: { "User-Agent": "VultureVision/1.0" }, signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]) });
     if (!r.ok) throw new Error(`${f.source} ${r.status}`);
     let sourceUrl: string | undefined;
     try { sourceUrl = new URL(f.url).origin; } catch { /* Retain last successful state on transient failure. */ }
     return parseRss(await r.text(), f.source, sourceUrl);
   }));
+  results.forEach((result, i) => health.push({ source: feeds[i].source, status: result.status === "rejected" ? "unavailable" : result.value.length ? "available" : "empty", count: result.status === "fulfilled" ? result.value.length : 0 }));
   const items = results.flatMap(r => r.status === "fulfilled" ? r.value : []);
-  items.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+  items.sort(newestFirst);
   return items.slice(0, 40);
 }
 
-async function fetchNewsApi(): Promise<Item[]> {
+async function fetchNewsApi(health: SourceHealth[], signal: AbortSignal): Promise<Item[]> {
   const key = Deno.env.get("NEWS_API_KEY");
-  if (!key) return [];
+  if (!key) { health.push({ source: "NewsAPI", status: "not_configured", count: 0 }); return []; }
   const out: Item[] = [];
+  let successes = 0;
   await Promise.allSettled(QUERY_TERMS.map(async (term) => {
     const u = new URL("https://newsapi.org/v2/everything");
     u.searchParams.set("q", term);
     u.searchParams.set("language", "en");
     u.searchParams.set("sortBy", "publishedAt");
     u.searchParams.set("pageSize", "5");
-    u.searchParams.set("apiKey", key);
     try {
-      const r = await fetch(u.toString());
+      const r = await fetch(u.toString(), { signal, headers: { "X-Api-Key": key } });
       if (!r.ok) return;
       const data = await r.json();
+      if (data.status !== "ok") return;
+      successes++;
       for (const art of (data.articles || []).slice(0, 5)) {
         const headline = art.title || "";
         if (!headline) continue;
-        const link = art.url;
+        const link = safeNewsUrl(art.url);
         let source_url: string | undefined;
         try { source_url = link ? new URL(link).origin : undefined; } catch { /* Retain last successful state on transient failure. */ }
         out.push({
           title: headline.slice(0, 200),
           source: art.source?.name || "NewsAPI",
-          time: art.publishedAt || new Date().toISOString(),
+          time: publicationTime(art.publishedAt),
           link,
           journalist: art.author || undefined,
           source_url,
@@ -226,20 +197,23 @@ async function fetchNewsApi(): Promise<Item[]> {
       }
     } catch { /* Retain last successful state on transient failure. */ }
   }));
+  health.push({ source: "NewsAPI", status: successes ? (out.length ? "available" : "empty") : "unavailable", count: out.length });
   return out;
 }
 
-async function fetchTorFeed(): Promise<Item[]> {
+async function fetchTorFeed(health: SourceHealth[], signal: AbortSignal): Promise<Item[]> {
   try {
     const supa = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-    const { data } = await supa
+    const { data, error } = await supa
       .from("tor_entries")
       .select("name,description,url,created_at,category")
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(20).abortSignal(signal);
+    if (error) throw new Error("Tor feed unavailable");
+    health.push({ source: "TOR metadata", status: data?.length ? "available" : "empty", count: data?.length || 0 });
     return (data || []).map((r: {name:string;url:string;description?:string;category?:string;created_at:string;source?:string}) => ({
       title: (r.description || r.name || "").slice(0, 200),
       source: "TOR_FEED",
@@ -248,20 +222,21 @@ async function fetchTorFeed(): Promise<Item[]> {
       region: "darknet",
       tier: "tor",
     })).filter(i => i.title);
-  } catch { return []; }
+  } catch { health.push({ source: "TOR metadata", status: "unavailable", count: 0 }); return []; }
 }
 
-async function fetchJournalistTweets(): Promise<{ irl: Item[]; dark: Item[]; tech: Item[] }> {
+async function fetchJournalistTweets(health: SourceHealth[], signal: AbortSignal): Promise<{ irl: Item[]; dark: Item[]; tech: Item[] }> {
   const out = { irl: [] as Item[], dark: [] as Item[], tech: [] as Item[] };
   await Promise.allSettled(TWITTER_JOURNALISTS.map(async (j, idx) => {
     // Rotate starting instance per handle to spread load
     const order = NITTER_INSTANCES.map((_, i) => NITTER_INSTANCES[(i + idx) % NITTER_INSTANCES.length]);
     for (const base of order) {
+      if (signal.aborted) break;
       try {
         const url = `${base}/${j.handle}/rss`;
         const r = await fetch(url, {
           headers: { "User-Agent": "VultureVision/1.0 (+journalist-scraper)" },
-          signal: AbortSignal.timeout(8000),
+          signal: AbortSignal.any([signal, AbortSignal.timeout(2500)]),
         });
         if (!r.ok) continue;
         const xml = await r.text();
@@ -277,22 +252,24 @@ async function fetchJournalistTweets(): Promise<{ irl: Item[]; dark: Item[]; tec
             source_url: `https://twitter.com/${j.handle}`,
           }));
         out[j.column].push(...items);
+        health.push({ source: j.name + " (X/RSS)", status: items.length ? "available" : "empty", count: items.length });
         return; // success for this handle
       } catch { /* try next nitter instance */ }
     }
+    health.push({ source: j.name + " (X/RSS)", status: "unavailable", count: 0 });
   }));
   return out;
 }
 
-async function fetchPublisherNews(req: Request, country?: string) {
+async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: string) {
   const authorization = req.headers.get("authorization") || "";
-  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authorization } } });
+  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authorization }, fetch: (input, init) => fetch(input, { ...init, signal }) } });
   const { data: { user }, error: authError } = await db.auth.getUser();
   if (authError || !user) return { items: [], status: "sign_in_required" };
   let query = db.from("news_articles").select("id,title,source,canonical_url,published_at,fetched_at,source_country,language,source_id")
     .gte("fetched_at", new Date(Date.now() - 48 * 3600_000).toISOString())
     .or("published_at.is.null,published_at.gte." + new Date(Date.now() - 72 * 3600_000).toISOString())
-    .order("published_at", { ascending: false, nullsFirst: false }).limit(100);
+    .order("published_at", { ascending: false, nullsFirst: false }).limit(100).abortSignal(signal);
   if (country) query = query.eq("source_country", country);
   const { data, error } = await query;
   if (error) return { items: [], status: "ingestion_not_available" };
@@ -301,45 +278,58 @@ async function fetchPublisherNews(req: Request, country?: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "GET" && req.method !== "POST") return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
+  let body: { country?: unknown } = {};
+  if (req.method === "POST") {
+    const raw = await req.text();
+    if (new TextEncoder().encode(raw).byteLength > 1024) return new Response(JSON.stringify({ error: "News request too large" }), { status: 413, headers: corsHeaders });
+    try { body = JSON.parse(raw); if (!body || typeof body !== "object") throw new Error(); }
+    catch { return new Response(JSON.stringify({ error: "Invalid news request" }), { status: 400, headers: corsHeaders }); }
+  }
   try {
-    const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
     const selectedCountry = body.country || new URL(req.url).searchParams.get("country");
     const country = typeof selectedCountry === "string" && /^[A-Z]{2}$/.test(selectedCountry) ? selectedCountry : undefined;
+    const signal = AbortSignal.timeout(12000);
+    const source_health: SourceHealth[] = [];
     const [irlRss, dark, tech, newsApi, tor, journalists, publisher] = await Promise.all([
-      fetchFeeds(FEEDS.irl),
-      fetchFeeds(FEEDS.dark),
-      fetchFeeds(FEEDS.tech),
-      fetchNewsApi(),
-      fetchTorFeed(),
-      fetchJournalistTweets(),
-      fetchPublisherNews(req, country),
+      fetchFeeds(FEEDS.irl, source_health, signal),
+      fetchFeeds(FEEDS.dark, source_health, signal),
+      fetchFeeds(FEEDS.tech, source_health, signal),
+      fetchNewsApi(source_health, signal),
+      fetchTorFeed(source_health, signal),
+      fetchJournalistTweets(source_health, signal),
+      fetchPublisherNews(req, signal, country).catch(() => ({ items: [], status: "ingestion_not_available" })),
     ]);
 
     const irl = [...newsApi, ...irlRss, ...journalists.irl]
-      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .sort(newestFirst)
       .slice(0, 30)
       .map(enrich);
 
     const darkOut = [...dark, ...tor, ...journalists.dark]
-      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .sort(newestFirst)
       .slice(0, 30)
       .map(enrich);
 
     const techOut = [...tech, ...journalists.tech]
-      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .sort(newestFirst)
       .slice(0, 30)
       .map(enrich);
 
     const all = [...irl, ...darkOut, ...techOut, ...publisher.items]
-      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .sort(newestFirst)
       .slice(0, 80);
 
-    return new Response(JSON.stringify({ irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status }), {
+    source_health.push({ source: "Publisher database", status: publisher.status === "available" ? "available" : publisher.status === "no_recent_articles" ? "empty" : "unavailable", count: publisher.items.length });
+    const usable = source_health.some(source => source.status === "available" || source.status === "empty") || publisher.status === "available" || publisher.status === "no_recent_articles";
+    const status = !usable ? "unavailable" : source_health.some(source => source.status === "unavailable") ? "degraded" : "available";
+    return new Response(JSON.stringify({ status, source_health, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status }), {
+      status: usable ? 200 : 503,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String((e as Error).message), irl: [], dark: [], tech: [], news_feed: [] }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ error: "News service unavailable", status: "unavailable", irl: [], dark: [], tech: [], news_feed: [] }), {
+      status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

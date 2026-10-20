@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { functionError } from "@/lib/functionError";
 import VVLayout from "@/components/VVLayout";
 import NewsScenarioSuggestions from "@/components/NewsScenarioSuggestions";
 import { Link } from "react-router-dom";
@@ -43,36 +44,54 @@ export default function News() {
   const [data, setData] = useState<NewsData>({ irl: [], dark: [], tech: [] });
   const [brief, setBrief] = useState<IntelBrief | null>(null);
   const [synthBusy, setSynthBusy] = useState(false);
+  const [feedStatus, setFeedStatus] = useState('loading');
+  const [refresh, setRefresh] = useState(0);
+  const [synthesisNotice, setSynthesisNotice] = useState<string | null>(null);
+  const [feedError, setFeedError] = useState<string | null>(null);
+  const [sourceHealth, setSourceHealth] = useState<{source: string; status: string; count: number}[]>([]);
 
   useEffect(() => {
     let alive = true;
     async function load() {
       try {
         const { data: res, error } = await supabase.functions.invoke("vv-news", { body: { country } });
-        if (error && alive) setPublisherStatus("ingestion_not_available");
+        if (error) {
+          const explanation = await functionError(error, "News sources are unavailable. Please try again shortly.");
+          const failure = await error.context?.clone?.().json().catch(() => null);
+          if (alive) {
+            setPublisherStatus("ingestion_not_available"); setFeedStatus('unavailable'); setFeedError(explanation);
+            setSourceHealth(Array.isArray(failure?.source_health) ? failure.source_health.filter((s: {source?:unknown;status?:unknown;count?:unknown}) => typeof s.source === 'string' && typeof s.status === 'string' && typeof s.count === 'number') : []);
+          }
+          return;
+        }
         if (alive && res) {
+          setFeedStatus(res.status || "degraded"); setFeedError(res.error || null); setSourceHealth(res.source_health || []);
           setData({ irl: res.irl || [], dark: res.dark || [], tech: res.tech || [] });
           setPublisherItems(res.publisher_news || []);
           setPublisherStatus(res.publisher_status || "ingestion_not_available");
         }
-      } catch { if (alive) setPublisherStatus("ingestion_not_available"); }
+      } catch { if (alive) { setPublisherStatus("ingestion_not_available"); setFeedStatus("unavailable"); setFeedError("News sources are unavailable."); } }
     }
-    setPublisherStatus("loading"); setPublisherItems([]);
+    setPublisherStatus("loading"); setPublisherItems([]); setFeedStatus("loading");
     load();
     fetchLatestBrief().then(b => alive && b && setBrief(b));
     const id = setInterval(load, 5 * 60 * 1000);
     const bId = setInterval(() => fetchLatestBrief().then(b => alive && b && setBrief(b)), 15 * 60 * 1000);
     const unsub = subscribeToIntelBriefs(b => { if (alive) setBrief(b); });
     return () => { alive = false; clearInterval(id); clearInterval(bId); unsub(); };
-  }, [country]);
+  }, [country, refresh]);
 
   async function onSynthesize() {
     if (synthBusy) return;
     setSynthBusy(true);
-    await triggerSynthesis();
-    setTimeout(() => setSynthBusy(false), 90000);
-    // refresh shortly after
-    setTimeout(() => fetchLatestBrief().then(b => b && setBrief(b)), 5000);
+    setSynthesisNotice(null);
+    try {
+      const result = await triggerSynthesis();
+      if (!result) { setSynthesisNotice("The intelligence service is unavailable. Synthesis was not confirmed."); return; }
+      const updated = await fetchLatestBrief();
+      if (updated) setBrief(updated);
+      setSynthesisNotice("Synthesis requested. Only verified brief updates are displayed.");
+    } finally { setSynthBusy(false); }
   }
 
   // ticker: use signals if brief present
@@ -82,19 +101,23 @@ export default function News() {
   const doubled = [...tickerSource, ...tickerSource];
 
   return (
-    <VVLayout>
-      <div className="news-page">
+    <VVLayout status={{ label: feedStatus === 'loading' ? 'CHECKING NEWS' : feedStatus === 'available' ? 'NEWS AVAILABLE' : feedStatus === 'degraded' ? 'PARTIAL NEWS COVERAGE' : 'NEWS UNAVAILABLE', tone: feedStatus === 'available' ? 'green' : 'gold' }}>
+      <div className="service-notice" role="status">
+        {feedError || (feedStatus === 'loading' ? 'Checking news sources…' : feedStatus === 'degraded' ? 'Some news sources are unavailable. Coverage is incomplete.' : feedStatus === 'available' ? 'News source checks completed.' : 'News is unavailable.')}
+        <button className="synthesize-btn" onClick={() => setRefresh(n => n + 1)}>Refresh news</button>
+        {synthesisNotice && <p>{synthesisNotice}</p>}
+        {sourceHealth.length > 0 && <details className="source-health"><summary>{sourceHealth.filter(s => s.status === 'available' || s.status === 'empty').length} of {sourceHealth.length} sources responded — view source status</summary><ul>{sourceHealth.map((s, i) => <li key={i}>{s.source}: {s.status.replace(/_/g, ' ')} ({s.count} items)</li>)}</ul></details>}
+      </div>
       <NewsScenarioSuggestions />
       <section className="mx-4 my-6 rounded-xl border border-border bg-background/90 p-5 md:mx-8">
         <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">Global publisher desk</h2><p className="mt-1 text-xs text-muted-foreground">Local reporting across {marketRegistry.length} office markets · country tags identify the publisher, not the subject of the story.</p></div><div><label htmlFor="news-country" className="sr-only">Publisher country or market</label><select id="news-country" value={country} onChange={e => setCountry(e.target.value)} className="rounded-lg border border-border bg-background p-2 text-sm"><option value="">All markets</option>{marketRegistry.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select></div></div>
-        {publisherItems.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{publisherItems.map(it => <article key={it.link} className="rounded-lg border border-border p-4 hover:border-primary"><p className="mb-2 text-xs text-primary">{it.source_country} · {it.source} · {it.language}</p><a href={it.link} target="_blank" rel="noopener noreferrer" className="text-sm leading-relaxed hover:underline">{it.title}</a><p className="mt-3 text-xs text-muted-foreground">{it.time ? timeAgo(it.time) : "Publication time unavailable"}</p>{it.id && <Link className="mt-3 inline-block text-xs text-primary underline" to={"/simulations?" + new URLSearchParams({ scenario: "Explore the consequences of: " + it.title, articles: it.id })}>Plug into simulation</Link>}</article>)}</div> : <p role="status" className="mt-5 text-sm text-muted-foreground">{publisherStatus === "loading" ? "Loading publisher headlines…" : publisherStatus === "no_recent_articles" ? "No recent publisher headlines for this market." : "Publisher ingestion is not available yet."}</p>}
+        {publisherItems.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{publisherItems.map(it => <article key={it.link} className="rounded-lg border border-border p-4 hover:border-primary"><p className="mb-2 text-xs text-primary">{it.source_country} · {it.source} · {it.language}</p><a href={it.link} target="_blank" rel="noopener noreferrer" className="text-sm leading-relaxed hover:underline">{decodeEntities(it.title)}</a><p className="mt-3 text-xs text-muted-foreground">{it.time ? timeAgo(it.time) : "Publication time unavailable"}</p>{it.id && <Link className="mt-3 inline-block text-xs text-primary underline" to={"/simulations?" + new URLSearchParams({ scenario: "Explore the consequences of: " + it.title, articles: it.id })}>Plug into simulation</Link>}</article>)}</div> : <p role="status" className="mt-5 text-sm text-muted-foreground">{publisherStatus === "loading" ? "Loading publisher headlines…" : publisherStatus === "no_recent_articles" ? "No recent publisher headlines for this market." : "Publisher ingestion is not available yet."}</p>}
       </section>
       <div className="news-grid">
-        <Column title="IRL News" tone="red" items={data.irl} badge="badge-red" badgeText="FEED" />
-        <Column title="Dark Web Intel" tone="gold" items={data.dark} badge="badge-dark" badgeText="ALERT" />
-        <Column title="Tech Intelligence" tone="cyan" items={data.tech} badge="badge-tech" badgeText="NEW" />
+        <Column title="IRL News" tone="red" items={data.irl} badge="badge-red" badgeText="FEED" unavailable={feedStatus === "unavailable"} />
+        <Column title="Dark Web Intel" tone="gold" items={data.dark} badge="badge-dark" badgeText="ALERT" unavailable={feedStatus === "unavailable"} />
+        <Column title="Tech Intelligence" tone="cyan" items={data.tech} badge="badge-tech" badgeText="NEW" unavailable={feedStatus === "unavailable"} />
         <IntelSynthesisColumn brief={brief} synthBusy={synthBusy} onSynthesize={onSynthesize} />
-      </div>
       </div>
       <div className="ticker-bar">
         <div className="ticker-label">// SIGNALS</div>
@@ -110,8 +133,8 @@ export default function News() {
   );
 }
 
-function Column({ title, tone, items, badge, badgeText }: {
-  title: string; tone: "red" | "gold" | "cyan"; items: Item[]; badge: string; badgeText: string;
+function Column({ title, tone, items, badge, badgeText, unavailable }: {
+  title: string; tone: "red" | "gold" | "cyan"; items: Item[]; badge: string; badgeText: string; unavailable: boolean;
 }) {
   return (
     <div className="news-col">
@@ -120,7 +143,7 @@ function Column({ title, tone, items, badge, badgeText }: {
         {title}
       </div>
       <div className="col-body">
-        {items.length === 0 && <div className="news-item"><div className="news-title dim-text">No feed items available.</div></div>}
+        {items.length === 0 && <div className="news-item"><div className="news-title dim-text">{unavailable ? "Source connection unavailable. Headlines could not be refreshed." : "No feed items available."}</div></div>}
         {items.slice(0, 20).map((it, i) => {
           let sourceHref = it.source_url;
           if (!sourceHref && it.link) {
@@ -134,7 +157,7 @@ function Column({ title, tone, items, badge, badgeText }: {
                   <a href={it.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
                     {decodeEntities(it.title)}
                   </a>
-                ) : it.title}
+                ) : decodeEntities(it.title)}
               </div>
               <div className="news-meta" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {sourceHref ? (
@@ -153,7 +176,7 @@ function Column({ title, tone, items, badge, badgeText }: {
                     <span style={{ color: "var(--cyan)" }}>✎ {it.journalist}</span>
                   )
                 )}
-                <span style={{ marginLeft: "auto" }}>{timeAgo(it.time)}</span>
+                <span style={{ marginLeft: "auto" }}>{it.time ? timeAgo(it.time) : "Publication time unknown"}</span>
               </div>
             </div>
           );

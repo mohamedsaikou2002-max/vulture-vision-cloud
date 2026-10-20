@@ -28,5 +28,19 @@ try {
  assert.ok((await db.query('SELECT news_context_status()')).rows.length);
  await assert.rejects(db.query('SELECT * FROM news_context_queue'));
  await assert.rejects(db.query('SELECT * FROM claim_news_context()'));
- console.log('Migration checks passed: permissions, leases, mid-generation updates, retained context and hourly budget.');
+ await db.exec("RESET ROLE; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$; GRANT USAGE ON SCHEMA auth TO authenticated;");
+ // Staged SQL is exercised only in this disposable database, never activated remotely by this test.
+ for(const name of (await readdir('drizzle/migrations')).filter(n=>n.endsWith('.sql')).sort())await db.exec(await readFile('drizzle/migrations/'+name,'utf8'));
+ const userA='00000000-0000-4000-8000-000000000001',userB='00000000-0000-4000-8000-000000000002';
+ const jobA='00000000-0000-4000-8000-000000000003',jobB='00000000-0000-4000-8000-000000000004';
+ const claimAutoSim=async(user,job,parent=null)=>(await db.query('SELECT vv_claim_autosim($1,$2,$3,$4,1) AS outcome',[user,job,'Local staged migration test',parent])).rows[0].outcome;
+ assert.equal(await claimAutoSim(userA,jobA),'claimed');assert.equal(await claimAutoSim(userA,jobA),'existing');assert.equal(await claimAutoSim(userA,jobB),'quota_exceeded');assert.equal(await claimAutoSim(userB,jobB,jobA),'invalid_parent');
+ await db.exec(`INSERT INTO subscriptions(user_id,status,current_period_end) VALUES ('${userA}','active',now()+interval '1 day'),('${userB}','active',now()+interval '1 day')`);
+ await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[userA]);await db.exec('SET ROLE authenticated');
+ assert.equal((await db.query('SELECT count(*)::integer AS n FROM autosim_jobs')).rows[0].n,1);
+ assert.equal((await db.query('SELECT count(*)::integer AS n FROM subscriptions')).rows[0].n,1);
+ await assert.rejects(db.query("UPDATE subscriptions SET status='active'"));
+ await assert.rejects(db.query("UPDATE autosim_jobs SET status='completed'"));
+ await assert.rejects(db.query('SELECT vv_claim_autosim($1,$2,$3,NULL,1)',[userA,jobB,'Forbidden client claim']));
+ console.log('Migration checks passed: existing permissions/context plus staged AutoSim ownership, claim replay, quotas and server-written membership.');
 } finally {await db.close();}

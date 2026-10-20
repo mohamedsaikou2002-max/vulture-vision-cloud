@@ -232,7 +232,10 @@ def main():
         finally: db.close()
     result=dict(fetched_at=datetime.now(timezone.utc).isoformat(),items=items,sources=reports)
     Path(args.output).write_text(json.dumps(result,indent=2,ensure_ascii=False))
-    if args.upload: upload(items)
-    print(json.dumps({'sources_checked':len(reports),'articles':len(items),'output':args.output,'uploaded':args.upload}))
+    all_failed = not reports or all(r.get('status') == 'skipped' for r in reports)
+    # Preserve diagnostic output, but fail visibly instead of reporting a healthy run.
+    if args.upload and not all_failed: upload(items)
+    print(json.dumps({'status': 'unavailable' if all_failed else 'degraded' if any(r.get('status') == 'skipped' for r in reports) else 'completed', 'sources_checked':len(reports),'articles':len(items),'output':args.output,'uploaded':args.upload and not all_failed}))
+    return 2 if all_failed else 0
 
-if __name__=='__main__': main()
+if __name__=='__main__': raise SystemExit(main())

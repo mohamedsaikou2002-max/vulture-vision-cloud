@@ -88,7 +88,7 @@ export default function SocioEconomics() {
               flexWrap: "wrap",
             }}
           >
-            <div style={{ flex: 1, minWidth: 260 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ color: "#ff2222", fontSize: ".7rem", letterSpacing: ".14em", marginBottom: 4 }}>
                 ⬢ SOCIOECONOMICS BACKEND {err.kind === "malformed" ? "RETURNED MALFORMED DATA" : "OFFLINE"}
                 {err.status ? ` · ${err.status}` : ""}
@@ -98,8 +98,8 @@ export default function SocioEconomics() {
               </div>
               <div style={{ color: "#8a7a55", fontSize: ".55rem", marginTop: 4, letterSpacing: ".08em" }}>
                 {err.kind === "malformed"
-                  ? "Check socioeconomics_backend.py logs — response shape did not match expected schema."
-                  : "Start socioeconomics_backend.py on port 5002 (VITE_SOCIO_HOST to override)."}
+                  ? "The service returned an unexpected response. Please try again or contact your workspace administrator."
+                  : "The socioeconomic service is unavailable. Contact your workspace administrator if retrying does not help."}
                 {lastFetch && ` · last attempt ${lastFetch.toLocaleTimeString()}`}
               </div>
             </div>
@@ -156,7 +156,7 @@ export default function SocioEconomics() {
         </div>
 
         {/* SECONDARY DIMENSIONS */}
-        <div className="se-stat-row" style={{ gridTemplateColumns: "repeat(6,1fr)" }}>
+        <div className="se-stat-row secondary-stat-row">
           {["credit", "consumer", "inflation", "employment", "growth", "default"].map(dim => {
             const v = signals[dim] ?? 0.5;
             const col = colorForDim(dim, v);

@@ -1,5 +1,6 @@
 // Live observables for AutoSim. Every fetch is optional: a missing key or failed request is reported
 // as unavailable and the affected dimension falls back to a labelled neutral default.
+declare const Deno: { env: { get(name: string): string | undefined } };
 import type { Observables } from "./autosim_engine.ts";
 
 export interface SourceStatus { id: string; ok: boolean; detail: string }
@@ -29,6 +30,9 @@ export async function loadMacroObservables(): Promise<{ obs: Observables; status
       const rows = await fred(series, key, limit);
       const v = rows.length ? pick(rows) : NaN;
       if (!Number.isFinite(v)) throw new Error("no usable observations");
+      const maxAge=['unrate','cpi_yoy','umcsent','retail_yoy'].includes(id)?70:id==='nfci'?21:7;
+      const age=(Date.now()-Date.parse(rows[0].date))/86400000;
+      if(!Number.isFinite(age)||age < -1||age > maxAge)throw new Error('Latest observation is stale or undated');
       obs[id] = { value: v, observed_at: rows[0].date, source: `FRED:${series}` };
       status.push({ id: `fred:${series}`, ok: true, detail: `latest ${rows[0].date}` });
     } catch (e) { status.push({ id: `fred:${series}`, ok: false, detail: (e as Error).message }); }
@@ -39,14 +43,27 @@ export async function loadMacroObservables(): Promise<{ obs: Observables; status
 export const SUPPORTED_ASSETS = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "ADA-USD", "DOGE-USD", "LINK-USD", "AVAX-USD"];
 
 // Coinbase Exchange public candles — no key needed. Returns up to 300 daily closes, oldest first.
+export function validCandles(rows: unknown, now = Date.now()) {
+  if (!Array.isArray(rows)) throw new Error('Invalid candle response');
+  const today = Math.floor(now / 86400000) * 86400;
+  const completed = new Map<number, number>();
+  for (const r of rows) {
+    if (!Array.isArray(r) || r.length < 6 || r.some(n => typeof n !== 'number' || !Number.isFinite(n)) || r[0] % 86400 !== 0 || r[1] <= 0 || r[2] < r[1] || r[3] < r[1] || r[3] > r[2] || r[4] < r[1] || r[4] > r[2] || r[5] < 0) throw new Error('Invalid candle observation');
+    if (r[0] >= today) continue;
+    if (completed.has(r[0])) throw new Error('Duplicate candle date');
+    completed.set(r[0], r[4]);
+  }
+  const sorted = [...completed].sort((a,b)=>a[0]-b[0]);
+  if (sorted.length < 90 || today - sorted[sorted.length-1][0] > 4*86400) throw new Error('Insufficient or stale completed candles');
+  if (sorted.some((r,i)=>i>0 && r[0]-sorted[i-1][0]!==86400)) throw new Error('Incomplete daily history');
+  return { closes: sorted.map(r=>r[1]), dates: sorted.map(r=>new Date(r[0]*1000).toISOString().slice(0,10)) };
+}
 export async function loadCandles(product: string): Promise<{ closes: number[]; dates: string[]; status: SourceStatus }> {
   try {
     const r = await fetch(`https://api.exchange.coinbase.com/products/${product}/candles?granularity=86400`, { headers: { "User-Agent": "vulture-vision" }, signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error(`Coinbase ${r.status}`);
-    const rows: number[][] = await r.json(); // [time, low, high, open, close, volume], newest first
-    const sorted = rows.sort((a, b) => a[0] - b[0]);
-    if (sorted.length < 90) throw new Error("fewer than 90 daily candles returned");
-    return { closes: sorted.map(x => x[4]), dates: sorted.map(x => new Date(x[0] * 1000).toISOString().slice(0, 10)), status: { id: `coinbase:${product}`, ok: true, detail: `${sorted.length} daily candles to ${new Date(sorted[sorted.length - 1][0] * 1000).toISOString().slice(0, 10)}` } };
+    const { closes, dates } = validCandles(await r.json());
+    return { closes, dates, status: { id: `coinbase:${product}`, ok: true, detail: `${closes.length} completed daily candles to ${dates.at(-1)}` } };
   } catch (e) {
     return { closes: [], dates: [], status: { id: `coinbase:${product}`, ok: false, detail: (e as Error).message } };
   }

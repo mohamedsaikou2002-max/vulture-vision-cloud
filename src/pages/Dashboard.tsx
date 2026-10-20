@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { functionError } from "@/lib/functionError";
 import VVLayout from "@/components/VVLayout";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -6,12 +7,12 @@ import {
   IntelBrief, RegimeState, REGIME_COLORS, REGIME_LABELS, timeAgoShort, confidenceLabel,
 } from "@/lib/intelApi";
 
-interface Msg { type: "ai" | "user"; text: string; }
+interface Msg { type: "ai" | "user"; text: string; contextEligible?: boolean; }
 
 const initialMsg: Msg = {
   type: "ai",
   text:
-    "System online. All monitoring layers active. Query anything — dark web activity, market status, breach intelligence, or threat analysis.",
+    "Ask an intelligence research question. Responses use the latest available brief when connected; live monitoring and provider availability must be verified. Operator access is required.",
 };
 
 export default function Dashboard() {
@@ -43,7 +44,7 @@ export default function Dashboard() {
   async function send() {
     const val = input.trim();
     if (!val || busy) return;
-    setMessages(m => [...m, { type: "user", text: val }]);
+    setMessages(m => [...m, { type: "user", text: val, contextEligible: true }]);
     setInput("");
     setBusy(true);
     setMode("PROCESSING");
@@ -53,11 +54,13 @@ export default function Dashboard() {
           message: val,
           intel_context: brief?.thesis || null,
           regime: regime?.current_state || null,
+          history: messages.filter(m => m.contextEligible).slice(-6).map(m => ({ role: m.type === "ai" ? "model" : "user", text: m.text.slice(0, 2000) })),
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await functionError(error, "AI response unavailable. Try again shortly."));
+      if (data?.error) throw new Error(data.error);
       const reply = data?.reply || data?.message || "[no reply]";
-      setMessages(m => [...m, { type: "ai", text: String(reply) }]);
+      setMessages(m => [...m, { type: "ai", text: String(reply), contextEligible: true }]);
     } catch (e: unknown) {
       setMessages(m => [...m, { type: "ai", text: `[ERROR: ${e instanceof Error ? e.message : "Backend Connection Failed"}]` }]);
     } finally {
@@ -110,7 +113,7 @@ export default function Dashboard() {
             </span>
           </>
         ) : (
-          <span style={{ color: "var(--dim)" }}>REGIME ENGINE: CONNECTING...</span>
+          <span style={{ color: "var(--dim)" }}>REGIME DATA UNAVAILABLE — awaiting a verified connection</span>
         )}
       </div>
 
@@ -122,7 +125,7 @@ export default function Dashboard() {
             <span className="chat-mode">{mode}</span>
           </div>
 
-          <div className="chat-messages" ref={scrollRef}>
+          <div className="chat-messages" ref={scrollRef} role="log" aria-label="Intelligence conversation" aria-live="polite">
             {messages.map((m, i) => (
               <div key={i} className={`msg msg-${m.type}`}>
                 <div className="msg-label">{m.type === "ai" ? "// EAGLE EYE AI" : "// YOU"}</div>
@@ -140,6 +143,8 @@ export default function Dashboard() {
           <div className="chat-input-row">
             <input
               className="chat-input"
+              aria-label="Intelligence question"
+              maxLength={8000}
               placeholder="Enter query..."
               value={input}
               disabled={busy}
@@ -147,7 +152,7 @@ export default function Dashboard() {
               onKeyDown={e => { if (e.key === "Enter") send(); }}
               autoComplete="off"
             />
-            <button className="chat-send" onClick={send} disabled={busy}>SEND</button>
+            <button className="chat-send" onClick={send} disabled={busy || !input.trim()}>SEND</button>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import video from "@/assets/vulture-video.asset.json";
+import BackgroundVideo from "@/components/BackgroundVideo";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -10,7 +10,7 @@ export default function Index() {
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
   const go = () => navigate("/welcome");
   return <>
-    <div className="video-bg"><video autoPlay muted loop playsInline src={video.url} /></div>
+    <div className="video-bg"><BackgroundVideo /></div>
     <div className="video-overlay" />
     <div className="scanlines" />
     <div className="noise" />

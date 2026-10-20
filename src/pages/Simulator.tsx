@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Mic, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VVLayout from "@/components/VVLayout";
@@ -27,12 +27,20 @@ const EXAMPLES = [
 const pct = (v: number | null | undefined, d = 1) => (v == null || !Number.isFinite(v) ? "—" : `${(v * 100).toFixed(d)}%`);
 
 export default function Simulator() {
-  const [scenario, setScenario] = useState("");
+  const [params] = useSearchParams();
+  const articleIds = useMemo(() => (params.get('articles') || '').split(',').filter(id => /^[a-f0-9]{64}$/i.test(id)).slice(0,8), [params]);
+  const [scenario, setScenario] = useState(() => (params.get('scenario') || '').slice(0,2000));
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
   const [error, setError] = useState("");
-  const [result, setResult] = useState<AutoSimResult | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [completed, setCompleted] = useState<{result: AutoSimResult; jobId: string} | null>(null);
+  const result = completed?.result || null;
+  const jobId = completed?.jobId || null;
+  const [pendingJob, setPendingJob] = useState<string | null>(null);
+  const pendingPayload = useRef<Parameters<typeof runSimulation>[0] | null>(null);
+  const mounted = useRef(true);
+  const busyRef = useRef(false);
+  const request = useRef<AbortController | null>(null);
   const [tab, setTab] = useState<typeof TABS[number]>("canvas");
   const [historyError, setHistoryError] = useState("");
   const [jobs, setJobs] = useState<JobRow[]>([]);
@@ -50,49 +58,86 @@ export default function Simulator() {
 
   const refreshJobs = useCallback(() => { listJobs().then(rows => { setJobs(rows); setHistoryError(""); }).catch(e => setHistoryError(e instanceof Error ? e.message : "History unavailable")); }, []);
   useEffect(() => { refreshJobs(); }, [refreshJobs]);
-  useEffect(() => () => { if (poll.current) window.clearInterval(poll.current); stopSpeaking(); }, []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current=false; request.current?.abort(); if (poll.current) window.clearInterval(poll.current); stopSpeaking(); };
+  }, []);
   useEffect(() => { localStorage.setItem("vv-handsfree", handsFree ? "1" : "0"); }, [handsFree]);
   useEffect(() => { localStorage.setItem("vv-speak", speakOn ? "1" : "0"); }, [speakOn]);
 
   const execute = useCallback(async (text: string, extra: { parent_job_id?: string; inject?: { dimension: string; delta: number } } = {}) => {
-    if (busy) return;
+    if (busyRef.current || pendingJob) return;
     const trimmed = text.trim();
-    if (trimmed.length < 8) { setError("Describe the scenario in at least a few words."); return; }
-    setBusy(true); setError(""); setStage("queued"); setCountdown(null); stopSpeaking();
+    if (trimmed.length < 8) { setError('Describe the scenario in at least a few words.'); return; }
+    busyRef.current = true;
+    setBusy(true); setError(''); setStage('queued'); setCountdown(null); stopSpeaking();
     const id = crypto.randomUUID();
-    setJobId(id);
-    poll.current = window.setInterval(async () => { const s = await jobStatus(id).catch(() => null); if (s) setStage(s); }, 1200);
+    const controller = new AbortController(); request.current=controller;
+    let polling = false;
+    poll.current = window.setInterval(async () => {
+      if (polling) return;
+      polling=true;
+      try { const status=await jobStatus(id); if(mounted.current && request.current===controller && status)setStage(status); }
+      catch { /* The foreground response remains authoritative. */ }
+      finally { polling=false; }
+    }, 2000);
     try {
       const prev = extra.parent_job_id ? result : null;
-      const r = await runSimulation({ scenario: trimmed, job_id: id, ...extra });
-      setParent(prev); setResult(r.result); setTab("forecast"); refreshJobs();
-      if (speakOn && r.result.analysis?.spoken_summary) speak(r.result.analysis.spoken_summary);
+      const payload = { scenario: trimmed, job_id: id, ...(!extra.parent_job_id && articleIds.length ? {article_ids:articleIds} : {}), ...extra };
+      pendingPayload.current = payload;
+      const response = await runSimulation(payload, controller.signal);
+      if (!mounted.current) return;
+      setParent(prev); setCompleted({jobId:response.job_id,result:response.result}); setPendingJob(null); setTab('forecast'); refreshJobs();
+      if (speakOn && response.result.analysis?.spoken_summary) speak(response.result.analysis.spoken_summary);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Something went wrong. Try again.");
+      if (!mounted.current) return;
+      setError(e instanceof Error ? e.message : 'The simulation could not be confirmed.');
+      if (e instanceof ApiError && ['network','timeout'].includes(e.code)) setPendingJob(id);
     } finally {
       if (poll.current) window.clearInterval(poll.current);
-      setBusy(false); setStage("");
+      busyRef.current=false;
+      if(mounted.current){setBusy(false);setStage('');}
     }
-  }, [result, refreshJobs, speakOn, busy]);
+  }, [result, refreshJobs, speakOn, pendingJob, articleIds]);
+
+  const recoverPending = async () => {
+    if (!pendingJob || busyRef.current) return;
+    busyRef.current=true;setBusy(true);
+    try {
+      const status = await jobStatus(pendingJob);
+      if(status==='completed') {
+        const recovered=await loadJob(pendingJob);
+        if(recovered){setCompleted({jobId:pendingJob,result:recovered});setParent(null);setPendingJob(null);setError('');setTab('forecast');refreshJobs();}
+      } else if(status === null && pendingPayload.current?.job_id === pendingJob) {
+        // Reuse the same atomic claim ID if the first request never reached the server.
+        const recovered = await runSimulation(pendingPayload.current);
+        if (mounted.current) { setCompleted({jobId:recovered.job_id,result:recovered.result});setParent(null);setPendingJob(null);setError('');setTab('forecast');refreshJobs(); }
+      } else if(status==='failed'||status==='cancelled') {setPendingJob(null);setError('The previous run failed. You can start a new request.');}
+      else setError('The previous request may still be running. Check again before starting another.');
+    } catch(e){setError(e instanceof Error?e.message:'Could not check the pending run.');}
+    finally{busyRef.current=false;setBusy(false);}
+  };
 
   // Hands-free: a clear voice transcript starts a 3-second visible countdown that can be cancelled.
   const voice = useVoiceInput({
     onFinal: (text, confidence) => {
       setScenario(text);
-      if (handsFree && confidence >= 0.75) setCountdown(3);
+      if (handsFree && confidence >= 0.75 && !busyRef.current && !pendingJob) setCountdown(3);
+      else setCountdown(null);
     },
   });
   useEffect(() => {
     if (countdown === null) return;
-    if (countdown <= 0) { void execute(scenarioRef.current); return; }
+    if (countdown <= 0) { setCountdown(null); if (!busyRef.current && !pendingJob) void execute(scenarioRef.current); return; }
     const t = window.setTimeout(() => setCountdown(c => (c === null ? null : c - 1)), 1000);
     return () => window.clearTimeout(t);
-  }, [countdown, execute]);
+  }, [countdown, execute, pendingJob]);
 
   const openJob = async (id: string) => {
+    if (busyRef.current || pendingJob) return;
     try {
       const r = await loadJob(id);
-      if (r) { setResult(r); setJobId(id); setParent(null); setScenario(r.scenario); setTab("forecast"); }
+      if (r) { setCompleted({result:r,jobId:id}); setParent(null); setScenario(r.scenario); setTab("forecast"); }
     } catch (e) { setError(e instanceof Error ? e.message : "Could not open simulation"); }
   };
   const corpusRows = useMemo(() => (corpus as { event_id: string; name: string; start_date: string; category: string }[]).filter(e => (e.name + e.category).toLowerCase().includes(corpusQ.toLowerCase())), [corpusQ]);
@@ -117,11 +162,13 @@ export default function Simulator() {
             {voice.error && <p className="sim-note sim-warn">{voice.error}</p>}
             <div className="sim-row">
               <Button variant="ghost" className={`sim-mic${voice.listening ? " on" : ""}`} disabled={!voice.supported || busy} onClick={voice.listening ? voice.stop : voice.start} aria-label={voice.listening ? "Stop recording" : "Start voice input"} title={voice.supported ? "Tap to speak" : "Voice input isn't supported in this browser"}>{voice.listening ? <Square size={18} /> : <Mic size={18} />}</Button>
-              <Button variant="ghost" className="sim-go" disabled={busy || scenario.trim().length < 8} onClick={() => execute(scenario)}>{busy ? "Simulating…" : "Simulate scenario"}</Button>
+              <Button variant="ghost" className="sim-go" disabled={busy || !!pendingJob || scenario.trim().length < 8} onClick={() => execute(scenario)}>{busy ? "Simulating…" : "Simulate scenario"}</Button>
             </div>
             <label className="sim-check"><input type="checkbox" checked={handsFree} onChange={e => setHandsFree(e.target.checked)} /> Hands-free: run automatically after I speak</label>
             <label className="sim-check"><input type="checkbox" checked={speakOn} onChange={e => setSpeakOn(e.target.checked)} /> Read the summary aloud</label>
             {!scenario && <div className="sim-chips">{EXAMPLES.map(x => <Button variant="ghost" key={x} className="sim-chip-btn" onClick={() => setScenario(x)}>{x}</Button>)}</div>}
+            {articleIds.length > 0 && <p className="sim-note">{articleIds.length} selected headline reference(s) will be checked for freshness and included as related context.</p>}
+            {pendingJob && <Button variant="ghost" className="sim-ghost" disabled={busy} onClick={() => void recoverPending()}>Check pending run</Button>}
             {error && <p className="sim-note sim-warn" role="alert">{error}</p>}
           </section>
 
@@ -139,7 +186,7 @@ export default function Simulator() {
               <input type="range" min={-0.2} max={0.2} step={0.01} value={injDelta} onChange={e => setInjDelta(Number(e.target.value))} aria-label="Shock size" />
               <b className="sim-num">{injDelta > 0 ? "+" : ""}{injDelta.toFixed(2)}</b>
             </div>
-            <Button variant="ghost" className="sim-ghost" disabled={busy || !result || !jobId} onClick={() => { if (result && jobId) void execute(result.scenario, { parent_job_id: jobId, inject: { dimension: injDim, delta: injDelta } }); }}>Re-run with this change</Button>
+            <Button variant="ghost" className="sim-ghost" disabled={busy || !!pendingJob || !result || !jobId} onClick={() => { if (result && jobId) void execute(result.scenario, { parent_job_id: jobId, inject: { dimension: injDim, delta: injDelta } }); }}>Re-run with this change</Button>
             <p className="sim-note">Creates a new run you can compare. The original stays frozen.</p>
           </section>
 
@@ -164,7 +211,7 @@ export default function Simulator() {
               <ul className="sim-history">
                 {historyError && <li role="alert" className="sim-warn">{historyError}</li>}
                 {!historyError && !jobs.length && <li className="sim-note">No simulations yet. Your runs appear here and can be reopened without changing them.</li>}
-                {jobs.map(j => <li key={j.id}><Button variant="ghost" className="sim-link" onClick={() => openJob(j.id)} disabled={j.status !== "completed"}>{j.scenario.slice(0, 90)}</Button> <span className="sim-chip">{j.status}</span>{j.parent_job_id && <span className="sim-chip">variant</span>} <time>{new Date(j.created_at).toLocaleString()}</time></li>)}
+                {jobs.map(j => <li key={j.id}><Button variant="ghost" className="sim-link" onClick={() => openJob(j.id)} disabled={busy || !!pendingJob || j.status !== "completed"}>{j.scenario.slice(0, 90)}</Button> <span className="sim-chip">{j.status}</span>{j.parent_job_id && <span className="sim-chip">variant</span>} <time>{new Date(j.created_at).toLocaleString()}</time></li>)}
               </ul>
             )}
             {result && <p className="sim-fine">{result.disclaimer} Engine {result.engine_version} · seed {result.seed} · model {result.model}</p>}
@@ -183,7 +230,7 @@ function Forecast({ r, parent }: { r: AutoSimResult | null; parent: AutoSimResul
     <div>
       {a?.headline && <h2 className="sim-h">{a.headline}</h2>}
       {a?.summary && <p className="sim-p">{a.summary}</p>}
-      <span className="tag tag-gold">{r.mode === "hypothetical" ? "Hypothetical scenario" : "Grounded in recent news"}</span> <span className="tag tag-grey">{r.calibration_status}</span>
+      <span className="tag tag-gold">{r.mode === "hypothetical" ? "Hypothetical scenario" : "Scenario with related reporting"}</span> <span className="tag tag-grey">{r.calibration_status}</span>
       <h3 className="sim-h3">Where each dimension ends up in {r.horizon_days} days</h3>
       <div className="sim-ranges">
         {DIMENSIONS.map(d => { const x = r.dimensions.distribution[d]; const dp = parent ? x.p50 - parent.dimensions.distribution[d].p50 : null; return (
@@ -229,6 +276,7 @@ function Agents({ r, jobId }: { r: AutoSimResult | null; jobId: string | null })
   const [ans, setAns] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  useEffect(() => { setAns(''); setErr(''); }, [jobId]);
   if (!r) return <p className="sim-note">Seven simulated agent groups react to the scenario. Run one to inspect and question them.</p>;
   const ask = async () => { if (!jobId) return; setBusy(true); setErr(""); setAns(""); try { setAns((await interrogateAgent(jobId, agent, q)).answer); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } };
   return (

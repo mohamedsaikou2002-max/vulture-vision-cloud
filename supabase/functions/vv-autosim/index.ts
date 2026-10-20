@@ -5,7 +5,10 @@
 // numbers. Every response uses the same envelope: { ok:true, ... } or { ok:false, error:{code,message} }.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { parseAutoSimRequest, dailyLimit, boundedPaths } from "../_shared/autosim_request.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildWorldPulse } from "../_shared/world_pulse.ts";
+import { parseAnalysis, validateAutoSimResult } from "../_shared/autosim_contract.ts";
+import type { AutoSimResult } from "../_shared/autosim_types.ts";
 import { generate, generateJSON, GeminiError } from "../_shared/gemini.ts";
 import {
   AGENTS, DIMENSIONS, ENGINE_ASSUMPTIONS, ENGINE_VERSION, EVENT_SHOCKS, EVENT_TYPES, STRATEGY_IDS, STRATEGY_INFO,
@@ -41,7 +44,7 @@ Deno.serve(async (req) => {
   const action = typeof body.action === "string" ? body.action : "run";
 
   try {
-    if (action === "world_state") return await worldState();
+    if (action === "world_state") return await worldState(sb);
     // New membership gating stays inactive until payment configuration is explicitly enabled.
     if (Deno.env.get("VV_REQUIRE_SUBSCRIPTION") === "true") {
       const { data: ok, error } = await sb.rpc("vv_autosim_has_access", { p_user_id: user.id });
@@ -59,12 +62,13 @@ Deno.serve(async (req) => {
 });
 
 // ── world state (no Gemini, no quota) ────────────────────────
-async function worldState() {
+async function worldState(sb: SupabaseClient) {
   const [{ obs, status }, candles] = await Promise.all([loadMacroObservables(), loadCandles("BTC-USD")]);
   const all = { ...obs };
   if (candles.closes.length) all.crypto_vol_ann = { value: dailyLogVol(candles.closes, 30) * Math.sqrt(365), observed_at: candles.dates.at(-1), source: "coinbase:BTC-USD realized vol" };
   const b = buildBaseline(all);
-  return json({ ok: true, as_of: new Date().toISOString(), baseline: b.baseline, detail: b.detail, neutral_dimensions: b.neutral, data_status: [...status, candles.status] });
+  const evidence = await retrieveEvidence(sb, [], [], true);
+  return json({ world_pulse: buildWorldPulse(b.baseline, b.neutral, evidence.selected), ok: true, as_of: new Date().toISOString(), baseline: b.baseline, detail: b.detail, neutral_dimensions: b.neutral, data_status: [...status, candles.status] });
 }
 
 // ── interpretation helpers ───────────────────────────────────
@@ -98,7 +102,7 @@ function validateInterp(raw: Record<string, unknown>, horizonHint: number): Inte
   const h = typeof raw.horizon_days === "number" ? Math.round(raw.horizon_days) : horizonHint;
   return {
     event_type: type, summary: typeof raw.summary === "string" ? raw.summary.slice(0, 300) : "",
-    is_hypothetical: raw.is_hypothetical !== false, horizon_days: clamp(h, 1, 30),
+    is_hypothetical: true, horizon_days: clamp(h, 1, 30),
     asset: SUPPORTED_ASSETS.includes(raw.asset as string) ? (raw.asset as string) : "BTC-USD",
     regions: arr(raw.regions, 6), sectors: arr(raw.sectors, 6), search_keywords: arr(raw.search_keywords, 8),
     shocks, shock_rationale: rationale,
@@ -109,11 +113,21 @@ function validateInterp(raw: Record<string, unknown>, horizonHint: number): Inte
 
 // ── main run ─────────────────────────────────────────────────
 // deno-lint-ignore no-explicit-any
-async function run(sb: any, userId: string, body: Record<string, unknown>) {
+async function run(sb: SupabaseClient, userId: string, body: Record<string, unknown>) {
   const scenario = typeof body.scenario === "string" ? body.scenario.trim() : "";
   if (scenario.length < 8 || scenario.length > 2000) return fail("invalid_scenario", "Describe the scenario in 8–2000 characters", 400);
   const jobId = typeof body.job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.job_id) ? body.job_id : crypto.randomUUID();
   const parent = typeof body.parent_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.parent_job_id) ? body.parent_job_id : null;
+
+  let parentResult: AutoSimResult | null = null;
+  if (parent) {
+    const { data: stored, error } = await sb.from('autosim_jobs').select('result,status').eq('id', parent).eq('user_id', userId).maybeSingle();
+    if (error || !stored || stored.status !== 'completed') return fail('invalid_parent', 'Original simulation is unavailable', 400);
+    try { parentResult = validateAutoSimResult(stored.result) as unknown as AutoSimResult; }
+    catch { return fail('invalid_parent', 'Original simulation has invalid replay data', 400); }
+    if (!parentResult.replay_spec || parentResult.engine_version !== ENGINE_VERSION) return fail('invalid_parent', 'Run a new baseline with the current engine before creating controlled variants', 409);
+    if (scenario !== parentResult.scenario) return fail('invalid_parent', 'A controlled variant must retain the original scenario', 400);
+  }
 
   const { data: claim, error: claimError } = await sb.rpc("vv_claim_autosim", {
     p_user_id: userId, p_job_id: jobId, p_scenario: scenario, p_parent_id: parent,
@@ -141,7 +155,10 @@ async function run(sb: any, userId: string, body: Record<string, unknown>) {
     await stage("interpreting");
     const horizonHint = clamp(Math.round(Number(body.horizon_days) || 30), 1, 30);
     let interp: Interp, model = "none";
-    try {
+    if (parentResult) {
+      interp = { ...parentResult.interpretation, horizon_days: parentResult.horizon_days, search_keywords: [], shocks: parentResult.shocks.gemini || {} };
+      model = parentResult.model;
+    } else try {
       const { data, model: m } = await generateJSON<Record<string, unknown>>({
         system: "You convert a trader's scenario into structured economic inputs. Respond with JSON only.",
         prompt: `Scenario: """${scenario}"""\n\nReturn JSON with keys: event_type (one of ${EVENT_TYPES.join(", ")}), summary (one sentence), is_hypothetical (true unless the scenario describes something already widely reported), horizon_days (1-30), asset (one of ${SUPPORTED_ASSETS.join(", ")}; the crypto asset most exposed, BTC-USD if unclear), regions (array), sectors (array), search_keywords (4-8 short lowercase words or phrases useful for searching news headlines), shocks (object: dimension -> number between -0.2 and 0.2 = how far the scenario moves that 0-1 dimension; omit unaffected dimensions), shock_rationale (object: dimension -> under 20 words), risk_profile ("balanced" unless the scenario text explicitly asks for conservative or aggressive), confidence (0-1).\nDimensions: ${DIMENSIONS.join(", ")}. Meaning: ${DIM_HELP}.`,
@@ -156,18 +173,23 @@ async function run(sb: any, userId: string, body: Record<string, unknown>) {
 
     // 2 — evidence
     await stage("retrieving_evidence");
-    const evidence = await retrieveEvidence(sb, interp.search_keywords);
+    const evidence = parentResult?.evidence || await retrieveEvidence(sb, interp.search_keywords, (body.article_ids as string[] | undefined) || []);
     if (evidence.status === "unavailable") warnings.push("News index could not be queried; this run uses no news evidence.");
     else if (evidence.status === "none_found") warnings.push("No matching headlines in the last 72 hours — treated as a hypothetical scenario.");
 
     // 3 — state
     await stage("estimating_state");
-    const [{ obs, status: macroStatus }, candles] = await Promise.all([loadMacroObservables(), loadCandles(interp.asset)]);
+    const [{ obs, status: macroStatus }, candles] = parentResult
+      ? [{ obs: {}, status: parentResult.state.data_status }, parentResult.replay_spec!.candles] as const
+      : await Promise.all([loadMacroObservables(), loadCandles(interp.asset)]);
     const all = { ...obs };
     if (candles.closes.length) all.crypto_vol_ann = { value: dailyLogVol(candles.closes, 30) * Math.sqrt(365), observed_at: candles.dates.at(-1), source: `coinbase:${interp.asset} realized vol` };
-    const { baseline, detail, neutral } = buildBaseline(all);
-    if (neutral.length) warnings.push(`No live data for: ${neutral.join(", ")}. Those dimensions start at a neutral 0.5 and are labelled as defaults.`);
-    const dataStatus: SourceStatus[] = [...macroStatus, candles.status];
+    const { baseline, detail, neutral } = parentResult
+      ? { baseline: parentResult.state.baseline, detail: parentResult.state.detail, neutral: parentResult.state.neutral_dimensions }
+      : buildBaseline(all);
+    if (neutral.length) warnings.push(`No fresh observations for: ${neutral.join(', ')}. Those dimensions use a neutral 0.5 default.`);
+    const dataStatus: SourceStatus[] = parentResult ? parentResult.state.data_status : [...macroStatus, candles.status];
+    if (parentResult) warnings.push('Controlled variant: original evidence, observations, candles, path counts and random seed are frozen. Only the requested shock and its derived responses change.');
 
     // 4 — simulate
     await stage("simulating");
@@ -176,26 +198,32 @@ async function run(sb: any, userId: string, body: Record<string, unknown>) {
     if (inj && DIMENSIONS.includes(inj.dimension as Dim) && typeof inj.delta === "number") injected[inj.dimension as Dim] = clamp(inj.delta, -0.2, 0.2);
     const applied: Shock = {};
     for (const d of DIMENSIONS) {
-      const v = (interp.shocks[d] ?? EVENT_SHOCKS[interp.event_type][d] ?? 0) + (injected[d] ?? 0);
+      const v = (parentResult ? (parentResult.shocks.applied[d] ?? 0) : (interp.shocks[d] ?? EVENT_SHOCKS[interp.event_type][d] ?? 0)) + (injected[d] ?? 0);
       if (v !== 0) applied[d] = clamp(v, -0.25, 0.25);
     }
     const horizon = interp.horizon_days;
-    const seed = Number.isInteger(body.seed) ? Number(body.seed) >>> 0 : Math.floor(mulberry32(Date.now() & 0xffffffff)() * 4294967295);
-    const dimRes = runDimensionScenario({ baseline, shocks: applied, horizonDays: horizon, paths: boundedPaths(Deno.env.get("VV_DIM_PATHS"), 600, 600), seed });
+    const seed = parentResult?.seed ?? crypto.getRandomValues(new Uint32Array(1))[0];
+    const dimPaths = parentResult?.replay_spec?.dim_paths ?? boundedPaths(Deno.env.get('VV_DIM_PATHS'), 600, 600);
+    const strategyPaths = parentResult?.replay_spec?.strategy_paths ?? boundedPaths(Deno.env.get('VV_STRAT_PATHS'), 200, 200);
+    const dimRes = runDimensionScenario({ baseline, shocks: applied, horizonDays: horizon, paths: dimPaths, seed });
     const synthetic = candles.closes.length < 90;
-    const baseVol = synthetic ? 0.035 : dailyLogVol(candles.closes, 30);
+    const baseVol = parentResult?.market.base_daily_vol ?? (synthetic ? 0.035 : dailyLogVol(candles.closes, 30));
     if (synthetic) warnings.push("No price history available; strategy tests start from a synthetic price of 100.");
     const mc = marketConditions(baseline, dimRes, baseVol, horizon);
     const endState = Object.fromEntries(DIMENSIONS.map(d => [d, dimRes.distribution[d].p50])) as Record<Dim, number>;
-    const cfg = autoConfigure(baseline, endState as never, interp.risk_profile);
+    const cfg = autoConfigure(baseline, endState, interp.risk_profile);
+    if (parentResult) {
+      cfg.cost.fee_bps = parentResult.execution.cost.fee_bps;
+      cfg.rationale = cfg.rationale.map(line=>line.startsWith('Taker fee ')?`Taker fee ${cfg.cost.fee_bps} bps is frozen from the original run; funding ${cfg.cost.funding_bps_per_day} bps/day.`:line);
+    }
     const bias = mc.riskOffShift > 0.015 ? -1 : mc.riskOffShift < -0.015 ? 1 : 0;
     const warm = synthetic ? Array.from({ length: 60 }, () => 100) : candles.closes;
-    const scen = scenarioMonteCarlo({ warmupCloses: warm, mc, horizon, paths: boundedPaths(Deno.env.get("VV_STRAT_PATHS"), 200, 200), seed, cost: cfg.cost, bias });
-    let historical: unknown = null;
+    const scen = scenarioMonteCarlo({ warmupCloses: warm, mc, horizon, paths: strategyPaths, seed, cost: cfg.cost, bias });
+    let historical: AutoSimResult["strategies"]["historical"] = null;
     if (!synthetic && candles.closes.length >= 150) {
       const start = Math.max(60, candles.closes.length - 240);
       historical = {
-        window: { start: candles.dates[start], end: candles.dates.at(-1), days: candles.closes.length - 1 - start },
+        window: { start: candles.dates[start], end: candles.dates[candles.dates.length - 1], days: candles.closes.length - 1 - start },
         note: "Replay of today's automatic settings on recent daily candles. Fixed rules, no parameter fitting, not predictive of future results.",
         buy_hold: buyAndHold(candles.closes, start),
         strategies: STRATEGY_IDS.map(id => STRATEGY_INFO[id].needsScenario
@@ -206,7 +234,7 @@ async function run(sb: any, userId: string, body: Record<string, unknown>) {
 
     const resultCore = {
       engine_version: ENGINE_VERSION, model, as_of: new Date().toISOString(), scenario, seed, horizon_days: horizon,
-      mode: evidence.status === "found" ? "evidence_grounded_counterfactual" : "hypothetical",
+      mode: "hypothetical" as const,
       interpretation: interp, evidence,
       state: { baseline, detail, neutral_dimensions: neutral, data_status: dataStatus },
       shocks: { applied, prior: EVENT_SHOCKS[interp.event_type], gemini: interp.shocks, injected },
@@ -220,7 +248,7 @@ async function run(sb: any, userId: string, body: Record<string, unknown>) {
 
     // 5 — explain
     await stage("analyzing");
-    let analysis: unknown = null;
+    let analysis: AutoSimResult["analysis"] = null;
     try {
       const compact = {
         scenario, mode: resultCore.mode, horizon_days: horizon, asset: interp.asset,
@@ -236,12 +264,16 @@ async function run(sb: any, userId: string, body: Record<string, unknown>) {
         prompt: `Data:\n${JSON.stringify(compact)}\n\nReturn JSON: headline (max 12 words), summary (max 110 words), drivers (3-5 short strings: which dimensions moved and why, citing the numbers), risks (2-4 strings), gaps (strings: missing data, uncorroborated assumptions, contradictions in headlines), what_would_change_this (2-3 strings), spoken_summary (max 55 words, plain speech, no symbols or markdown).`,
         maxOutputTokens: 1400, temperature: 0.3,
       });
-      analysis = data;
+      analysis = parseAnalysis(data);
+      if (!analysis) warnings.push("The AI explanation had an invalid structure and was omitted. Numerical results remain available.");
     } catch (e) {
       warnings.push(`Gemini explanation unavailable (${(e as Error).message}). Numerical results are unaffected.`);
     }
 
-    const result = { ...resultCore, analysis, warnings };
+    const result = { ...resultCore, analysis, warnings,
+      replay_spec: { candles, dim_paths: dimPaths, strategy_paths: strategyPaths },
+    };
+    validateAutoSimResult(result);
     const { error: saveError } = await sb.from("autosim_jobs").update({ status: "completed", result, stage_log: [...log, { status: "completed", at: new Date().toISOString() }], completed_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
     if (saveError) throw new Error("Could not save simulation result");
     return json({ ok: true, job_id: jobId, status: "completed", result });
@@ -254,22 +286,29 @@ async function run(sb: any, userId: string, body: Record<string, unknown>) {
 
 // ── evidence retrieval ───────────────────────────────────────
 // deno-lint-ignore no-explicit-any
-async function retrieveEvidence(sb: any, keywords: string[]) {
+async function retrieveEvidence(sb: SupabaseClient, keywords: string[], articleIds: string[] = [], recentAll = false) {
   const windowHours = 72;
   const since = new Date(Date.now() - windowHours * 3_600_000).toISOString();
   const kws = keywords.map(k => k.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim()).filter(k => k.length >= 3).slice(0, 8);
   const empty = { window_hours: windowHours, sources_reporting: 0, matched: 0, independent_sources: 0, selected: [] as { title: string; source: string; url: string; country: string; published_at: string | null; first_seen: string }[] };
   try {
-    const { data: srcRows, error: e1 } = await sb.from("news_articles").select("source_id").gte("fetched_at", since).limit(5000);
+    const signal = AbortSignal.timeout(8000);
+    const { data: srcRows, error: e1 } = await sb.from("news_articles").select("source_id").gte("fetched_at", since).or('published_at.is.null,published_at.gte.' + since).limit(5000).abortSignal(signal);
     if (e1) throw e1;
     const sources_reporting = new Set((srcRows ?? []).map((r: { source_id: string }) => r.source_id)).size;
-    if (!kws.length || !sources_reporting) return { ...empty, sources_reporting, status: sources_reporting ? "none_found" : "unavailable" };
-    const { data, error } = await sb.from("news_articles")
-      .select("id,title,source,source_id,source_country,canonical_url,published_at,fetched_at")
-      .gte("fetched_at", since).or(kws.map(k => `title.ilike.%${k}%`).join(",")).order("fetched_at", { ascending: false }).limit(300);
+    if ((!kws.length && !articleIds.length && !recentAll) || !sources_reporting) return { ...empty, sources_reporting, status: sources_reporting ? "none_found" : "unavailable" };
+    let query = sb.from("news_articles").select("id,title,source,source_id,source_country,canonical_url,published_at,fetched_at")
+      .gte("fetched_at", since).or('published_at.is.null,published_at.gte.' + since);
+    if (articleIds.length) query = query.in('id', articleIds);
+    else if (!recentAll) query = query.or(kws.map(k => `title.ilike.%${k}%`).join(','));
+    const { data, error } = await query.order('fetched_at', { ascending: false }).limit(300).abortSignal(signal);
     if (error) throw error;
     const seen = new Set<string>();
-    const ranked = (data ?? []).map((a: Record<string, string>) => {
+    const ranked = (data ?? []).filter((a: Record<string,string>) => {
+      const published = a.published_at ? Date.parse(a.published_at) : null;
+      const fetched = Date.parse(a.fetched_at);
+      return Number.isFinite(fetched) && fetched >= Date.parse(since) && fetched <= Date.now() + 60000 && (published === null || (Number.isFinite(published) && published >= Date.parse(since) && published <= Date.now() + 60000)) && /^https?:\/\//.test(a.canonical_url);
+    }).map((a: Record<string, string>) => {
       const title = a.title.toLowerCase();
       const hits = kws.filter(k => title.includes(k)).length;
       const ageH = (Date.now() - Date.parse(a.published_at ?? a.fetched_at)) / 3_600_000;
@@ -287,7 +326,7 @@ async function retrieveEvidence(sb: any, keywords: string[]) {
 
 // ── interrogate a simulated agent group ──────────────────────
 // deno-lint-ignore no-explicit-any
-async function interrogate(sb: any, userId: string, body: Record<string, unknown>) {
+async function interrogate(sb: SupabaseClient, userId: string, body: Record<string, unknown>) {
   const agent = typeof body.agent === "string" ? body.agent : "";
   const question = typeof body.question === "string" ? body.question.trim().slice(0, 400) : "";
   if (!(AGENTS as readonly string[]).includes(agent) || question.length < 3) return fail("invalid_request", "Choose an agent group and ask a question", 400);

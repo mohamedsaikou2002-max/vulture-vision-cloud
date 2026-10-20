@@ -10,16 +10,23 @@ export function useLiveNewsContext() {
   const active=useRef(false);
   const lastVersion=useRef(0);
   const reload=useCallback(async()=>{
-    const {data:worker,error:workerError}=await (supabase as SupabaseClient).rpc('news_context_status');
-    if(active.current)setWorkerStatus(workerError?'unavailable':worker?.status || 'unknown');
-    const {data,error}=await (supabase as SupabaseClient).from('news_prompt_versions').select('version,context').order('version',{ascending:false}).limit(1);
-    if(!active.current)return;
-    if(error){setStatus('unavailable');return;}
-    const row=(data as unknown as {version:number;context:LiveNewsContext}[]|null)?.[0];
-    if(!row){setStatus('waiting');return;}
-    if(row.version < lastVersion.current)return;
-    lastVersion.current=row.version;
-    setContext(row.context);setVersion(row.version);setStatus('ready');
+    try {
+      const signal = AbortSignal.timeout(8000);
+      const [{data:worker,error:workerError}, {data,error}] = await Promise.all([
+        (supabase as SupabaseClient).rpc('news_context_status').abortSignal(signal),
+        (supabase as SupabaseClient).from('news_prompt_versions').select('version,context').order('version',{ascending:false}).limit(1).abortSignal(signal),
+      ]);
+      if(!active.current)return;
+      setWorkerStatus(workerError?'unavailable':worker?.status || 'unknown');
+      if(error){setStatus('unavailable');return;}
+      const row=(data as unknown as {version:number;context:LiveNewsContext}[]|null)?.[0];
+      if(!row){setStatus('waiting');return;}
+      if(row.version < lastVersion.current)return;
+      lastVersion.current=row.version;
+      setContext(row.context);setVersion(row.version);setStatus('ready');
+    } catch {
+      if(active.current){setStatus('unavailable');setWorkerStatus('unavailable');}
+    }
   },[]);
   useEffect(()=>{
     active.current=true;

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { parseAnalyticsData } from "@/lib/analyticsData";
+import { functionError } from "@/lib/functionError";
 import VVLayout from "@/components/VVLayout";
 import QuantumBilling from "@/components/QuantumBilling";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,7 +39,9 @@ interface Portfolio {
 interface Full {
   crypto: Crypto[];
   assets: Asset[];
-  portfolio: Portfolio;
+  portfolio: Portfolio | null;
+  status?: string;
+  source_health?: { source: string; status: string; count: number }[];
   narrative?: string;
   ts?: string;
 }
@@ -57,6 +61,8 @@ const regimeBadge = (r?: string) => {
 export default function Analytics() {
   const [data, setData] = useState<Full | null>(null);
   const [online, setOnline] = useState<boolean | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -64,17 +70,23 @@ export default function Analytics() {
       try {
         const { data: res, error } = await supabase.functions.invoke("vv-analytics");
         if (!alive) return;
-        if (error || !res) { setOnline(false); return; }
-        setData(res as Full);
+        if (error) {
+          const explanation = await functionError(error, "Analytics is unavailable. Try again shortly.");
+          if (alive) { setOnline(false); setProblem(explanation); }
+          return;
+        }
+        const validated = parseAnalyticsData(res);
+        setData(validated as Full);
+        setProblem(null);
         setOnline(true);
-      } catch {
-        if (alive) setOnline(false);
+      } catch (e) {
+        if (alive) { setOnline(false); setProblem(e instanceof Error ? e.message : "Analytics is unavailable."); }
       }
     }
     load();
     const id = setInterval(load, 60_000);
     return () => { alive = false; clearInterval(id); };
-  }, []);
+  }, [refresh]);
 
   // Intel Backend state
   const [brief, setBrief] = useState<IntelBrief | null>(null);
@@ -98,7 +110,7 @@ export default function Analytics() {
   const status = online === null
     ? { label: "CONNECTING", tone: "gold" as const }
     : online
-      ? { label: "ENGINE ONLINE", tone: "green" as const }
+      ? { label: data?.status === "degraded" ? "PARTIAL MARKET DATA" : "MARKET DATA AVAILABLE", tone: data?.status === "degraded" ? "gold" as const : "green" as const }
       : { label: "ENGINE OFFLINE", tone: "red" as const };
 
   const btc = data?.crypto.find(c => c.symbol === "BTC");
@@ -120,23 +132,29 @@ export default function Analytics() {
   return (
     <VVLayout status={status}>
       <div className="scroll-inner">
+        <div className="service-notice" role={problem ? "alert" : "status"}>
+          {problem || (data?.status === "degraded" ? "Some market sources are unavailable. Signals use only the observations shown." : "Market indicators are research estimates, not calibrated predictions.")}
+          {data?.ts && <span> Observations fetched {new Date(data.ts).toLocaleTimeString()}.{!online && " Showing last available results."}</span>}
+          <button className="synthesize-btn" onClick={() => setRefresh(n => n + 1)}>Refresh market data</button>
+        </div>
+        <p className="service-note">Analytics and intel chat currently require operator access. Simulation access is a separate pilot capability.</p>
         <div className="stat-row">
           <div className="stat-card panel">
-            <div className="stat-label">S&amp;P 500 / SPY</div>
+            <div className="stat-label">SPY · 30D median estimate</div>
             <div className="stat-value">{spy ? fP(spy.mc_30d.p50) : "—"}</div>
             <div className={`stat-delta ${spy && spy.mc_30d.prob_up > 0.5 ? "up" : "down"}`}>
-              {spy ? `P↑ ${(spy.mc_30d.prob_up * 100).toFixed(1)}%  Sharpe ${f2(spy.stats.sharpe_ratio)}` : "loading..."}
+              {spy ? `P↑ ${(spy.mc_30d.prob_up * 100).toFixed(1)}%  Sharpe ${f2(spy.stats.sharpe_ratio)}` : (online === null ? "Loading…" : "Unavailable")}
             </div>
           </div>
           <div className="stat-card panel">
             <div className="stat-label">BITCOIN / BTC</div>
             <div className="stat-value">{btc ? fP(btc.price) : "—"}</div>
-            <div className={`stat-delta ${dir(btc?.change_24h)}`}>{btc ? `${fPct(btc.change_24h)} 24h` : "loading..."}</div>
+            <div className={`stat-delta ${dir(btc?.change_24h)}`}>{btc ? `${fPct(btc.change_24h)} 24h` : (online === null ? "Loading…" : "Unavailable")}</div>
           </div>
           <div className="stat-card panel">
             <div className="stat-label">ETHEREUM / ETH</div>
             <div className="stat-value">{eth ? fP(eth.price) : "—"}</div>
-            <div className={`stat-delta ${dir(eth?.change_24h)}`}>{eth ? `${fPct(eth.change_24h)} 24h` : "loading..."}</div>
+            <div className={`stat-delta ${dir(eth?.change_24h)}`}>{eth ? `${fPct(eth.change_24h)} 24h` : (online === null ? "Loading…" : "Unavailable")}</div>
           </div>
           <div className="stat-card panel">
             <div className="stat-label">PORTFOLIO REGIME</div>
@@ -205,9 +223,9 @@ export default function Analytics() {
 
         <div className="analytics-wrap">
           <div className="panel" style={{ padding: 14 }}>
-            <div className="panel-title">QUANTUM AMPLITUDE SCORES — Born Rule · Interference · Entanglement</div>
+            <div className="panel-title">CLASSICAL INDICATOR SCORES — quantum-inspired heuristic</div>
             <div className="quantum-wrap">
-              {!data?.assets.length && <div className="q-loading">⬡ AWAITING ENGINE OUTPUT...</div>}
+              {!data?.assets.length && <div className="q-loading">{online === null ? "Loading quantitative signals…" : "No quantitative signals available."}</div>}
               {data?.assets.map(a => {
                 const q = a.quantum?.score || 0;
                 const pct = (q * 100).toFixed(1);
@@ -238,7 +256,7 @@ export default function Analytics() {
                   </tr>
                 </thead>
                 <tbody>
-                  {!data?.assets.length && <tr><td colSpan={10} className="empty-cell">Loading asset data...</td></tr>}
+                  {!data?.assets.length && <tr><td colSpan={10} className="empty-cell">{online === null ? "Loading asset data…" : "Asset history is unavailable."}</td></tr>}
                   {data?.assets.map(a => {
                     const r = regimeBadge(a.regime);
                     const ti = tickerImpl(a.symbol);
@@ -277,7 +295,7 @@ export default function Analytics() {
           </div>
 
           <div className="panel" style={{ padding: 14, marginTop: 14 }}>
-            <div className="panel-title">CRYPTO MARKET WATCH — CoinGecko · Live</div>
+            <div className="panel-title">CRYPTO MARKET WATCH — CoinGecko observations</div>
             <div style={{ overflowX: "auto" }}>
               <table className="data-table">
                 <thead>
@@ -286,7 +304,7 @@ export default function Analytics() {
                   </tr>
                 </thead>
                 <tbody>
-                  {!data?.crypto.length && <tr><td colSpan={7} className="empty-cell">Loading...</td></tr>}
+                  {!data?.crypto.length && <tr><td colSpan={7} className="empty-cell">{online === null ? "Loading prices…" : "Crypto prices are unavailable."}</td></tr>}
                   {data?.crypto.map(c => (
                     <tr key={c.symbol}>
                       <td>{c.symbol} <span style={{ color: "var(--dim)" }}>· {c.name}</span></td>
@@ -312,12 +330,12 @@ export default function Analytics() {
 
           <div className="panel narrative-panel" style={{ marginTop: 14 }}>
             <div className="narrative-header">
-              <div className="status-dot" style={{ background: data?.narrative ? "var(--green)" : "var(--dim)" }} />
+              <div className="status-dot" style={{ background: data?.narrative && !/unavailable|offline|insufficient/i.test(data.narrative) ? "var(--green)" : "var(--dim)" }} />
               <span className="panel-title" style={{ marginBottom: 0 }}>VULTURE AI — MARKET INTELLIGENCE BRIEF</span>
               <span className="narrative-ts">{data?.ts ? new Date(data.ts).toLocaleTimeString() : ""}</span>
             </div>
             <div className="narrative-body">
-              {data?.narrative || <span className="dim-text">⬡ COMPUTING PROBABILISTIC ANALYSIS...</span>}
+              {data?.narrative || <span className="dim-text">{online === null ? "Loading market brief…" : "AI market brief is unavailable."}</span>}
             </div>
           </div>
 

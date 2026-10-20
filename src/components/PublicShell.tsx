@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import video from "@/assets/vulture-video.asset.json";
+import BackgroundVideo from "@/components/BackgroundVideo";
 import PublicContours from "./PublicContours";
 import "@/styles/public-info.css";
 
@@ -27,7 +27,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       media.current.style.transform = `translateY(${Math.min((scroll.current?.scrollTop ?? 0) * .065, 65)}px) scale(1.12)`;
     }
   }}>
-    <div className="public-video"><video ref={media} autoPlay muted loop playsInline preload="auto" src={video.url} /></div>
+    <div className="public-video"><BackgroundVideo videoRef={media} /></div>
     <div className="public-shade" />
     <PublicContours />
     <header className="public-header">

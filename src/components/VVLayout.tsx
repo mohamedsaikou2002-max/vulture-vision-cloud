@@ -1,6 +1,6 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import BackgroundVideo from "./BackgroundVideo";
 import { NavLink } from "react-router-dom";
-import video from "@/assets/vulture-video.asset.json";
 
 interface Props {
   children: ReactNode;
@@ -18,26 +18,34 @@ const links = [
 
 export default function VVLayout({ children, status, blurred = true }: Props) {
   const [newIntel, setNewIntel] = useState(false);
-
+  const navRef = useRef<HTMLElement>(null);
+  const [navHeight, setNavHeight] = useState(64);
   useEffect(() => {
-    const onIntel = () => {
-      setNewIntel(true);
-      const t = setTimeout(() => setNewIntel(false), 30000);
-      return () => clearTimeout(t);
-    };
-    window.addEventListener("vv-new-intel", onIntel);
-    return () => window.removeEventListener("vv-new-intel", onIntel);
+    const nav = navRef.current;
+    if (!nav) return;
+    const observer = new ResizeObserver(() => setNavHeight(nav.getBoundingClientRect().height));
+    observer.observe(nav);
+    return () => observer.disconnect();
   }, []);
 
-  const dotClass = status?.tone && status.tone !== "green" ? `status-dot ${status.tone}` : "status-dot gold";
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const onIntel = () => {
+      setNewIntel(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setNewIntel(false), 30000);
+    };
+    window.addEventListener("vv-new-intel", onIntel);
+    return () => { clearTimeout(timer); window.removeEventListener("vv-new-intel", onIntel); };
+  }, []);
+
+  const dotClass = `status-dot ${status?.tone || "gold"}`;
   const statusLabel = newIntel ? "NEW INTEL" : (status?.label || "STATUS UNVERIFIED");
 
   return (
     <>
       <div className={`video-bg${blurred ? " blurred" : ""}`}>
-        <video autoPlay muted loop playsInline>
-          <source src={video.url} type="video/mp4" />
-        </video>
+        <BackgroundVideo />
       </div>
       <div className="video-overlay" />
       <div className="scanlines" />
@@ -48,7 +56,7 @@ export default function VVLayout({ children, status, blurred = true }: Props) {
       <div className="corner corner-bl" />
       <div className="corner corner-br" />
 
-      <nav className="nav">
+      <nav className="nav" ref={navRef} aria-label="Main navigation">
         <NavLink to="/" className="nav-logo">VULTURE VISION</NavLink>
         <div className="nav-links">
           {links.map(l => (
@@ -63,7 +71,7 @@ export default function VVLayout({ children, status, blurred = true }: Props) {
         </div>
       </nav>
 
-      <div className="page-content">{children}</div>
+      <main id="main-content" className="page-content" style={{ paddingTop: navHeight }}>{children}</main>
     </>
   );
 }

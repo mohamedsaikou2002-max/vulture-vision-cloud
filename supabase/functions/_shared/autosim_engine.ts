@@ -73,7 +73,7 @@ export const ENGINE_ASSUMPTIONS = {
   coefficients: "Illustrative and uncalibrated. Agent responses are bounded heuristics, not observed behavior.",
   deviations_measured_from: "the estimated starting state (not a fixed 0.5)",
 };
-export const ENGINE_VERSION = "autosim-1.0.0";
+export const ENGINE_VERSION = "autosim-1.1.0";
 
 // ── helpers ──────────────────────────────────────────────────
 export const clamp = (v: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
@@ -177,6 +177,11 @@ const norm = (v: number, lo: number, hi: number, invert = false) => {
   return invert ? 1 - x : x;
 };
 export function buildBaseline(obs: Observables, now = Date.now()): { baseline: DimVector; detail: Record<Dim, BaselineDim>; neutral: Dim[] } {
+  const maxAge: Record<string, number> = { vix: 7, hy_spread: 7, curve_10y2y: 7, unrate: 70, cpi_yoy: 70, nfci: 21, umcsent: 70, retail_yoy: 70, crypto_vol_ann: 3 };
+  obs = Object.fromEntries(Object.entries(obs).filter(([key, value]) => {
+    const age = value?.observed_at ? (now - Date.parse(value.observed_at)) / 86400000 : Infinity;
+    return value && Number.isFinite(value.value) && Number.isFinite(age) && age >= -1 && age <= (maxAge[key] ?? 7);
+  }));
   const spec: Record<Dim, () => { v: number; o?: Observable } | null> = {
     fear: () => obs.vix ? { v: norm(obs.vix.value, 12, 40), o: obs.vix } : obs.crypto_vol_ann ? { v: norm(obs.crypto_vol_ann.value, .3, 1.2), o: obs.crypto_vol_ann } : null,
     volatility: () => obs.crypto_vol_ann ? { v: norm(obs.crypto_vol_ann.value, .3, 1.2), o: obs.crypto_vol_ann } : obs.vix ? { v: norm(obs.vix.value, 12, 40), o: obs.vix } : null,
@@ -278,7 +283,8 @@ export function strategySignal(id: StrategyId, x: Ctx): number {
       return x.entryIdx >= 0 ? 0 : x.bias; // one entry only
     }
     case "defensive_derisk": {
-      const rv = realizedVol(c, t, 14), rvLong = realizedVol(c, t, 50) || rv;
+      const rv = realizedVol(c, t, 14), rvLong = realizedVol(c, t, 50);
+      if (rvLong <= 1e-9) return 1; // A flat synthetic warm-up must not produce 0/0 and NaN.
       return clamp(1 - Math.max(0, rv / (2 * rvLong) - 0.25), 0, 1);
     }
   }
@@ -295,6 +301,7 @@ export function backtest(closes: number[], startIdx: number, id: StrategyId, cos
   const rets: number[] = [];
   const perUnit = (cost.fee_bps + cost.slippage_bps + cost.spread_bps / 2) / 1e4;
   for (let t = startIdx; t < closes.length - 1; t++) {
+    const periodStart = equity;
     const target = clamp(strategySignal(id, { closes, t, prev: pos, bias, entryIdx, entryPrice }), -1, 1);
     const turnover = Math.abs(target - pos);
     if (turnover > 1e-9) {
@@ -308,14 +315,20 @@ export function backtest(closes: number[], startIdx: number, id: StrategyId, cos
     pos = target;
     const r = closes[t + 1] / closes[t] - 1;
     const pnl = pos * cost.leverage * r - Math.abs(pos) * cost.leverage * cost.funding_bps_per_day / 1e4;
-    const before = equity;
+    const before = periodStart;
     equity *= 1 + pnl;
     expo += Math.abs(pos) * cost.leverage;
     if (equity <= 0.05 * before || 1 + pnl <= 0.02) { equity = 0; liquidated = true; rets.push(-1); break; }
     rets.push(equity / before - 1);
     peak = Math.max(peak, equity); maxDD = Math.max(maxDD, 1 - equity / peak);
   }
-  if (pos !== 0 && !liquidated) { trades++; if (equity > tradeEq) wins++; }
+  if (pos !== 0 && !liquidated) {
+    const beforeExit = equity;
+    equity *= Math.max(0, 1 - Math.abs(pos) * cost.leverage * perUnit);
+    if (rets.length) rets[rets.length - 1] = (1 + rets[rets.length - 1]) * (beforeExit ? equity / beforeExit : 0) - 1;
+    peak = Math.max(peak, equity); maxDD = Math.max(maxDD, 1 - equity / peak);
+    trades++; if (equity > tradeEq) wins++;
+  }
   const sd = std(rets);
   return {
     total_return: equity - 1, max_drawdown: liquidated ? 1 : maxDD,
@@ -337,7 +350,8 @@ export function autoConfigure(baseline: DimVector, endState: DimVector, risk: Ri
   const byStress = stress > 0.62 ? 1 : stress > 0.55 ? 2 : stress > 0.48 ? 3 : 4;
   const leverage = Math.max(1, Math.min(cap, byStress));
   const denoEnv = (globalThis as { Deno?: { env?: { get(k: string): string | undefined } } }).Deno?.env;
-  const fee = Number(denoEnv?.get("VV_DEFAULT_FEE_BPS") ?? 10) || 10;
+  const configuredFee = Number(denoEnv?.get("VV_DEFAULT_FEE_BPS") ?? 10);
+  const fee = Number.isFinite(configuredFee) && configuredFee >= 0 && configuredFee <= 1000 ? configuredFee : 10;
   const slip = Number((2 + 20 * Math.max(0, endState.volatility - 0.4) + 15 * Math.max(0, 0.5 - endState.liquidity)).toFixed(1));
   const spread = Number((2 + 12 * Math.max(0, 0.5 - endState.liquidity)).toFixed(1));
   const funding = 1;

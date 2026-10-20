@@ -8,6 +8,8 @@ class SafeScene extends Component<{ children: ReactNode }, { failed: boolean }> 
 export default function PublicContours() {
   const [scene, setScene] = useState<{ color: string; reduced: boolean } | null>(null);
   useEffect(() => {
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (motion.matches || window.matchMedia('(max-width: 600px)').matches) return;
     const canvas = document.createElement("canvas");
     try {
       if (!canvas.getContext("webgl2") && !canvas.getContext("webgl")) return;

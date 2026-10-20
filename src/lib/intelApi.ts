@@ -1,10 +1,9 @@
 // Vulture Vision — Intelligence Backend API Client
 // Connects to vv_intel_backend running on VITE_INTEL_HOST:8000
 
-const INTEL_HOST = (import.meta.env.VITE_INTEL_HOST as string) || "localhost:8000";
-const isHttps = typeof location !== "undefined" && location.protocol === "https:";
-const BASE_URL = `${isHttps ? "https" : "http"}://${INTEL_HOST}`;
-const WS_URL = `${isHttps ? "wss" : "ws"}://${INTEL_HOST}`;
+import { backendOrigin } from './backendOrigin';
+const BASE_URL = backendOrigin(import.meta.env.VITE_INTEL_HOST, import.meta.env.DEV, 8000, typeof location !== 'undefined' && location.protocol === 'https:');
+const WS_URL = BASE_URL?.replace(/^http/, 'ws');
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -80,6 +79,7 @@ export interface IntelBrief {
 // ── REST calls ──────────────────────────────────────────────
 
 export async function fetchLatestBrief(): Promise<IntelBrief | null> {
+  if (!BASE_URL) return null;
   try {
     const res = await fetch(`${BASE_URL}/brief/latest`, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
@@ -88,6 +88,7 @@ export async function fetchLatestBrief(): Promise<IntelBrief | null> {
 }
 
 export async function fetchRegime(): Promise<RegimeState | null> {
+  if (!BASE_URL) return null;
   try {
     const res = await fetch(`${BASE_URL}/regime`, { signal: AbortSignal.timeout(6000) });
     if (!res.ok) return null;
@@ -96,6 +97,7 @@ export async function fetchRegime(): Promise<RegimeState | null> {
 }
 
 export async function fetchHealth(): Promise<{ status: string; queue_depth: number } | null> {
+  if (!BASE_URL) return null;
   try {
     const res = await fetch(`${BASE_URL}/health`, { signal: AbortSignal.timeout(4000) });
     if (!res.ok) return null;
@@ -104,6 +106,7 @@ export async function fetchHealth(): Promise<{ status: string; queue_depth: numb
 }
 
 export async function triggerSynthesis(): Promise<{ message: string } | null> {
+  if (!BASE_URL) return null;
   try {
     const res = await fetch(`${BASE_URL}/synthesize/now`, { method: "POST", signal: AbortSignal.timeout(90000) });
     if (!res.ok) return null;
@@ -117,6 +120,7 @@ export function subscribeToIntelBriefs(
   onBrief: (brief: IntelBrief) => void,
   onRegime?: (regime: RegimeState) => void,
 ): () => void {
+  if (!WS_URL) return () => {};
   let ws: WebSocket | null = null;
   let dead = false;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
