@@ -1,3 +1,4 @@
+- [x] AutoSim is Nasdaq-based (Nasdaq Composite ^IXIC daily closes from Yahoo, no crypto) and every simulator number is shown as a percentage (world state, forecast, strategies, agents, inject slider); vv-autosim deployed; 115 tests pass; verified live — world state shows yahoo:NASDAQ and no crypto mentions. Live runs still blocked by the Gemini free-tier quota (below).
 - [x] Import compatible AutoSim source and UI (39 focused tests passed): typed/voice scenarios, ten dimensions, strategy stress tests and history; preserve original splash, $1050 membership, MiroFish permissions and optional quantum. Live runs blocked until staged tables are accepted and service configuration is verified.
 - [x] Simulations page (/simulations) powered by MiroFish
 - [x] Public entrance and information page updated with Grey Company story/socials and lazy Three.js contours; desktop/mobile pages checked. Original video pointer retained; playback unavailable in local browser checks.
