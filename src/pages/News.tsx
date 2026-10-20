@@ -38,7 +38,6 @@ function timeAgo(iso?: string) {
 }
 
 export default function News() {
-  const [collector,setCollector]=useState<Record<string,{status:string;checked_at:string;articles:number}>>({});
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
   const [moreBusy, setMoreBusy] = useState(false);
@@ -86,7 +85,6 @@ export default function News() {
     if(loadedCountry.current!==country){setPublisherItems([]);setPage(0);pageRef.current=0;loadedCountry.current=country;}
     setPublisherStatus("loading");setFeedStatus("loading");
     load();
-    void supabase.from('news_source_status').select('source_id,status,checked_at,articles').abortSignal(AbortSignal.timeout(8000)).then(({data})=>{if(alive&&data)setCollector(Object.fromEntries(data.map(s=>[s.source_id,s])));});
     fetchLatestBrief().then(b => alive && b && setBrief(b));
     const id = setInterval(load, 60000);
     const channel = supabase.channel("news-feed-updates").on("postgres_changes", {event:"INSERT",schema:"public",table:"news_articles"}, () => { if (alive && Date.now()-lastLiveRefresh.current>15000){lastLiveRefresh.current=Date.now();setRefresh(n=>n+1);} }).subscribe();
@@ -140,7 +138,7 @@ export default function News() {
         <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">Global publisher desk</h2><p className="mt-1 text-xs text-muted-foreground">207 additional publishers across {new Set(newsSources.map(s=>s.source_country)).size} markets · country tags identify the publisher, not the subject of the story.</p></div><div><label htmlFor="news-country" className="sr-only">Publisher country or market</label><select id="news-country" value={country} onChange={e => setCountry(e.target.value)} className="rounded-lg border border-border bg-background p-2 text-sm"><option value="">All markets</option>{[...new Map([...marketRegistry,...newsSources.map(s=>({code:s.source_country,name:s.country_name}))].map(m=>[m.code,m])).values()].sort((a,b)=>a.name.localeCompare(b.name)).map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select></div></div>
         {publisherItems.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{publisherItems.map(it => <article key={it.link} className="rounded-lg border border-border p-4 hover:border-primary"><p className="mb-2 text-xs text-primary">{it.source_country} · {it.source} · {it.language}</p><a href={it.link} target="_blank" rel="noopener noreferrer" className="text-sm leading-relaxed hover:underline">{decodeEntities(it.title)}</a><p className="mt-3 text-xs text-muted-foreground">{it.time ? timeAgo(it.time) : "Publication time unavailable"}</p>{it.id && <Link className="mt-3 inline-block text-xs text-primary underline" to={"/simulations?"+new URLSearchParams({scenario:"Explore the consequences of: "+it.title,articles:it.id})}>Explore in simulator</Link>}</article>)}</div> : <p role="status" className="mt-5 text-sm text-muted-foreground">{publisherStatus === "loading" ? "Loading publisher headlines…" : publisherStatus === "no_recent_articles" ? "No recent publisher headlines for this market." : "Publisher ingestion is not available yet."}</p>}
         {hasMore && <button className="synthesize-btn" disabled={moreBusy} onClick={()=>void loadMore()}>{moreBusy?'Loading…':'Load more headlines'}</button>}
-        <details className="mt-4 text-xs"><summary>207-source catalog and collection status</summary><p>Collected metadata appears above. Restricted or unreachable publishers are skipped; no feed can guarantee all news. Headlines are ordered by publication time and refresh every minute.</p><ul>{newsSources.map(s=><li key={s.id}>{s.name} · {s.country_name} · {collector[s.id] ? `${collector[s.id].status} (${collector[s.id].articles} items) · ${new Date(collector[s.id].checked_at).toLocaleString()}` : "No collector report yet"}</li>)}</ul></details>
+        <details className="mt-4 text-xs"><summary>207-source catalog</summary><p>Collected metadata appears above. Restricted or unreachable publishers are skipped; no feed can guarantee all news. Headlines are ordered by publication time and refresh every minute.</p><ul>{newsSources.map(s=><li key={s.id}>{s.name} · {s.country_name}</li>)}</ul></details>
       </section>
       <div className="news-grid">
         <Column title="IRL News" tone="red" items={data.irl} badge="badge-red" badgeText="FEED" unavailable={feedStatus === "unavailable"} />
