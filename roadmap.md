@@ -1,3 +1,4 @@
+- [ ] Import compatible AutoSim archive: typed/voice scenarios, ten dimensions, strategy stress tests and history; preserve original splash, $99 membership, MiroFish permissions and optional quantum. Live runs blocked until staged tables are accepted and service configuration is verified.
 - [x] Simulations page (/simulations) powered by MiroFish
 - [ ] Modern public video landing and information page, Grey Company story/socials, subtle Three.js and parallax.
 - [ ] Google member profiles and $99/month Stripe subscriptions; activation depends on payment setup approval and accepting staged membership tables.
