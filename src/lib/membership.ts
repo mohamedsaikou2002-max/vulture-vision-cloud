@@ -1,6 +1,6 @@
-export const MEMBERSHIP = { amountCents: 105000, pilotAmountCents: 9999, currency: "usd", interval: "month", trialHours: 168 } as const;
-export const MEMBERSHIP_START_SEQUENCE = ["paid_pilot", "free_trial", "monthly_membership"] as const;
-// The seven-day free trial follows the paid pilot; checkout remains unconfigured.
+export const MEMBERSHIP = { amountCents: 105000, pilotAmountCents: 9900, currency: "usd", interval: "month", trialHours: 168 } as const;
+export const MEMBERSHIP_START_SEQUENCE = ["paid_intro", "monthly_membership"] as const;
+// Seven days of paid introductory access, followed by monthly membership. Activation is server-controlled.
 export const TRIAL_PERIOD_DAYS = MEMBERSHIP.trialHours / 24;
 
 export interface MembershipRecord {

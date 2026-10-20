@@ -56,4 +56,14 @@ describe('Gemini secure failover', () => {
     await expect(createGeminiFailover({ credentials, fetch })('gemini-3.8-flash', '{}', 40000)).rejects.toThrow('Gemini request unavailable');
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+});it('cycles seven numbered backup slots on quota exhaustion and returns the first successful result',async()=>{
+ const controller=new AbortController();vi.stubGlobal('AbortSignal',{timeout:()=>controller.signal});
+ try{
+  const keys=configuredGeminiKeys(Object.fromEntries(Array.from({length:8},(_,i)=>[i?'GEMINI_API_KEY_'+i:'GEMINI_API_KEY','fixture-key-'+i])));
+  const fetch=vi.fn().mockImplementation(async()=>fetch.mock.calls.length<8?new Response('',{status:429}):Response.json({answer:'confirmed'}));
+  const transport=createGeminiFailover({credentials:()=>keys,fetch});
+  expect(await (await transport('gemini-configured','{}',40000)).json()).toEqual({answer:'confirmed'});
+  expect(fetch).toHaveBeenCalledTimes(8);
+  expect(fetch.mock.calls.map(c=>c[1].headers['x-goog-api-key'])).toEqual(keys.map(k=>k.value));
+ }finally{vi.unstubAllGlobals();}
 });

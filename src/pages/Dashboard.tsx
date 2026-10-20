@@ -76,7 +76,7 @@ export default function Dashboard() {
     : [];
 
   return (
-    <VVLayout>
+    <VVLayout><div className="intel-workspace">
       {/* Morning Brief Strip */}
       <div className="morning-brief-strip">
         <span className="morning-brief-label">// MORNING BRIEF</span>
@@ -149,13 +149,13 @@ export default function Dashboard() {
               value={input}
               disabled={busy}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") send(); }}
+              onKeyDown={e => { if (e.key === "Enter" && !e.nativeEvent.isComposing) send(); }}
               autoComplete="off"
             />
             <button className="chat-send" onClick={send} disabled={busy || !input.trim()}>SEND</button>
           </div>
         </div>
       </div>
-    </VVLayout>
+    </div></VVLayout>
   );
 }

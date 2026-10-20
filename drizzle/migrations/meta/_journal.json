@@ -8,6 +8,13 @@
       "when": 1792461126231,
       "tag": "0001_autosim",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792470000000,
+      "tag": "0002_billing",
+      "breakpoints": true
     }
   ]
 }

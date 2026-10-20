@@ -1,3 +1,4 @@
+import {membershipAccess} from '../_shared/membership_access.ts';
 // vv-simulation-chat — user-authenticated Gemini research panel.
 // Unlike the separate operator-only MiroFish engine, this answers research questions
 // even when an engine is unavailable. Synthetic analyst roles are not live agents.
@@ -39,6 +40,7 @@ Deno.serve(async (req: Request) => {
   // Existing service-role-only RPC atomically enforces 6 synthesis calls per user per hour.
   // If migrations aren't deployed, fail closed rather than make unmetered provider calls.
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
+  const membership=await membershipAccess(admin,user.id);if(membership)return membership;
   const { data: claimed, error: claimError } = await admin.rpc("claim_scenario_synthesis", { p_user_id: user.id });
   if (claimError) return reply({ error: "Simulation chat quota is unavailable; deploy the quota migration" }, 503);
   if (claimed !== true) return reply({ error: "Hourly simulation research limit reached (6 calls)" }, 429);

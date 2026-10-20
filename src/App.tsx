@@ -10,6 +10,7 @@ const Dashboard=lazy(()=>import("./pages/Dashboard"));
 const Analytics=lazy(()=>import("./pages/Analytics"));
 const News=lazy(()=>import("./pages/News"));
 const Simulations=lazy(()=>import("./pages/Simulations"));
+const SimpleSimulator=lazy(()=>import("./pages/SimpleSimulator"));
 const Simulator=lazy(()=>import("./pages/Simulator"));
 import NotFound from "./pages/NotFound";
 import AuthGate from "./components/AuthGate";
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/news" element={<News />} />
+          <Route path="/simulations/simple" element={<SimpleSimulator />} />
           <Route path="/simulations" element={<Simulator />} />
           <Route path="/simulations/pilot" element={<Simulations />} />
           <Route path="*" element={<NotFound />} />

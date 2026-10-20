@@ -56,3 +56,31 @@
 @media(prefers-reduced-motion:reduce){.belicia-workspace *, .public-site *{scroll-behavior:auto;animation:none!important;}}
 
 .sys-clock {font-family:Tektur,sans-serif;color:#92929e;font-size:10px;}
+.belicia-workspace .simple-sim{max-width:780px;margin:0 auto;padding:40px 24px 70px;display:grid;gap:18px;}
+.belicia-workspace .simple-sim h1{font-size:28px;font-weight:400;}
+.belicia-workspace .simple-sim p{font-size:12px;line-height:1.9;color:#a5a5b5;}
+.belicia-workspace .simple-sim label{font-size:11px;letter-spacing:.12em;}
+.belicia-workspace .simple-sim textarea{min-height:150px;border:1px solid #ffffff28;background:#111116;border-radius:8px;padding:16px;resize:vertical;font-family:inherit;font-size:13px;}
+.belicia-workspace .simple-submit{padding:14px;border-radius:6px;background:#eee;color:#111;font-size:12px;}
+.belicia-workspace .simple-submit:disabled{opacity:.4;}
+.belicia-workspace .simple-results{padding:24px;background:#111116;border:1px solid #ffffff20;border-radius:8px;display:grid;gap:16px;}
+.belicia-workspace .simple-results h2{font-size:17px;}
+.belicia-workspace .simple-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.belicia-workspace .simple-cards article{padding:18px 10px;background:#ffffff05;border:1px solid #ffffff14;border-radius:6px;}
+.belicia-workspace .simple-cards span{font-size:9px;color:#9999aa;display:block;}
+.belicia-workspace .simple-cards strong{font-size:22px;font-weight:400;display:block;margin-top:10px;}
+.belicia-workspace .simple-sim small{font-size:10px;line-height:1.8;color:#9696a8;}
+.belicia-workspace .simple-sim a{font-size:11px;color:#ddd;}
+.belicia-workspace .intel-workspace{height:100%;min-height:0;display:flex;flex-direction:column;}
+.belicia-workspace .intel-workspace .chat-wrap{min-height:0;flex:1;padding:20px;overflow:hidden;}
+.belicia-workspace .intel-workspace .chat-box{height:100%;min-height:0;width:min(960px,100%);}
+.belicia-workspace .intel-workspace .chat-header{flex-shrink:0;}
+.belicia-workspace .intel-workspace .chat-messages{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;}
+.belicia-workspace .intel-workspace .msg{overflow-wrap:anywhere;white-space:pre-wrap;max-width:95%;font-family:inherit;font-size:12px;line-height:1.9;}
+.belicia-workspace .intel-workspace .chat-input-row{flex-shrink:0;position:relative;padding:12px;gap:10px;border-top:1px solid #ffffff18;}
+.belicia-workspace .intel-workspace .chat-input{min-height:46px;flex:1;width:0;font-family:inherit;font-size:13px;}
+.belicia-workspace .intel-workspace .chat-send{min-width:70px;min-height:46px;border-color:#ffffff28;background:#ffffff0c;border-radius:5px;color:white;font-family:inherit;}
+.belicia-workspace .intel-workspace .morning-brief-strip,.belicia-workspace .intel-workspace .regime-bar{flex-shrink:0;max-height:90px;overflow-y:auto;}
+@media(max-width:600px){.belicia-workspace .intel-workspace .chat-wrap{padding:10px;}.belicia-workspace .simple-cards{grid-template-columns:1fr;}.belicia-workspace .simple-sim{padding:26px 16px;}.belicia-workspace .intel-workspace .chat-header-title{font-size:9px;}.belicia-workspace .intel-workspace .msg{max-width:100%;}}
+
+.belicia-workspace {height:100dvh;}

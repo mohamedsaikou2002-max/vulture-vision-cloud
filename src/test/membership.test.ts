@@ -4,15 +4,15 @@ describe("membership rules", () => {
   it("is 1050 USD recurring monthly", () => {
     expect(MEMBERSHIP).toMatchObject({ amountCents: 105000, currency: "usd", interval: "month" });
   });
-  it("prices the paid pilot at 99.99 USD", () => {
-    expect(MEMBERSHIP.pilotAmountCents).toBe(9999);
+  it("prices the paid introduction at 99 USD", () => {
+    expect(MEMBERSHIP.pilotAmountCents).toBe(9900);
   });
-  it("includes seven free trial days", () => {
+  it("includes seven introductory access days", () => {
     expect(MEMBERSHIP.trialHours).toBe(168);
     expect(TRIAL_PERIOD_DAYS).toBe(7);
   });
-  it("places the free trial after the paid pilot and before monthly membership", () => {
-    expect(MEMBERSHIP_START_SEQUENCE).toEqual(["paid_pilot", "free_trial", "monthly_membership"]);
+  it("places paid introductory access before monthly membership", () => {
+    expect(MEMBERSHIP_START_SEQUENCE).toEqual(["paid_intro", "monthly_membership"]);
   });
   it("requires an active or trialing subscription within its paid period", () => {
     const now = Date.parse("2026-10-19T00:00:00Z");

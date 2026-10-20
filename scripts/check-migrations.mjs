@@ -36,11 +36,30 @@ try {
  const claimAutoSim=async(user,job,parent=null)=>(await db.query('SELECT vv_claim_autosim($1,$2,$3,$4,1) AS outcome',[user,job,'Local staged migration test',parent])).rows[0].outcome;
  assert.equal(await claimAutoSim(userA,jobA),'claimed');assert.equal(await claimAutoSim(userA,jobA),'existing');assert.equal(await claimAutoSim(userA,jobB),'quota_exceeded');assert.equal(await claimAutoSim(userB,jobB,jobA),'invalid_parent');
  await db.exec(`INSERT INTO subscriptions(user_id,status,current_period_end) VALUES ('${userA}','active',now()+interval '1 day'),('${userB}','active',now()+interval '1 day')`);
+
+ await db.query('INSERT INTO auth.users(id) VALUES($1),($2),($3)',[userA,userB,'00000000-0000-4000-8000-000000000099']);
+ await db.query('INSERT INTO billing_customers(user_id,stripe_customer_id) VALUES($1,$2)',[userA,'cus_test_a']);
+ const checkoutUser='00000000-0000-4000-8000-000000000099';
+ const checkout=async(id)=>(await db.query('SELECT vv_claim_checkout($1,$2) AS value',[checkoutUser,id])).rows[0].value;
+ const firstCheckout=await checkout(jobA);assert.equal((await checkout(jobB)).request_id,firstCheckout.request_id);
+ const billingState={customer:'cus_test_a',subscription:'sub_a',status:'active',price:'price_monthly',period_end:new Date(Date.now()+86400000).toISOString(),trial_end:null,cancel_at_period_end:false};
+ const billing=async(event,created,snapshot)=>(await db.query('SELECT vv_apply_billing_event($1,$2,$3,$4::jsonb) AS result',[event,created,userA,JSON.stringify(snapshot)])).rows[0].result;
+ assert.equal(await billing('evt_1',100,billingState),'applied');assert.equal(await billing('evt_1',100,billingState),'duplicate');
+ assert.equal(await billing('evt_old',99,{...billingState,status:'past_due'}),'stale');
+ assert.equal(await billing('evt_cancel',101,{...billingState,status:'canceled'}),'applied');
+ assert.equal(await billing('evt_equal_old',101,billingState),'stale');
+ assert.equal((await db.query('SELECT vv_autosim_has_access($1) AS access',[userA])).rows[0].access,false);
+ assert.equal(await billing('evt_new_sub',102,{...billingState,subscription:'sub_new'}),'applied');
+ assert.equal(await billing('evt_old_sub_late',103,{...billingState,status:'canceled'}),'stale');
+ await assert.rejects(billing('evt_forged',104,{...billingState,customer:'cus_other'}));
  await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[userA]);await db.exec('SET ROLE authenticated');
  assert.equal((await db.query('SELECT count(*)::integer AS n FROM autosim_jobs')).rows[0].n,1);
  assert.equal((await db.query('SELECT count(*)::integer AS n FROM subscriptions')).rows[0].n,1);
  await assert.rejects(db.query("UPDATE subscriptions SET status='active'"));
  await assert.rejects(db.query("UPDATE autosim_jobs SET status='completed'"));
  await assert.rejects(db.query('SELECT vv_claim_autosim($1,$2,$3,NULL,1)',[userA,jobB,'Forbidden client claim']));
- console.log('Migration checks passed: existing permissions/context plus staged AutoSim ownership, claim replay, quotas and server-written membership.');
+ await assert.rejects(db.query('SELECT * FROM billing_customers'));
+ await assert.rejects(db.query('SELECT vv_claim_checkout($1,$2)',[userA,jobB]));
+ await assert.rejects(db.query('SELECT vv_apply_billing_event($1,$2,$3,$4::jsonb)',['forged',200,userA,JSON.stringify(billingState)]));
+ console.log('Migration checks passed: billing duplicate/out-of-order events, customer binding, checkout claims;  existing permissions/context plus staged AutoSim ownership, claim replay, quotas and server-written membership.');
 } finally {await db.close();}

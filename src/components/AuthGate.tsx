@@ -21,14 +21,14 @@ export default function AuthGate({ children }: { children?: ReactNode }) {
 
   const signIn = async () => {
     setErr(null);
-    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}${window.location.pathname}` });
     if (r.error) setErr(String((r.error as Error).message ?? r.error));
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
+    <div className="belicia-workspace min-h-screen flex items-center justify-center bg-background text-foreground p-6">
       <div className="w-full max-w-sm border border-border p-8 text-center space-y-6">
-        <h1 className="text-2xl tracking-widest font-bold" style={{ fontFamily: "Orbitron, sans-serif" }}>VULTURE VISION</h1>
+        <h1 className="text-2xl tracking-widest font-bold" style={{ fontFamily: "Tektur, sans-serif" }}>VULTURE VISION</h1>
         <p className="text-sm text-muted-foreground">Sign in to access the intelligence terminal.</p>
         <Button variant="outline" onClick={signIn} className="w-full border-primary text-primary">
           SIGN IN WITH GOOGLE

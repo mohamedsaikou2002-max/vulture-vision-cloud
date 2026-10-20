@@ -11,7 +11,8 @@ interface Props {
 const links = [
   { to: "/dashboard", label: "INTEL" },
   { to: "/analytics", label: "ANALYTICS" },
-  { to: "/simulations", label: "SIMULATIONS" },
+  { to: "/simulations", label: "POD ROOM" },
+  { to: "/simulations/simple", label: "QUICK SIM" },
   { to: "/news", label: "NEWS FEED" },
 ];
 
@@ -47,7 +48,7 @@ export default function VVLayout({ children, status }: Props) {
         <NavLink to="/" className="nav-logo">VULTURE VISION</NavLink>
         <div className="nav-links">
           {links.map(l => (
-            <NavLink key={l.to} to={l.to} className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
+            <NavLink key={l.to} to={l.to} end className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
               {l.label}
             </NavLink>
           ))}
