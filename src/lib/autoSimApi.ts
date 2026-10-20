@@ -77,10 +77,12 @@ export async function listJobs(): Promise<JobRow[]> {
   return data as JobRow[];
 }
 export async function loadJob(id: string): Promise<AutoSimResult | null> {
-  const { data } = await jobs().select("result").eq("id", id).maybeSingle();
+  const { data, error } = await jobs().select("result").eq("id", id).maybeSingle();
+  if (error) throw new ApiError("history_unavailable", "Couldn't open this simulation.", 500);
   return (data?.result as AutoSimResult) ?? null;
 }
 export async function jobStatus(id: string): Promise<string | null> {
-  const { data } = await jobs().select("status").eq("id", id).maybeSingle();
+  const { data, error } = await jobs().select("status").eq("id", id).maybeSingle();
+  if (error) throw new ApiError("history_unavailable", "Couldn't read this simulation's status.", 500);
   return data?.status ?? null;
 }

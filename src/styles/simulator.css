@@ -1,5 +1,5 @@
-.autosim-workspace /* AutoSim workspace — built on the Eagle tokens in index.css (gold on black). */
-.sim-root { display: grid; grid-template-columns: minmax(300px, 2fr) 3fr; gap: 14px; padding: 16px 24px 24px; min-height: 100%; }
+/* AutoSim workspace — scoped to preserve existing terminal pages. */
+.autosim-workspace .sim-root { display: grid; grid-template-columns: minmax(300px, 2fr) 3fr; gap: 14px; padding: 16px 24px 24px; min-height: 100%; }
 .autosim-workspace .sim-left, .autosim-workspace .sim-right { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .autosim-workspace .sim-card { padding: 14px; }
 .autosim-workspace .sim-input, .autosim-workspace .sim-select { width: 100%; background: var(--dark); border: 1px solid var(--gold-dim); color: var(--text); font: inherit; font-size: .8rem; padding: 10px; resize: vertical; }
@@ -25,17 +25,17 @@
 .autosim-workspace .sim-chip-btn { background: none; border: 1px dashed var(--gold-dim); padding: 7px 9px; font: inherit; font-size: .64rem; text-align: left; cursor: pointer; }
 .autosim-workspace .sim-chip-btn:hover { border-color: var(--gold-bright); }
 .autosim-workspace .sim-chip { display: inline-block; font-size: .56rem; letter-spacing: 0; padding: 1px 6px; border: 1px solid var(--gold-dim); margin-left: 4px; }
-.autosim-workspace .sim-chip.ok { border-color: var(--green-dim); } .sim-chip.bad { border-color: var(--red); }
+.autosim-workspace .sim-chip.ok { border-color: var(--green-dim); } .autosim-workspace .sim-chip.bad { border-color: var(--red); }
 .autosim-workspace .sim-sources { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
 .autosim-workspace .sim-dims { display: grid; gap: 5px; }
 .autosim-workspace .sim-dim { display: grid; grid-template-columns: 110px 1fr 36px; gap: 8px; align-items: center; font-size: .64rem; text-transform: capitalize; }
 .autosim-workspace .sim-track, .autosim-workspace .sim-rail { position: relative; height: 6px; background: var(--gold-dim); }
-.autosim-workspace .sim-fill { height: 100%; background: var(--gold); } .sim-fill.dim { background: var(--dim); }
+.autosim-workspace .sim-fill { height: 100%; background: var(--gold); } .autosim-workspace .sim-fill.dim { background: var(--dim); }
 .autosim-workspace .sim-stages { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: .7rem; }
 .autosim-workspace .sim-stages li { opacity: .4; padding-left: 18px; position: relative; }
 .autosim-workspace .sim-stages li::before { content: '○'; position: absolute; left: 0; }
-.autosim-workspace .sim-stages li.done { opacity: 1; } .sim-stages li.done::before { content: '●'; color: var(--green); }
-.autosim-workspace .sim-stages li.run { opacity: 1; color: var(--cyan) !important; } .sim-stages li.run::before { content: '◐'; animation: blink 1s infinite; }
+.autosim-workspace .sim-stages li.done { opacity: 1; } .autosim-workspace .sim-stages li.done::before { content: '●'; color: var(--green); }
+.autosim-workspace .sim-stages li.run { opacity: 1; color: var(--cyan) !important; } .autosim-workspace .sim-stages li.run::before { content: '◐'; animation: blink 1s infinite; }
 .autosim-workspace .sim-num { width: 44px; text-align: right; font-size: .7rem; }
 .autosim-workspace .sim-corpus { list-style: none; padding: 0; margin: 8px 0 0; max-height: 220px; overflow: auto; font-size: .62rem; display: grid; gap: 5px; }
 .autosim-workspace .sim-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -53,7 +53,7 @@
 .autosim-workspace .sim-band { position: absolute; top: 0; bottom: 0; background: var(--cyan); }
 .autosim-workspace .sim-mark { position: absolute; top: -3px; width: 4px; height: 12px; background: var(--gold-bright); transform: translateX(-2px); }
 .autosim-workspace .sim-mark.start { background: transparent; border: 1px solid var(--gold-bright); }
-.autosim-workspace .up { color: var(--green) !important; } .down { color: var(--red) !important; }
+.autosim-workspace .up { color: var(--green) !important; } .autosim-workspace .down { color: var(--red) !important; }
 .autosim-workspace .sim-news { list-style: none; padding: 0; display: grid; gap: 6px; font-size: .68rem; }
 .autosim-workspace .sim-news a { text-decoration: underline; text-decoration-color: var(--gold-dim); }
 .autosim-workspace .sim-scroll { overflow-x: auto; }
@@ -63,7 +63,7 @@
 .autosim-workspace .sim-bh td { opacity: .7; }
 .autosim-workspace .sim-agents { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
 .autosim-workspace .sim-agent { text-align: left; background: var(--dark); border: 1px solid var(--gold-dim); padding: 10px; display: grid; gap: 4px; font: inherit; cursor: pointer; text-transform: capitalize; }
-.autosim-workspace .sim-agent.on { border-color: var(--gold-bright); } .sim-agent small { opacity: .6; font-size: .56rem; }
+.autosim-workspace .sim-agent.on { border-color: var(--gold-bright); } .autosim-workspace .sim-agent small { opacity: .6; font-size: .56rem; }
 .autosim-workspace .sim-quote { border-left: 2px solid var(--gold); padding: 8px 12px; margin: 12px 0; font-size: .74rem; line-height: 1.6; max-width: 70ch; }
 .autosim-workspace .sim-history { list-style: none; padding: 0; display: grid; gap: 10px; font-size: .7rem; }
 .autosim-workspace .sim-history time { opacity: .5; font-size: .58rem; margin-left: 6px; }
@@ -71,9 +71,9 @@
 .autosim-workspace .sim-canvas svg { width: 100%; max-height: 560px; transform-origin: center; transition: transform .25s; }
 .autosim-workspace .sim-canvas-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .autosim-workspace .sim-mini { background: none; border: 1px solid var(--gold-dim); padding: 3px 10px; font: inherit; font-size: .66rem; cursor: pointer; }
-.autosim-workspace .sim-legend { font-size: .58rem; opacity: .8; margin-left: 8px; } .sim-legend i { display: inline-block; width: 8px; height: 8px; margin: 0 4px 0 8px; }
-@media (max-width: 900px) { .sim-root { grid-template-columns: 1fr; padding: 12px; } .sim-range { grid-template-columns: 90px 1fr 90px; } }
-@media (prefers-reduced-motion: reduce) { .sim-mic.on, .sim-stages li.run::before { animation: none; } .sim-canvas svg { transition: none; } }
+.autosim-workspace .sim-legend { font-size: .58rem; opacity: .8; margin-left: 8px; } .autosim-workspace .sim-legend i { display: inline-block; width: 8px; height: 8px; margin: 0 4px 0 8px; }
+@media (max-width: 900px) { .autosim-workspace .sim-root { grid-template-columns: 1fr; padding: 12px; } .autosim-workspace .sim-range { grid-template-columns: 90px 1fr 90px; } }
+@media (prefers-reduced-motion: reduce) { .autosim-workspace .sim-mic.on, .autosim-workspace .sim-stages li.run::before { animation: none; } .autosim-workspace .sim-canvas svg { transition: none; } }
 
 .autosim-workspace .autosim-header { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:24px 24px 0; }
 .autosim-workspace .autosim-header h1 { font-family:Orbitron,monospace; font-size:20px; }
