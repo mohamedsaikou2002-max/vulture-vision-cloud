@@ -1,4 +1,5 @@
 // Server-only credential transport. Never put credentials in URLs, logs or errors.
+declare const Deno: { env: { toObject(): Record<string, string> } };
 export interface GeminiCredential { slot: string; value: string }
 export function configuredGeminiKeys(env: Record<string, string | undefined>): GeminiCredential[] {
   const names = Object.keys(env).filter(name => /^GEMINI_API_KEY(?:_[1-9][0-9]*)?$/.test(name));

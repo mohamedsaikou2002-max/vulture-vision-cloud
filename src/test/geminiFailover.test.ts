@@ -1,8 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { configuredGeminiKeys, createGeminiFailover } from '../../supabase/functions/_shared/gemini_failover';
 
 const credentials = () => [{ slot: 'GEMINI_API_KEY', value: 'test-primary' }, { slot: 'GEMINI_API_KEY_1', value: 'test-backup' }];
 describe('Gemini secure failover', () => {
+  // jsdom lacks AbortSignal.timeout; model it without real timers or provider traffic.
+  beforeEach(() => vi.stubGlobal('AbortSignal', { timeout: vi.fn(() => new AbortController().signal) }));
+  afterEach(() => vi.unstubAllGlobals());
   it('discovers numbered secrets in order and deduplicates without exposing them', () => {
     const keys = configuredGeminiKeys({ GEMINI_API_KEY_10: 'ten', GEMINI_API_KEY_2: 'two', GEMINI_API_KEY: 'primary', GEMINI_API_KEY_1: 'primary', OTHER: 'ignore' });
     expect(keys.map(k => k.slot)).toEqual(['GEMINI_API_KEY', 'GEMINI_API_KEY_2', 'GEMINI_API_KEY_10']);
