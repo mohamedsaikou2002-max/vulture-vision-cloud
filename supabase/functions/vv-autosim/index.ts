@@ -21,6 +21,8 @@ import { NASDAQ_MARKET, nasdaqObservations, loadNasdaqCandles, loadMacroObservab
 const cors = { ...corsHeaders, "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
 const fail = (code: string, message: string, status: number) => json({ ok: false, error: { code, message } }, status);
+// Fast structured generation for simulation stages; operators may override each provider.
+const simulationAI=()=>({model:Deno.env.get('GEMINI_AUTOSIM_MODEL')||Deno.env.get('GEMINI_MODEL')||'gemini-2.5-flash-lite',gatewayModel:Deno.env.get('LOVABLE_AUTOSIM_MODEL')||Deno.env.get('LOVABLE_AI_MODEL')||'google/gemini-2.5-flash-lite'});
 const DISCLAIMER = "Scenario-conditional simulation using uncalibrated coefficients. Not a forecast, not investment advice. Trading, especially with leverage, can lose more than you intend to risk.";
 
 const DIM_HELP = "fear↑=more fear; trust↑=more trust; liquidity↑=easier funding; volatility↑=larger swings; credit↑=easier credit; consumer_activity↑=stronger demand; inflation↑=more price pressure; employment↑=stronger labor market; growth↑=stronger output; default_risk↑=more borrower stress";
@@ -162,7 +164,7 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
       const { data, model: m } = await generateJSON<Record<string, unknown>>({
         system: "You convert a trader's scenario into structured economic inputs. Respond with JSON only.",
         prompt: `Scenario: """${scenario}"""\n\nThe simulated market is the ${NASDAQ_MARKET.label} index (${NASDAQ_MARKET.symbol}) — do not pick or output any asset.\n\nReturn JSON with keys: event_type (one of ${EVENT_TYPES.join(", ")}), summary (one sentence), is_hypothetical (true unless the scenario describes something already widely reported), horizon_days (1-30), regions (array), sectors (array), search_keywords (4-8 short lowercase words or phrases useful for searching news headlines), shocks (object: dimension -> number between -0.2 and 0.2 = how far the scenario moves that 0-1 dimension; omit unaffected dimensions), shock_rationale (object: dimension -> under 20 words), risk_profile ("balanced" unless the scenario text explicitly asks for conservative or aggressive), confidence (0-1).\nDimensions: ${DIMENSIONS.join(", ")}. Meaning: ${DIM_HELP}.`,
-        maxOutputTokens: 1500, temperature: 0.2, timeoutMs: 25000,
+        ...simulationAI(), maxOutputTokens: 1200, temperature: 0.2, timeoutMs: 30000,
       });
       interp = validateInterp(data, horizonHint); model = m;
     } catch (e) {
@@ -257,13 +259,13 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
         execution: cfg.cost,
         scenario_strategies: scen.strategies.map(s => ({ strategy: s.label, median_return_pct: +(s.median_return * 100).toFixed(1), p5_pct: +(s.p5_return * 100).toFixed(1), p95_pct: +(s.p95_return * 100).toFixed(1), prob_loss: +s.prob_loss.toFixed(2), prob_liquidation: +s.prob_liquidation.toFixed(2) })),
         buy_hold_median_pct: +(scen.buy_hold.median_return * 100).toFixed(1),
-        headlines: evidence.selected.slice(0, 15).map(h => `${h.source}: ${h.title}`),
+        headlines: evidence.selected.slice(0, 8).map(h => `${h.source}: ${h.title.slice(0,240)}`),
         warnings,
       };
       const { data } = await generateJSON<Record<string, unknown>>({
         system: "You explain the output of a numerical economic simulator to a fast-moving trader. Use ONLY numbers present in the data. Never invent probabilities, prices or returns. Call results 'simulated'. Be direct and brief.",
         prompt: `Data:\n${JSON.stringify(compact)}\n\nReturn JSON: headline (max 12 words), summary (max 110 words), drivers (3-5 short strings: which dimensions moved and why, citing the numbers), risks (2-4 strings), gaps (strings: missing data, uncorroborated assumptions, contradictions in headlines), what_would_change_this (2-3 strings), spoken_summary (max 55 words, plain speech, no symbols or markdown).`,
-        maxOutputTokens: 1400, temperature: 0.3, timeoutMs: 35000,
+        ...simulationAI(), maxOutputTokens: 1200, temperature: 0.3, timeoutMs: 40000,
       });
       analysis = parseAnalysis(data);
       if (!analysis) warnings.push("The AI explanation had an invalid structure and was omitted. Numerical results remain available.");

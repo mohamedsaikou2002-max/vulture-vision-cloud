@@ -28,7 +28,7 @@ describe('Intel grounding and provider failures', () => {
   });
   it('uses a key header, honors configuration and falls back only on 404', async () => {
     const fetcher = vi.fn().mockResolvedValueOnce(new Response('', { status: 404 })).mockResolvedValueOnce(Response.json({ candidates: [{ content: { parts: [{ thought: true, text: 'Private reasoning' }, { text: 'Grounded answer' }] } }] }));
-    expect(await generateGemini('test-key', 'gemini-configured', { contents: [] }, fetcher)).toEqual({ text: 'Grounded answer', model: 'gemini-3.8-flash' });
+    expect(await generateGemini('test-key', 'gemini-configured', { contents: [] }, fetcher)).toEqual({ text: 'Grounded answer', model: 'gemini-2.5-flash' });
     expect(fetcher.mock.calls[0][0]).toContain('gemini-configured:generateContent');
     expect(fetcher.mock.calls[0][0]).not.toContain('test-key');
     expect(fetcher.mock.calls[0][1].headers['x-goog-api-key']).toBe('test-key');

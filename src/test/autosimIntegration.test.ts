@@ -108,7 +108,7 @@ describe('AutoSim real handler and shared engine',()=>{
       return original(input,init);
     });
     const r=await f.call({action:'run',job_id:job1,scenario:'A funding liquidity crunch'});
-    expect(r.status).toBe(200);expect(r.data.result.model).toBe('google/gemini-2.5-flash');
+    expect(r.status).toBe(200);expect(r.data.result.model).toBe('google/gemini-2.5-flash-lite');
     expect(r.data.result.analysis.headline).toBe('Gateway explanation');
     expect(f.fetcher.mock.calls.some(c=>String(c[0]).includes('generativelanguage'))).toBe(false);
   });

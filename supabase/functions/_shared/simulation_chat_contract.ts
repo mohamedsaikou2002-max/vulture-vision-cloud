@@ -137,12 +137,11 @@ export function parseSimulationChatAnswer(raw: string, mode: AnalystMode, validN
   };
 }
 
-/** Prefer current broadly available Gemini models. A 404 on a legacy 2.5 model
- * may mean that this API key is not eligible to access it, not that its name is invalid.
- * Only fail over after a 404; never retry chargeable or ambiguous provider failures.
+/** Respect the configured model; use established Flash candidates only on HTTP 404.
+ * Do not spend a short simulation deadline probing speculative version names.
  */
 export function availableGeminiModels(configured?: string | null): string[] {
-  const preferred = configured?.trim() || "gemini-3.8-flash";
+  const preferred = configured?.trim() || "gemini-2.5-flash";
   if (!/^[A-Za-z0-9_.-]{3,80}$/.test(preferred)) throw new Error("Invalid Gemini model configuration");
-  return [...new Set([preferred, "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"])].slice(0, 4);
+  return [...new Set([preferred, "gemini-2.5-flash", "gemini-2.5-flash-lite"])];
 }
