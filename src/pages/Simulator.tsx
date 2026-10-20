@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Mic, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VVLayout from "@/components/VVLayout";
