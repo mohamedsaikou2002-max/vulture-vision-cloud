@@ -50,6 +50,7 @@ export default function News() {
   const [publisherItems, setPublisherItems] = useState<Item[]>([]);
   const [publisherStatus, setPublisherStatus] = useState("loading");
   const [data, setData] = useState<NewsData>({ irl: [], dark: [], tech: [] });
+  const [breaking, setBreaking] = useState<Item[]>([]);
   const [brief, setBrief] = useState<IntelBrief | null>(null);
   const [synthBusy, setSynthBusy] = useState(false);
   const [feedStatus, setFeedStatus] = useState('loading');
@@ -77,6 +78,7 @@ export default function News() {
         if (alive && res) {
           setFeedStatus(res.status || "degraded"); setFeedError(res.error || null); setSourceHealth(res.source_health || []);
           setData({ irl: res.irl || [], dark: res.dark || [], tech: res.tech || [] });
+          setBreaking(Array.isArray(res.breaking) ? res.breaking : []);
           setPublisherItems(old=>[...new Map([...(res.publisher_news || []),...old].map(it=>[it.id||it.link,it])).values()]); if(pageRef.current===0)setHasMore(!!res.has_more);
           setPublisherStatus(res.publisher_status || "ingestion_not_available");
         }
@@ -142,6 +144,13 @@ export default function News() {
         {hasMore && <button className="synthesize-btn" disabled={moreBusy} onClick={()=>void loadMore()}>{moreBusy?'Loading…':'Load more headlines'}</button>}
         <details className="mt-4 text-xs"><summary>207-source catalog and collection status</summary><p>Collected metadata appears above. Restricted or unreachable publishers are skipped; no feed can guarantee all news. Headlines are ordered by publication time and refresh every minute.</p><ul>{newsSources.map(s=><li key={s.id}>{s.name} · {s.country_name} · {collector[s.id] ? `${collector[s.id].status} (${collector[s.id].articles} items) · ${new Date(collector[s.id].checked_at).toLocaleString()}` : "No collector report yet"}</li>)}</ul></details>
       </section>
+      {breaking.length > 0 && <section className="mx-4 mb-2 rounded-xl border border-destructive/50 bg-destructive/10 p-4 md:mx-8" aria-label="Breaking news">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[.2em] text-destructive">⚡ Breaking now</p>
+        <ul className="space-y-2">{breaking.map((it, i) => <li key={i} className="text-sm leading-relaxed">
+          {it.link ? <a href={it.link} target="_blank" rel="noopener noreferrer" className="hover:underline">{decodeEntities(it.title)}</a> : decodeEntities(it.title)}
+          <span className="ml-2 text-xs text-muted-foreground">{it.source || "Web"} · {it.time ? timeAgo(it.time) : "just now"}</span>
+        </li>)}</ul>
+      </section>}
       <div className="news-grid">
         <Column title="IRL News" tone="red" items={data.irl} badge="badge-red" badgeText="FEED" unavailable={feedStatus === "unavailable"} />
         <Column title="Dark Web Intel" tone="gold" items={data.dark} badge="badge-dark" badgeText="ALERT" unavailable={feedStatus === "unavailable"} />
