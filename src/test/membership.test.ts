@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { MEMBERSHIP, hasMembership } from "../lib/membership";
 describe("membership rules", () => {
-  it("is 99 USD recurring monthly", () => {
-    expect(MEMBERSHIP).toEqual({ amountCents: 9900, currency: "usd", interval: "month" });
+  it("is 1050 USD recurring monthly", () => {
+    expect(MEMBERSHIP).toEqual({ amountCents: 105000, currency: "usd", interval: "month" });
   });
   it("requires an active or trialing subscription within its paid period", () => {
     const now = Date.parse("2026-10-19T00:00:00Z");
