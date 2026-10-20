@@ -27,10 +27,11 @@ export default function Welcome() {
     } catch (e) { setError(e instanceof Error ? e.message : "Google sign-in could not be completed. Please try again."); setBusy(false); }
   };
   return <PublicShell><main className="welcome-main">
-    <section className="welcome-heading"><span className="section-index">02 — THE PERSPECTIVE</span><h1>Vulture Vision.<br /><span>See the bigger picture.</span></h1><p>Market intelligence for people who make their own decisions.</p></section>
+    <section className="welcome-heading"><span className="section-index">THE PERSPECTIVE — BY GREY COMPANY</span><h1>Vulture Vision.<br /><span>See the bigger picture.</span></h1><p>Explore the consequences of a scenario. Market intelligence, economic context, and strategy stress tests—your judgment stays at the center.</p><Button asChild size="lg"><Link to="#membership">Get membership <ArrowUpRight /></Link></Button></section>
+    <section className="welcome-story"><span className="section-index">01 — THE NAME</span><h2>A higher vantage point.</h2><p>Inspired by the vulture’s remarkable altitude and long-range vision, Vulture Vision brings a wide landscape into focus from a single vantage point. The idea is simple: step back from individual signals, see how they connect, and make your own informed decisions.</p><p>Built by <strong>Grey Company</strong>. Developed with <strong>400+ day traders</strong> during beta testing and used by hedge funds and capital management firms to inform capital allocation and management.</p></section>
     <section className="welcome-capabilities">{[
       ["01", "Intelligence, connected", "Market signals, news, and on-chain context in one research workspace."],
-      ["02", "Scenarios, explored", "Socio-economic research and scenario analysis to examine what could happen next."],
+      ["02", "Scenarios, explored", "Typed or spoken scenarios, ten economic dimensions, and six strategy stress tests. Simulated results are clearly separated from historical replays."],
       ["03", "Capital, considered", "A wider lens for allocation and risk. Your judgment stays at the center—never automated trading."],
     ].map(([n, title, copy]) => <article key={n}><span>{n}</span><h2>{title}</h2><p>{copy}</p></article>)}</section>
     <section className="membership-section" id="membership"><div><span className="section-index">03 — MEMBERSHIP</span><h2>Your next<br />vantage point.</h2><p>Built by Grey Company. Developed with 400+ beta day traders, and used by hedge funds and capital management firms to inform capital allocation and management.</p><small>Research support, not investment advice. No guaranteed outcomes.</small></div>

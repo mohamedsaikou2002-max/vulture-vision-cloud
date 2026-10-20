@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
+import video from "@/assets/vulture-video.asset.json";
 
 interface Props {
   children: ReactNode;
@@ -35,7 +36,7 @@ export default function VVLayout({ children, status, blurred = true }: Props) {
     <>
       <div className={`video-bg${blurred ? " blurred" : ""}`}>
         <video autoPlay muted loop playsInline>
-          <source src="/video.mp4" type="video/mp4" />
+          <source src={video.url} type="video/mp4" />
         </video>
       </div>
       <div className="video-overlay" />
