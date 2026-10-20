@@ -4,6 +4,7 @@ import { Mic, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VVLayout from "@/components/VVLayout";
 import RecentNews from "@/components/sim/RecentNews";
+import BreakingNews from "@/components/sim/BreakingNews";
 import WorldState from "@/components/sim/WorldState";
 import DimensionCanvas, { label } from "@/components/sim/DimensionCanvas";
 import corpus from "@/data/historicalCorpus.json";
@@ -154,10 +155,11 @@ export default function Simulator() {
   return (
     <VVLayout status={{ label: busy ? "SIMULATING" : "RESEARCH", tone: busy ? "cyan" : "gold" }}>
       <div className="scroll-inner autosim-workspace">
-      <div className="autosim-header"><h1>Nasdaq scenario simulator</h1><Link to="/simulations/pilot">MiroFish pilot & research chat ↗</Link></div>
+      <div className="autosim-header"><h1>Nasdaq scenario simulator</h1></div>
       <p className="sim-note">Market: Nasdaq Composite (^IXIC). Strategy tests and forecasts use Nasdaq daily history; synthetic fallback is explicitly labelled.</p>
       <div className="sim-root">
         <aside className="sim-left">
+          <BreakingNews />
           <RecentNews />
           <section className="panel sim-card">
             <div className="panel-title">World state</div>
