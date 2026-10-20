@@ -1,4 +1,6 @@
-export const MEMBERSHIP = { amountCents: 105000, currency: "usd", interval: "month" } as const;
+export const MEMBERSHIP = { amountCents: 105000, currency: "usd", interval: "month", trialHours: 24 } as const;
+// Stripe trials are set in whole days; 24h = 1 day.
+export const TRIAL_PERIOD_DAYS = MEMBERSHIP.trialHours / 24;
 
 export interface MembershipRecord {
   status: string;
