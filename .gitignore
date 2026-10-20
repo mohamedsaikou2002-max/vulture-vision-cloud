@@ -34,3 +34,9 @@ news-crawler/crawl-result.json
 services/voice/__pycache__/
 services/voice/tests/__pycache__/
 *.ggml
+
+# Server secrets and local environment overrides
+.env.*
+!.env.example
+*.pem
+*.key

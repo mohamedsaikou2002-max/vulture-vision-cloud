@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState("STANDBY");
   const [brief, setBrief] = useState<IntelBrief | null>(null);
+  const [regimeError,setRegimeError]=useState("Loading Nasdaq regime…");
   const [regime, setRegime] = useState<RegimeState | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -31,9 +32,9 @@ export default function Dashboard() {
   useEffect(() => {
     let alive = true;
     fetchLatestBrief().then(b => alive && b && setBrief(b));
-    fetchRegime().then(r => alive && r && setRegime(r));
+    fetchRegime().then(r => {if(alive){setRegime(r);setRegimeError(r?"":"Market regime provider unavailable");}}).catch(e=>{if(alive){setRegime(null);setRegimeError(e instanceof Error?e.message:"Market regime unavailable");}});
     const bId = setInterval(() => fetchLatestBrief().then(b => alive && b && setBrief(b)), 15 * 60 * 1000);
-    const rId = setInterval(() => fetchRegime().then(r => alive && r && setRegime(r)), 2 * 60 * 1000);
+    const rId = setInterval(() => fetchRegime().then(r => {if(alive){setRegime(r);setRegimeError(r?"":"Market regime provider unavailable");}}).catch(e=>{if(alive){setRegime(null);setRegimeError(e instanceof Error?e.message:"Market regime unavailable");}}), 2 * 60 * 1000);
     const unsub = subscribeToIntelBriefs(
       b => { if (alive) setBrief(b); },
       r => { if (alive) setRegime(r); },
@@ -50,6 +51,7 @@ export default function Dashboard() {
     setMode("PROCESSING");
     try {
       const { data, error } = await supabase.functions.invoke("vv-chat", {
+        signal: AbortSignal.timeout(55000),
         body: {
           message: val,
           intel_context: brief?.thesis || null,
@@ -102,18 +104,18 @@ export default function Dashboard() {
           <>
             <span className="status-dot" style={{ background: regimeColor, boxShadow: `0 0 8px ${regimeColor}` }} />
             <span className="regime-state-label" style={{ color: regimeColor }}>{regimeLabel}</span>
-            <span style={{ color: "var(--dim)" }}>DUR {regime.current_duration_sessions}s</span>
+            <span title={regime.method} style={{ color: "var(--dim)" }}>{regime.model_version || "External regime model"} · {regime.freshness || "freshness unverified"}</span>
             {nextProbs.map(([state, prob]) => (
               <span key={state} className="regime-prob-pill" style={{ color: REGIME_COLORS[state] || "var(--dim)" }}>
                 → {REGIME_LABELS[state] || state}: {(prob * 100).toFixed(0)}%
               </span>
             ))}
             <span style={{ marginLeft: "auto", color: "var(--gold-dim)" }}>
-              TRAINED ON {regime.observations_count} OBSERVATIONS
+              BASED ON {regime.observations_count} OBSERVATIONS · {regime.source} · {regime.last_verified_at}
             </span>
           </>
         ) : (
-          <span style={{ color: "var(--dim)" }}>REGIME DATA UNAVAILABLE — awaiting a verified connection</span>
+          <span style={{ color: "var(--dim)" }}>{regimeError}</span>
         )}
       </div>
 

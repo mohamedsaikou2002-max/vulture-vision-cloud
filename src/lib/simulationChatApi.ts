@@ -4,7 +4,7 @@ import type {
 } from "../../supabase/functions/_shared/simulation_chat_contract";
 
 export async function askSimulationResearch(request: SimulationChatRequest): Promise<SimulationChatAnswer> {
-  const { data, error } = await supabase.functions.invoke("vv-simulation-chat", { body: request });
+  const { data, error } = await supabase.functions.invoke("vv-simulation-chat", { body: request, signal: AbortSignal.timeout(55000) });
   if (error) {
     let explanation = error.message || "Simulation chat service is unavailable";
     const context = (error as typeof error & { context?: Response }).context;

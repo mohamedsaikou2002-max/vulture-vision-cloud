@@ -50,7 +50,7 @@ records or recreate profiles. It has only been applied to a disposable local
 Postgres-compatible database during this task. Existing client policies must not
 allow users to update subscriptions or the new private tables.
 
-Keep `BILLING_ENABLED=false` and `VV_REQUIRE_SUBSCRIPTION=false` during setup.
+Apply staged `0003_workspace_security.sql` after billing; it defaults the database release policy to false. Keep `BILLING_ENABLED=false` and leave `workspace_release_policy.paid_access_required` false during setup. Activate only through the staged process in [PRODUCTION_AUDIT.md](PRODUCTION_AUDIT.md).
 The opt-in gate protects member Intel/chat/analytics, research chat, and both
 AutoSim views server-side; the separate MiroFish operator allowlist stays intact.
 Do not turn on a new subscription gate until the payment flow and accepted
@@ -154,7 +154,7 @@ retains operator-only access.
 
 ## 5. Release checks and publish
 
-Run:
+Use Node.js 22.12 or newer. Run:
 
 ```
 npm ci
@@ -165,8 +165,7 @@ npm run build
 npm run test:migrations
 ```
 
-The migration check requires the CI PGlite dependency documented in setup; it
-runs only in a disposable local database. Check phone, tablet and desktop layouts,
+The migration check uses PGlite, installed by `npm ci`, and runs only in a disposable local database. Check phone, tablet and desktop layouts,
 including short-height screens and an open mobile keyboard. Verify long Intel
 replies scroll while Send remains reachable, and verify authentication redirects.
 

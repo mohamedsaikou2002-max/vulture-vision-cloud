@@ -29,9 +29,10 @@ describe('Additional live publisher feeds', () => {
       ? new Response(`<rss><channel><item><title>Publisher update</title><link>https://blog.cloudflare.com/update/</link><pubDate>${now}</pubDate><description>Body excluded</description></item></channel></rss>`)
       : new Response('', { status: 503 });
     const response = await loadEdgeHandler('vv-news', fetcher, {}, () => ({
-      auth: { getUser: async () => ({ data: { user: null }, error: null }) },
+      auth: { getUser: async () => ({ data: { user: {id:"fixture"} }, error: null }) },
+      rpc:async()=>({data:true,error:null}),
       from: () => { throw new Error('Database unavailable'); },
-    }))(new Request('https://fixture.invalid', { method: 'POST', body: '{}' }));
+    }))(new Request('https://fixture.invalid', { method: 'POST', headers:{authorization:'Bearer fixture'}, body: '{}' }));
     const result = await response.json();
     expect(response.status, JSON.stringify(result)).toBe(200);
     expect(result.tech[0]).toMatchObject({ source: 'Cloudflare Blog', link: 'https://blog.cloudflare.com/update/', time: now });

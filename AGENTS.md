@@ -3,8 +3,8 @@
 - Keep landing styles scoped under public page classes; existing terminal pages retain their styling and behavior.
 - Use an asset pointer for the original uploaded video and lazy-load the decorative R3F contours so media and content remain available if WebGL fails.
 - Link billing customers to stable authenticated user IDs; subscription state is server-written and never derived from editable profile metadata.
-- Stage draft schema additions only; do not activate checkout or enforce a new subscription gate before payment configuration and staged membership tables are accepted.
-- Keep AutoSim at /simulations and the existing MiroFish pilot/research chat at /simulations/pilot so automatic stress tests never replace operator permissions or research chat.
+- Stage draft schema additions only; do not activate checkout or enforce a new subscription gate before payment configuration and staged membership tables are accepted. Use the server-owned workspace_release_policy database release control; missing access schema must fail closed, and environment subscription bypasses are forbidden.
+- Keep AutoSim at /simulations, Quick Sim at /simulations/simple and customer Research Chat at /research; redirect /simulations/pilot to /research. Preserve separate backend operator allowlists.
 - Share the deterministic AutoSim calculation engine between browser visualization and server calculation; label its uncalibrated and missing-data assumptions explicitly.
 - Claim AutoSim jobs atomically server-side before provider calls; replay IDs cannot launch another run and agent questions use the existing research quota.
 - Scope AutoSim and public information styles to their own page roots to prevent changes to the existing terminal and pilot pages.

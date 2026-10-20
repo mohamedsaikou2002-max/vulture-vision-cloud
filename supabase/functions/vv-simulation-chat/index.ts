@@ -41,6 +41,14 @@ Deno.serve(async (req: Request) => {
   // If migrations aren't deployed, fail closed rather than make unmetered provider calls.
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
   const membership=await membershipAccess(admin,user.id);if(membership)return membership;
+  // Resolve cited IDs from server-owned evidence; client titles never establish provenance.
+  if(request.news.length){
+    const cutoff=new Date(Date.now()-72*3600000).toISOString();
+    const {data:rows,error}=await admin.from('news_articles').select('id,title,translated_title_en,source,published_at').in('id',request.news.map(n=>n.id)).gte('published_at',cutoff).limit(8);
+    if(error)return reply({error:'Research evidence verification unavailable'},503);
+    if(rows?.length!==request.news.length)return reply({error:'Some source evidence is unavailable or stale; refresh the research context'},400);
+    request.news=rows.map(r=>({id:r.id,title:(r.translated_title_en||r.title).slice(0,240),source:r.source.slice(0,100)}));
+  }
   const { data: claimed, error: claimError } = await admin.rpc("claim_scenario_synthesis", { p_user_id: user.id });
   if (claimError) return reply({ error: "Simulation chat quota is unavailable; deploy the quota migration" }, 503);
   if (claimed !== true) return reply({ error: "Hourly simulation research limit reached (6 calls)" }, 429);

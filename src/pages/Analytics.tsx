@@ -7,7 +7,6 @@ import {
   fetchLatestBrief, fetchRegime, subscribeToIntelBriefs,
   IntelBrief, RegimeState, REGIME_COLORS, REGIME_LABELS, dirArrow, dirClass, confidenceLabel,
 } from "@/lib/intelApi";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from "recharts";
 
 interface Crypto {
   symbol: string;
@@ -65,7 +64,7 @@ export default function Analytics() {
     let alive = true;
     async function load() {
       try {
-        const { data: res, error } = await supabase.functions.invoke("vv-analytics");
+        const { data: res, error } = await supabase.functions.invoke("vv-analytics",{body:{},signal:AbortSignal.timeout(45000)});
         if (!alive) return;
         if (error) {
           const explanation = await functionError(error, "Analytics is unavailable. Try again shortly.");
@@ -87,13 +86,14 @@ export default function Analytics() {
 
   // Intel Backend state
   const [brief, setBrief] = useState<IntelBrief | null>(null);
+  const [regimeProblem,setRegimeProblem]=useState("");
   const [regime, setRegime] = useState<RegimeState | null>(null);
   useEffect(() => {
     let alive = true;
     fetchLatestBrief().then(b => alive && b && setBrief(b));
-    fetchRegime().then(r => alive && r && setRegime(r));
+    fetchRegime().then(r=>{if(alive){setRegime(r);setRegimeProblem(r?"":"Market regime unavailable");}}).catch(e=>{if(alive){setRegime(null);setRegimeProblem(e instanceof Error?e.message:"Market regime unavailable");}});
     const bId = setInterval(() => fetchLatestBrief().then(b => alive && b && setBrief(b)), 15 * 60 * 1000);
-    const rId = setInterval(() => fetchRegime().then(r => alive && r && setRegime(r)), 2 * 60 * 1000);
+    const rId = setInterval(() => fetchRegime().then(r=>{if(alive){setRegime(r);setRegimeProblem(r?"":"Market regime unavailable");}}).catch(e=>{if(alive){setRegime(null);setRegimeProblem(e instanceof Error?e.message:"Market regime unavailable");}}), 2 * 60 * 1000);
     const unsub = subscribeToIntelBriefs(
       b => { if (alive) setBrief(b); },
       r => { if (alive) setRegime(r); },
@@ -115,16 +115,6 @@ export default function Analytics() {
   const spy = data?.assets.find(a => a.symbol === "SPY");
   const port = data?.portfolio;
   const reg = regimeBadge(port?.dominant_regime);
-
-  // Markov chart data
-  const markovStates = ["risk_on", "risk_off", "neutral", "volatile", "trending"];
-  const markovChartData = regime ? markovStates.map(s => ({
-    state: REGIME_LABELS[s] || s,
-    rawState: s,
-    next: Math.round((regime.transition_probs_next_session?.[s] || 0) * 100),
-    nSession: Math.round((regime.transition_probs_n_sessions?.[s] || 0) * 100),
-    fill: REGIME_COLORS[s],
-  })) : [];
 
   return (
     <VVLayout status={status}>
@@ -167,54 +157,12 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* MARKOV REGIME ENGINE */}
-        {regime && (
-          <div className="panel markov-panel" style={{ marginTop: 14 }}>
-            <div>
-              <div className="panel-title" style={{ fontSize: 10 }}>MARKOV REGIME ENGINE</div>
-              <div className="markov-regime-big" style={{ color: REGIME_COLORS[regime.current_state] }}>
-                {REGIME_LABELS[regime.current_state]}
-              </div>
-              <div className="markov-duration">DURATION: {regime.current_duration_sessions} SESSIONS</div>
-              <div className="markov-summary">{regime.regime_summary}</div>
-              <div className="markov-duration" style={{ marginTop: 8 }}>
-                MOST LIKELY NEXT: <span style={{ color: REGIME_COLORS[regime.most_likely_next] || "var(--gold)" }}>
-                  {REGIME_LABELS[regime.most_likely_next] || regime.most_likely_next}
-                </span>
-              </div>
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div className="panel-title" style={{ fontSize: 10 }}>TRANSITION PROBABILITIES</div>
-              <div style={{ width: "100%", height: 180 }}>
-                <ResponsiveContainer>
-                  <BarChart data={markovChartData}>
-                    <CartesianGrid stroke="rgba(201,168,76,.08)" />
-                    <XAxis dataKey="state" stroke="#7a5f28" fontSize={9} />
-                    <YAxis stroke="#7a5f28" fontSize={9} domain={[0, 100]} unit="%" />
-                    <Tooltip contentStyle={{ background: "#000", border: "1px solid #c9a84c", fontSize: 11 }} />
-                    <Legend wrapperStyle={{ fontSize: 9 }} />
-                    <Bar dataKey="next" name="NEXT SESSION" fill="#c9a84c" />
-                    <Bar dataKey="nSession" name={`${regime.n_sessions}-SESSION`} fill="#1e88e5" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="transition-watch-box">
-              <div className="transition-watch-label">TRANSITION WATCH</div>
-              <div className="transition-watch-text">
-                {brief?.regime_assessment?.transition_watch || "Monitoring transitions…"}
-              </div>
-              <div className="transition-watch-label" style={{ marginTop: 10 }}>STATIONARY EQUILIBRIUM</div>
-              <div className="equilibrium-pills">
-                {Object.entries(regime.stationary_distribution || {}).map(([s, p]) => (
-                  <span key={s} className="eq-pill" style={{ color: REGIME_COLORS[s], borderColor: REGIME_COLORS[s] }}>
-                    {REGIME_LABELS[s] || s}: {(p * 100).toFixed(0)}%
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {regimeProblem&&<p className="service-notice" role="status">{regimeProblem}</p>}
+        {regime&&<section className="panel markov-panel" style={{marginTop:14}}>
+          <div><div className="panel-title">NASDAQ MARKET REGIME · DESCRIPTIVE</div><div className="markov-regime-big" style={{color:REGIME_COLORS[regime.current_state]}}>{REGIME_LABELS[regime.current_state]}</div><p>{regime.regime_summary}</p></div>
+          <div><div className="panel-title">OBSERVATION PROVENANCE</div><p>{regime.source} · {regime.observations_count} observations</p><p>{regime.last_verified_at} · {regime.freshness}</p><small>{regime.model_version}: {regime.method}</small></div>
+          <div><div className="panel-title">MODEL LIMITS</div><p>Uncalibrated historical rule. Predictive transition probabilities and stationary equilibrium are unavailable.</p></div>
+        </section>}
 
         <div className="analytics-wrap">
           <div className="panel" style={{ padding: 14, marginTop: 14 }}>
@@ -248,7 +196,7 @@ export default function Analytics() {
                           <span className={`badge ${r.cls}`}>{r.label}</span>
                           {regime && (
                             <div style={{ fontSize: 9, color: "var(--dim)", marginTop: 2 }}>
-                              MARKOV: {REGIME_LABELS[regime.most_likely_next] || regime.most_likely_next}
+                              NASDAQ: {REGIME_LABELS[regime.current_state]}
                             </div>
                           )}
                         </td>

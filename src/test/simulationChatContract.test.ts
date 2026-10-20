@@ -29,10 +29,10 @@ const output = {
 };
 describe("Podroom-inspired Vulture simulation chat contract", () => {
   it("uses current Flash models by default and falls back when legacy models return 404", () => {
-    expect(availableGeminiModels()).toEqual(["gemini-3.8-flash", "gemini-3.5-flash-lite"]);
-    expect(availableGeminiModels("gemini-configured")).toEqual(["gemini-configured", "gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+    expect(availableGeminiModels()).toEqual(["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"]);
+    expect(availableGeminiModels("gemini-configured")).toEqual(["gemini-configured", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash"]);
     expect(availableGeminiModels(" gemini-2.5-flash ")).toEqual(["gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite"]);
-    expect(availableGeminiModels("gemini-3.8-flash")).toHaveLength(2);
+    expect(availableGeminiModels("gemini-3.8-flash")).toHaveLength(3);
     expect(() => availableGeminiModels("../not-a-model")).toThrow("Invalid Gemini model");
   });
   it("accepts bounded scenario, role panel and news context", () => {
@@ -42,7 +42,7 @@ describe("Podroom-inspired Vulture simulation chat contract", () => {
     const prompt = buildSimulationChatPrompt(input);
     expect(prompt.system).toMatch(/untrusted context/);
     expect(prompt.system).toMatch(/do not execute transactions/i);
-    expect(prompt.system).toMatch(/MiroFish results are unavailable/);
+    expect(prompt.system).toMatch(/completed simulation results are unavailable/);
     expect(prompt.user).toContain("not_started");
     expect(prompt.user).toContain(input.question);
   });

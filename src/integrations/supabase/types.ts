@@ -93,6 +93,12 @@ export type Database = {
       }
       news_articles: {
         Row: {
+          original_title: string | null
+          translated_title_en: string | null
+          translation_source_language: string | null
+          translated_at: string | null
+          translation_status: string
+
           canonical_url: string
           fetched_at: string
           id: string
@@ -105,6 +111,12 @@ export type Database = {
           title: string
         }
         Insert: {
+          original_title?: string | null
+          translated_title_en?: string | null
+          translation_source_language?: string | null
+          translated_at?: string | null
+          translation_status?: string
+
           canonical_url: string
           fetched_at?: string
           id: string
@@ -117,6 +129,12 @@ export type Database = {
           title: string
         }
         Update: {
+          original_title?: string | null
+          translated_title_en?: string | null
+          translation_source_language?: string | null
+          translated_at?: string | null
+          translation_status?: string
+
           canonical_url?: string
           fetched_at?: string
           id?: string

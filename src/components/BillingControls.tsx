@@ -5,14 +5,14 @@ export default function BillingControls(){
  const [enabled,setEnabled]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[status,setStatus]=useState('');
  const requestId=useRef<string|null>(null);
  useEffect(()=>{let active=true;const load=async()=>{
-  const [{data:config,error:configError},{data,error:statusError}]=await Promise.all([supabase.functions.invoke('vv-billing',{body:{action:'config'}}),supabase.functions.invoke('vv-billing',{body:{action:'status'}})]);
+  const [{data:config,error:configError},{data,error:statusError}]=await Promise.all([supabase.functions.invoke('vv-billing',{body:{action:'config'},signal:AbortSignal.timeout(12000)}),supabase.functions.invoke('vv-billing',{body:{action:'status'},signal:AbortSignal.timeout(12000)})]);
   if(active){setEnabled(!configError&&!statusError&&config?.enabled===true);setStatus(data?.subscription?.status||'');if(configError||statusError)setError('Billing status is unavailable. No payment has been started.');else setError('');}
  };void load();const timer=setInterval(()=>void load(),15000);return()=>{active=false;clearInterval(timer);};},[]);
  const start=async(action:'checkout'|'portal')=>{
   setBusy(true);setError('');
   try{
    if(!requestId.current)requestId.current=crypto.randomUUID();
-   const {data,error}=await supabase.functions.invoke('vv-billing',{body:{action,request_id:requestId.current}});
+   const {data,error}=await supabase.functions.invoke('vv-billing',{body:{action,request_id:requestId.current},signal:AbortSignal.timeout(60000)});
    if(error||typeof data?.url!=='string')throw new Error('Billing could not be confirmed. Retry or contact support.');
    const url=new URL(data.url);if(url.protocol!=='https:'||!['checkout.stripe.com','billing.stripe.com'].includes(url.hostname))throw new Error('Invalid billing redirect');
    window.location.assign(url.href);

@@ -1,3 +1,5 @@
+import {WarmState} from '../_shared/warm_state.ts';
+import { authorize } from '../_shared/access.ts';
 import { parseRss, newestFirst, publicationTime, safeNewsUrl, type SourceHealth } from "../_shared/news_feed.ts";
 import { additionalTechFeeds } from "./additional_sources.ts";
 import { collectCatalog } from './catalog_ingestion.ts';
@@ -271,18 +273,19 @@ async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: s
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authorization }, fetch: (input, init) => fetch(input, { ...init, signal }) } });
   const { data: { user }, error: authError } = await db.auth.getUser();
   if (authError || !user) return { items: [], status: "sign_in_required" };
-  let query = db.from("news_articles").select("id,title,source,canonical_url,published_at,fetched_at,source_country,language,source_id")
+  let query = db.from("news_articles").select("id,title,original_title,translated_title_en,translation_status,translation_source_language,translated_at,source,canonical_url,published_at,fetched_at,source_country,language,source_id")
     .gte("fetched_at", new Date(Date.now() - 48 * 3600_000).toISOString())
     .or("published_at.is.null,published_at.gte." + new Date(Date.now() - 72 * 3600_000).toISOString())
     .order("published_at", { ascending: false, nullsFirst: false }).order("id").range(page * pageSize, page * pageSize + pageSize).abortSignal(signal);
   if (country) query = query.eq("source_country", country);
   const { data, error } = await query;
   if (error) return { items: [], status: "ingestion_not_available" };
-  return { has_more: (data?.length || 0) > pageSize, items: (data || []).slice(0,pageSize).map(row => ({ id: row.id, title: row.title, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
+  return { has_more: (data?.length || 0) > pageSize, items: (data || []).slice(0,pageSize).map(row => ({ id: row.id, title: row.translated_title_en || row.title, original_title:row.original_title||row.title, translated_title_en:row.translated_title_en, translation_status:row.translation_status, translation_source_language:row.translation_source_language, translated_at:row.translated_at, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await authorize(req); if (denied) return denied;
   if (req.method !== "GET" && req.method !== "POST") return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
   let body: { country?: unknown; page?: unknown; publisher_only?: unknown } = {};
   if (req.method === "POST") {
@@ -300,6 +303,8 @@ Deno.serve(async (req) => {
       const publisher = await fetchPublisherNews(req, signal, country, page);
       return new Response(JSON.stringify({publisher_news:publisher.items,publisher_status:publisher.status,has_more:'has_more' in publisher && publisher.has_more,page}), {headers:{...corsHeaders,'Content-Type':'application/json'}});
     }
+    const store=new WarmState();
+    if(!country){const snapshot=await store.get('news_snapshot_v1');if(snapshot)return new Response(JSON.stringify(snapshot),{headers:{...corsHeaders,'Content-Type':'application/json'}});}
     const source_health: SourceHealth[] = [];
     const [irlRss, dark, tech, newsApi, tor, journalists, catalog_health] = await Promise.all([
       fetchFeeds(FEEDS.irl, source_health, signal),
@@ -340,7 +345,9 @@ Deno.serve(async (req) => {
     if (all.length && service && backend) {
       await createClient(backend,service).from('warm_state').upsert({key:'news_feed',value:all,expires_at:new Date(Date.now()+1800000).toISOString()},{onConflict:'key'});
     }
-    return new Response(JSON.stringify({ status, source_health, catalog_health, catalog_total: sourceCatalog.length, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more }), {
+    const snapshotValue={ status, source_health, catalog_health, catalog_total: sourceCatalog.length, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more };
+    if(usable&&!country)await store.set('news_snapshot_v1',snapshotValue,45);
+    return new Response(JSON.stringify(snapshotValue), {
       status: usable ? 200 : 503,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

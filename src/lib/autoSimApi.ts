@@ -40,6 +40,10 @@ export async function callAutoSim<T = Record<string, unknown>>(payload: Record<s
   if (!text) throw new ApiError("empty_response", "The simulation service returned nothing. Try again.", res.status);
   let parsed: unknown;
   try { parsed = JSON.parse(text); } catch { throw new ApiError("invalid_json", "The simulation service returned an unreadable response.", res.status); }
+  if(!res.ok && parsed && typeof parsed==='object' && typeof (parsed as {error?:unknown}).error==='string'){
+    const code=({402:'subscription_required',429:'quota_exceeded',502:'upstream_unavailable',503:'service_unavailable',504:'timeout'} as Record<number,string>)[res.status]||'request_failed';
+    throw new ApiError(code,String((parsed as {error:string}).error),res.status);
+  }
   const env = Envelope.safeParse(parsed);
   if (!env.success) throw new ApiError("invalid_response", "Unexpected response from the simulation service.", res.status);
   if (!res.ok || !env.data.ok) {

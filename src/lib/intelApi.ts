@@ -1,16 +1,21 @@
 import { supabase } from '@/integrations/supabase/client';
-// Vulture Vision — Intelligence Backend API Client
-// Connects to vv_intel_backend running on VITE_INTEL_HOST:8000
+// Vulture Vision — authenticated member intelligence API client.
 
 import { indexedBrief } from './workspaceData';
-import { backendOrigin } from './backendOrigin';
 import { functionError } from './functionError';
-const BASE_URL = backendOrigin(import.meta.env.VITE_INTEL_HOST, false, 8000, typeof location !== 'undefined' && location.protocol === 'https:');
+// Customer traffic always uses the authenticated Supabase service boundary.
+const BASE_URL: string | undefined = undefined;
 const WS_URL = BASE_URL?.replace(/^http/, 'ws');
 
 // ── Types ───────────────────────────────────────────────────
 
 export interface RegimeState {
+  status?: string;
+  source?: string;
+  last_verified_at?: string;
+  method?: string;
+  model_version?: string;
+  freshness?: string;
   current_state: "risk_on" | "risk_off" | "neutral" | "volatile" | "trending";
   current_duration_sessions: number;
   transition_probs_next_session: Record<string, number>;
@@ -83,7 +88,7 @@ export interface IntelBrief {
 
 export async function fetchLatestBrief(): Promise<IntelBrief | null> {
   if (!BASE_URL) {
-    const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'latest'}});
+    const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'latest'},signal:AbortSignal.timeout(12000)});
     return !error && data?.brief ? data.brief : indexedBrief().catch(()=>null);
   }
   try {
@@ -94,7 +99,12 @@ export async function fetchLatestBrief(): Promise<IntelBrief | null> {
 }
 
 export async function fetchRegime(): Promise<RegimeState | null> {
-  if (!BASE_URL) return null;
+  if (!BASE_URL) {
+    const {data,error}=await supabase.functions.invoke("vv-regime",{body:{},signal:AbortSignal.timeout(15000)});
+    if(error)throw new Error(await functionError(error,"Market regime provider unavailable"));
+    if(data?.status!=="available"||!["risk_on","risk_off","neutral","volatile","trending"].includes(data?.current_state))throw new Error(data?.regime_summary||"Insufficient regime observations");
+    return data as RegimeState;
+  }
   try {
     const res = await fetch(`${BASE_URL}/regime`, { signal: AbortSignal.timeout(6000) });
     if (!res.ok) return null;
@@ -113,7 +123,7 @@ export async function fetchHealth(): Promise<{ status: string; queue_depth: numb
 
 export async function triggerSynthesis(): Promise<{ message: string } | null> {
   if (!BASE_URL) {
-    const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'generate'}});
+    const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'generate'},signal:AbortSignal.timeout(50000)});
     if(error)throw new Error(await functionError(error,'Synthesis unavailable'));
     if(data?.error)throw new Error(data.error);
     return data;

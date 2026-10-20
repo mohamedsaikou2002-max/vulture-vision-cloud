@@ -14,7 +14,7 @@ Deno.serve(async req=>{
   const {data:{user},error}=await client.auth.getUser();if(error||!user)return reply({error:'Sign in to manage billing'},401);
   const sb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   if(body.action==='status'){
-   const {data,error}=await sb.from('subscriptions').select('status,current_period_end,trial_end,cancel_at_period_end').eq('user_id',user.id).maybeSingle();if(error)throw new Error('Billing schema unavailable');return reply({subscription:data});
+   const {data,error}=await sb.from('subscriptions').select('status,current_period_end,trial_end,cancel_at_period_end').eq('user_id',user.id).maybeSingle();if(error)throw new Error('Billing schema unavailable');const {data:access,error:accessError}=await sb.rpc('vv_workspace_access',{p_user_id:user.id});if(accessError)throw new Error('Entitlement verification unavailable');return reply({subscription:data,workspace_access:access===true});
   }
   if(!enabled)return reply({error:'Billing is not configured. No payment was created.'},503);
   const url=new URL(origin!);if(url.protocol!=='https:'||url.pathname!=='/'||url.search||url.hash||url.username||url.password)throw new Error('Configure a valid HTTPS FRONTEND_URL origin');

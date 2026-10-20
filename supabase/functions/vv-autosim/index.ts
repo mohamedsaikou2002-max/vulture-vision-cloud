@@ -1,3 +1,4 @@
+import {membershipAccess} from '../_shared/membership_access.ts';
 // vv-autosim — one input, everything else automatic.
 // The user supplies a scenario (typed or spoken). This function: interprets it with Gemini, searches the
 // indexed news network, estimates the 10-dimension economic state from live observables, runs the numerical
@@ -44,13 +45,9 @@ Deno.serve(async (req) => {
   const action = typeof body.action === "string" ? body.action : "run";
 
   try {
+    const denied = await membershipAccess(sb,user.id);
+    if (denied) return denied;
     if (action === "world_state") return await worldState(sb);
-    // New membership gating stays inactive until payment configuration is explicitly enabled.
-    if (Deno.env.get("VV_REQUIRE_SUBSCRIPTION") === "true") {
-      const { data: ok, error } = await sb.rpc("vv_autosim_has_access", { p_user_id: user.id });
-      if (error) return fail("entitlement_check_failed", "Could not verify your subscription", 503);
-      if (!ok) return fail("subscription_required", "An active subscription is required to run simulations", 402);
-    }
     if (action === "interrogate") return await interrogate(sb, user.id, body);
     if (action === "run") return await run(sb, user.id, body);
     return fail("unknown_action", `Unknown action: ${action}`, 400);

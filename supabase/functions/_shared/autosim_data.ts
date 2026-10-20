@@ -58,7 +58,7 @@ export async function loadMacroObservables(): Promise<{ obs: Observables; status
           return;
         }catch{/* Preserve missing-data reporting if both independent series are unavailable. */}
       }
-      status.push({ id: `fred:${series}`, ok: false, detail: (e as Error).message });
+      status.push({ id: `fred:${series}`, ok: false, detail: "Source unavailable or observations invalid/stale" });
     }
   }));
   return { obs, status };

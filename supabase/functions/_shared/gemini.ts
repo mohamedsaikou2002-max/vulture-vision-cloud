@@ -68,8 +68,9 @@ interface GenerationBody {
   generationConfig?: { maxOutputTokens?: number; temperature?: number; responseMimeType?: string };
 }
 /** Reuse the provider already configured by the host. Never retry a failed inference through another provider. */
-export async function generateConfigured(body: GenerationBody, timeoutMs = 18000) {
-  if (hasGeminiKeys()) return generateGemini('configured-slots', Deno.env.get('GEMINI_MODEL'), body, fetch, timeoutMs, geminiFetch);
+export async function generateConfigured(body: GenerationBody, timeoutMs = 18000, configuredModel?:string) {
+  body={...body,systemInstruction:{parts:[...(body.systemInstruction?.parts||[]),{text:"Respond in English. Translate foreign-language evidence descriptions into English while preserving source references, names and uncertainty. Structured JSON keys must remain exactly as requested."}]}};
+  if (hasGeminiKeys()) return generateGemini('configured-slots', configuredModel || Deno.env.get('GEMINI_MODEL'), body, fetch, timeoutMs, geminiFetch);
   const gateway = Deno.env.get('LOVABLE_API_KEY');
   if (!gateway) throw new GeminiError('not_configured', 'AI service is not configured', 503);
   const model = Deno.env.get('LOVABLE_AI_MODEL') || 'google/gemini-2.5-flash';

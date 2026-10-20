@@ -1,3 +1,4 @@
+import { authorize } from '../_shared/access.ts';
 import { parseInstruments } from '../_shared/request_limits.ts';
 interface BybitTicker { symbol:string; bid1Price?:string; ask1Price?:string; bid1Size?:string; ask1Size?:string; lastPrice?:string; price24hPcnt?:string; turnover24h?:string; }
 // MarketWorker — Bybit (crypto) + OANDA (forex).
@@ -99,6 +100,7 @@ async function fetchOanda(instruments: string[], token: string, accountId: strin
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const denied = await authorize(req); if (denied) return denied;
   try {
     const url = new URL(req.url);
     const cryptoParam = url.searchParams.get("crypto");

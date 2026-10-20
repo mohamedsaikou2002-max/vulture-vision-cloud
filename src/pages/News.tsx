@@ -14,6 +14,9 @@ interface Item {
   language?: string;
   fetched_at?: string;
   title: string;
+  original_title?: string;
+  translated_title_en?: string;
+  translation_status?: string;
   source?: string;
   time?: string;
   link?: string;
@@ -52,7 +55,7 @@ export default function News() {
     async function load() {
       if(loading)return;loading=true;
       try {
-        const { data: res, error } = await supabase.functions.invoke("vv-news", { body: {} });
+        const { data: res, error } = await supabase.functions.invoke("vv-news", { body: {}, signal:AbortSignal.timeout(25000) });
         if (error) {
           const explanation = await functionError(error, "News sources are unavailable. Please try again shortly.");
           const failure = await error.context?.clone?.().json().catch(() => null);
@@ -153,6 +156,8 @@ function Column({ title, tone, items, badge, badgeText, unavailable }: {
                     {decodeEntities(it.title)}
                   </a>
                 ) : decodeEntities(it.title)}
+                {it.translated_title_en && <details className="news-original"><summary>Translated to English · original</summary><span lang={it.language}>{it.original_title}</span></details>}
+                {!it.translated_title_en && it.translation_status && it.translation_status!=="original_english" && <small>Original headline · translation {it.translation_status.replace(/_/g," ")}</small>}
               </div>
               <div className="news-meta" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {sourceHref ? (

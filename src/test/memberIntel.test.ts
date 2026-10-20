@@ -15,7 +15,7 @@ describe('Member Intel research access',()=>{
   expect(rpc).toHaveBeenCalledWith('claim_scenario_synthesis',{p_user_id:'member'});
  });
  it('rejects an exhausted shared quota before Gemini',async()=>{
-  const fetcher=vi.fn();const client={auth:{getUser:async()=>({data:{user:{id:'member'}},error:null})},rpc:async()=>({data:false,error:null})};
+  const fetcher=vi.fn();const client={auth:{getUser:async()=>({data:{user:{id:'member'}},error:null})},rpc:async(name:string)=>({data:name==='vv_workspace_access',error:null})};
   expect((await loadEdgeHandler('vv-chat',fetcher,values,()=>client)(req())).status).toBe(429);expect(fetcher).not.toHaveBeenCalled();
  });
  it('rejects an expired user session before Gemini',async()=>{

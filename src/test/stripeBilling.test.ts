@@ -45,9 +45,9 @@ it('syncs a real signed webhook through current Stripe state and the service-onl
  expect(response.status).toBe(200);expect(rpc).toHaveBeenCalledWith('vv_apply_billing_event',expect.objectContaining({p_event_id:'evt_signed',p_user_id:user,p_snapshot:expect.objectContaining({status:'trialing',customer:'cus_fixture'})}));
  const rejected=await handler(new Request('https://fixture.invalid',{method:'POST',body:raw}));expect(rejected.status).toBe(400);expect(provider).toHaveBeenCalledTimes(1);
 });
-it('blocks premium member API calls before provider work when subscription enforcement is enabled',async()=>{
+it('blocks premium member API calls before provider work when the release policy requires membership',async()=>{
  const {loadEdgeHandler}=await import('./helpers/edgeHarness');const fetcher=vi.fn(),rpc=vi.fn(async()=>({data:false,error:null}));
- const handler=loadEdgeHandler('vv-chat',fetcher,{VV_REQUIRE_SUBSCRIPTION:'true',SUPABASE_URL:'https://fixture.supabase.co',SUPABASE_ANON_KEY:'anon-fixture',SUPABASE_SERVICE_ROLE_KEY:'service-fixture'},()=>({auth:{getUser:async()=>({data:{user:{id:'member'}},error:null})},rpc}));
+ const handler=loadEdgeHandler('vv-chat',fetcher,{SUPABASE_URL:'https://fixture.supabase.co',SUPABASE_ANON_KEY:'anon-fixture',SUPABASE_SERVICE_ROLE_KEY:'service-fixture'},()=>({auth:{getUser:async()=>({data:{user:{id:'member'}},error:null})},rpc}));
  const response=await handler(new Request('https://fixture.invalid',{method:'POST',headers:{authorization:'Bearer member-fixture'},body:JSON.stringify({message:'Explain Nasdaq risk'})}));
- expect(response.status).toBe(402);expect(rpc).toHaveBeenCalledWith('vv_autosim_has_access',{p_user_id:'member'});expect(fetcher).not.toHaveBeenCalled();
+ expect(response.status).toBe(402);expect(rpc).toHaveBeenCalledWith('vv_workspace_access',{p_user_id:'member'});expect(fetcher).not.toHaveBeenCalled();
 });

@@ -1,3 +1,4 @@
+import {WarmState} from '../_shared/warm_state.ts';
 import { authorize } from '../_shared/access.ts';
 import { hasConfiguredAI, generateConfigured } from '../_shared/gemini.ts';
 import { summarizeMarketStatus, type MarketSource } from '../_shared/market_status.ts';
@@ -242,6 +243,9 @@ Deno.serve(async (req) => {
   const denied = await authorize(req);
   if (denied) return denied;
   try {
+    const store=new WarmState();
+    const snapshot=await store.get('analytics_snapshot_v1');
+    if(snapshot)return new Response(JSON.stringify(snapshot),{headers:{...corsHeaders,'Content-Type':'application/json'}});
     const sources: MarketSource[] = [];
     async function collect<T>(source: string, operation: () => Promise<T[]>, minimum = 1): Promise<T[]> {
       try {
@@ -289,9 +293,9 @@ Deno.serve(async (req) => {
     const narrative = portfolio ? await aiNarrative(crypto, assets, portfolio) : "Insufficient history for a portfolio narrative.";
     const onchain = await fetchOnchain();
 
-    return new Response(JSON.stringify({
-      status, source_health: sources, crypto, assets, portfolio, narrative, onchain, ts: new Date().toISOString(),
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const snapshotValue={status,source_health:sources,crypto,assets,portfolio,narrative,onchain,ts:new Date().toISOString()};
+    await store.set('analytics_snapshot_v1',snapshotValue,120);
+    return new Response(JSON.stringify(snapshotValue), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: "Analytics service unavailable" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
