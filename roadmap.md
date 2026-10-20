@@ -4,7 +4,7 @@
 - [x] Public entrance and information page updated with Grey Company story/socials and lazy Three.js contours; desktop/mobile pages checked. Original video pointer retained; playback unavailable in local browser checks.
 - [x] Verify signed-in Nasdaq AutoSim live run and displayed results after deployment; numerical fallback completes HTTP 200 when Gemini fails, with explicit warnings and no invented AI answer.
 - [ ] Verify original video playback in the hosted preview; local Vite serves HTML at its asset path.
-- [ ] Connect the supplied YouTube demonstration and verify the public video player; preserve the original background video.
+- [x] Connect the supplied YouTube demonstration; player preview and direct watch link verified at 695×609, 25 focused tests passed and preview build OK; original background video preserved.
 - [ ] Google member profiles and $1050/month Stripe subscriptions; activation depends on payment setup approval and accepting staged membership tables.
 - [x] Display $99.99 paid pilot followed by seven additional free trial days, then unchanged $1050/month membership; checkout remains inactive.
 - [x] Seed simulations from socio-economics corpus (events, agents, scenario blends)
