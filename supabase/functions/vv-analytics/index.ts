@@ -25,9 +25,10 @@ interface Asset {
 async function fetchCrypto(): Promise<Crypto[]> {
   const ids = "bitcoin,ethereum,solana,cardano,ripple,dogecoin,polkadot,chainlink";
   const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&price_change_percentage=1h,24h,7d`;
-  const r = await fetch(url, { headers: { "User-Agent": "VultureVision/1.0" } });
-  if (!r.ok) return [];
-  const data = await r.json() as {id:string;symbol:string;name:string;current_price:number;price_change_percentage_24h:number;price_change_percentage_1h_in_currency?:number;price_change_percentage_24h_in_currency?:number;price_change_percentage_7d_in_currency?:number;market_cap:number;total_volume:number;sparkline_in_7d?:{price:number[]}}[];
+  const r = await fetch(url, { headers: { "User-Agent": "VultureVision/1.0" } }).catch(() => null);
+  if (!r || !r.ok) return [];
+  const data = await r.json().catch(() => null) as {id:string;symbol:string;name:string;current_price:number;price_change_percentage_24h:number;price_change_percentage_1h_in_currency?:number;price_change_percentage_24h_in_currency?:number;price_change_percentage_7d_in_currency?:number;market_cap:number;total_volume:number;sparkline_in_7d?:{price:number[]}}[] | null;
+  if (!data) return [];
   return data.map(d => ({
     symbol: d.symbol.toUpperCase(),
     name: d.name,
@@ -42,17 +43,19 @@ async function fetchCrypto(): Promise<Crypto[]> {
 
 async function fetchHistory(geckoId: string, days = 60): Promise<number[]> {
   const url = `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=${days}&interval=daily`;
-  const r = await fetch(url);
-  if (!r.ok) return [];
-  const j = await r.json();
+  const r = await fetch(url).catch(() => null);
+  if (!r || !r.ok) return [];
+  const j = await r.json().catch(() => null);
+  if (!j?.prices) return [];
   return (j.prices as [number, number][]).map(p => p[1]);
 }
 
 async function fetchStooq(symbol: string): Promise<number[]> {
   // Daily CSV — last ~6 months
-  const r = await fetch(`https://stooq.com/q/d/l/?s=${symbol}&i=d`);
-  if (!r.ok) return [];
-  const text = await r.text();
+  const r = await fetch(`https://stooq.com/q/d/l/?s=${symbol}&i=d`).catch(() => null);
+  if (!r || !r.ok) return [];
+  const text = await r.text().catch(() => "");
+  if (!text.trim()) return [];
   const rows = text.trim().split("\n").slice(1);
   const closes = rows.map(line => parseFloat(line.split(",")[4])).filter(n => !isNaN(n));
   return closes.slice(-90);
