@@ -150,6 +150,25 @@ const NITTER_INSTANCES = [
 
 const QUERY_TERMS = ["bitcoin","ethereum","crypto","fed","ecb","pboc","inflation","recession","rate"];
 
+// Headlines flagged as urgent by their own publisher wording, at most 2 hours old.
+const BREAKING_TERMS = ["breaking", "urgent", "just in", "developing", "alert:", "live:", "flash:"];
+function detectBreaking(items: Item[]): Item[] {
+  const seen = new Set<string>();
+  const out: Item[] = [];
+  for (const it of items) {
+    const t = (it.title || "").toLowerCase();
+    if (!BREAKING_TERMS.some(term => t.includes(term))) continue;
+    const published = it.time ? Date.parse(it.time) : NaN;
+    if (Number.isFinite(published) && (Date.now() - published > 2 * 3600_000 || published > Date.now() + 300_000)) continue;
+    const key = t.replace(/[^a-z0-9]/g, "").slice(0, 60);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(it);
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
 
 async function fetchFeeds(feeds: { url: string; source: string }[], health: SourceHealth[], signal: AbortSignal): Promise<Item[]> {
   const results = await Promise.allSettled(feeds.map(async f => {
@@ -323,11 +342,12 @@ Deno.serve(async (req) => {
     const all = [...irl, ...darkOut, ...techOut, ...publisher.items]
       .sort(newestFirst)
 ;
+    const breaking = detectBreaking(all);
 
     source_health.push({ source: "Publisher database", status: publisher.status === "available" ? "available" : publisher.status === "no_recent_articles" ? "empty" : "unavailable", count: publisher.items.length });
     const usable = source_health.some(source => source.status === "available" || source.status === "empty") || publisher.status === "available" || publisher.status === "no_recent_articles";
     const status = !usable ? "unavailable" : source_health.some(source => source.status === "unavailable") ? "degraded" : "available";
-    return new Response(JSON.stringify({ status, source_health, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more }), {
+    return new Response(JSON.stringify({ status, source_health, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, breaking, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more }), {
       status: usable ? 200 : 503,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
