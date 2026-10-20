@@ -266,7 +266,7 @@ async function fetchJournalistTweets(health: SourceHealth[], signal: AbortSignal
   return out;
 }
 
-async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: string, page = 0) {
+async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: string, page = 0, pageSize = 100) {
   const authorization = req.headers.get("authorization") || "";
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authorization }, fetch: (input, init) => fetch(input, { ...init, signal }) } });
   const { data: { user }, error: authError } = await db.auth.getUser();
@@ -274,11 +274,11 @@ async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: s
   let query = db.from("news_articles").select("id,title,source,canonical_url,published_at,fetched_at,source_country,language,source_id")
     .gte("fetched_at", new Date(Date.now() - 48 * 3600_000).toISOString())
     .or("published_at.is.null,published_at.gte." + new Date(Date.now() - 72 * 3600_000).toISOString())
-    .order("published_at", { ascending: false, nullsFirst: false }).order("id").range(page * 100, page * 100 + 100).abortSignal(signal);
+    .order("published_at", { ascending: false, nullsFirst: false }).order("id").range(page * pageSize, page * pageSize + pageSize).abortSignal(signal);
   if (country) query = query.eq("source_country", country);
   const { data, error } = await query;
   if (error) return { items: [], status: "ingestion_not_available" };
-  return { has_more: (data?.length || 0) > 100, items: (data || []).slice(0,100).map(row => ({ id: row.id, title: row.title, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
+  return { has_more: (data?.length || 0) > pageSize, items: (data || []).slice(0,pageSize).map(row => ({ id: row.id, title: row.title, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
 }
 
 Deno.serve(async (req) => {
@@ -310,7 +310,7 @@ Deno.serve(async (req) => {
       fetchJournalistTweets(source_health, signal),
       collectCatalog(req, signal).catch(() => []),
     ]);
-    const publisher = await fetchPublisherNews(req, AbortSignal.timeout(5000), country).catch(() => ({items:[],status:'ingestion_not_available'}));
+    const publisher = await fetchPublisherNews(req, AbortSignal.timeout(5000), country, 0, 1000).catch(() => ({items:[],status:'ingestion_not_available'}));
     const categorized = {irl: [] as Item[], dark: [] as Item[], tech: [] as Item[]};
     for (const row of publisher.items) {
       const source = sourceCatalog.find(s => s.id === row.source_id);
