@@ -1,4 +1,4 @@
-export const MEMBERSHIP = { amountCents: 9900, currency: "usd", interval: "month" } as const;
+export const MEMBERSHIP = { amountCents: 105000, currency: "usd", interval: "month" } as const;
 
 export interface MembershipRecord {
   status: string;
