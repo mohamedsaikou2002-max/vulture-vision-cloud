@@ -880,7 +880,7 @@ h1, h2, h3, h4, h5, h6 { color: white; }
 .se-up   { color: var(--green) !important; }
 .se-down { color: var(--red)   !important; }
 
-/* ── Simulations page (MiroFish) ─────────────────────────── */
+/* ── Simulator page ──────────────────────────────────────── */
 .sim-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
 @media (max-width: 1100px) { .sim-grid { grid-template-columns: 1fr; } }
 .sim-label { display: block; font-size: 9px; letter-spacing: 0.15em; color: var(--dim); margin: 10px 0 4px; }
