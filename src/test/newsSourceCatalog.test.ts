@@ -30,7 +30,7 @@ describe('Additional live publisher feeds', () => {
       from: () => { throw new Error('Database unavailable'); },
     }))(new Request('https://fixture.invalid', { method: 'POST', body: '{}' }));
     const result = await response.json();
-    expect(response.status).toBe(200);
+    expect(response.status, JSON.stringify(result)).toBe(200);
     expect(result.tech[0]).toMatchObject({ source: 'Cloudflare Blog', link: 'https://blog.cloudflare.com/update/', time: now });
     expect(result.source_health).toContainEqual({ source: 'Cloudflare Blog', status: 'available', count: 1 });
     expect(result.source_health).toContainEqual({ source: 'The Register', status: 'unavailable', count: 0 });
