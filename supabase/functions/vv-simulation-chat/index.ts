@@ -1,3 +1,4 @@
+import { geminiFetch, hasGeminiKeys } from "../_shared/gemini_failover.ts";
 // vv-simulation-chat — user-authenticated Gemini research panel.
 // Unlike the separate operator-only MiroFish engine, this answers research questions
 // even when an engine is unavailable. Synthetic analyst roles are not live agents.
@@ -33,8 +34,7 @@ Deno.serve(async (req: Request) => {
   const { data: { user }, error: authError } = await identity.auth.getUser(bearer);
   if (!user || authError) return reply({ error: "Invalid session" }, 401);
 
-  const key = Deno.env.get("GEMINI_API_KEY");
-  if (!key) return reply({ error: "Gemini is not configured for simulation chat" }, 503);
+  if (!hasGeminiKeys()) return reply({ error: "Gemini is not configured for simulation chat" }, 503);
   let models: string[];
   try { models = availableGeminiModels(Deno.env.get("GEMINI_MODEL")); }
   catch { return reply({ error: "Invalid Gemini model configuration" }, 503); }
@@ -54,14 +54,7 @@ Deno.serve(async (req: Request) => {
   });
   try {
     for (const model of models) {
-      const upstream = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-          signal: AbortSignal.timeout(40000),
-          body: generationBody,
-        }
-      );
+      const upstream = await geminiFetch(model, generationBody, 40000);
       // Older 2.5 models may be restricted for new Google API projects.
       // A 404 is a model-access/configuration failure, not billable inference success.
       if (upstream.status === 404) {
@@ -69,8 +62,8 @@ Deno.serve(async (req: Request) => {
         continue;
       }
       if (!upstream.ok) {
-        console.error("Simulation Gemini provider failure", upstream.status);
-        return reply({ error: upstream.status === 429 ? "Gemini is rate-limited" : "Gemini request failed" }, 502);
+        console.error("Simulation Gemini provider failure", model, upstream.status);
+        return reply({ error: upstream.status === 429 ? "Gemini is rate-limited" : "Gemini request failed", provider_status: upstream.status, model }, upstream.status === 429 ? 429 : 502);
       }
       const result = await upstream.json();
       const text = result?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("") || "";
