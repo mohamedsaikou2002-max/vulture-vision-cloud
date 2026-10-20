@@ -1,5 +1,8 @@
 import { parseRss, newestFirst, publicationTime, safeNewsUrl, type SourceHealth } from "../_shared/news_feed.ts";
 import { additionalTechFeeds } from "./additional_sources.ts";
+import { collectCatalog } from './catalog_ingestion.ts';
+import { sourceCatalog } from './source_catalog.ts';
+import { newsColumn } from './catalog_rules.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -263,7 +266,7 @@ async function fetchJournalistTweets(health: SourceHealth[], signal: AbortSignal
   return out;
 }
 
-async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: string, page = 0) {
+async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: string, page = 0, pageSize = 100) {
   const authorization = req.headers.get("authorization") || "";
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authorization }, fetch: (input, init) => fetch(input, { ...init, signal }) } });
   const { data: { user }, error: authError } = await db.auth.getUser();
@@ -271,11 +274,11 @@ async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: s
   let query = db.from("news_articles").select("id,title,source,canonical_url,published_at,fetched_at,source_country,language,source_id")
     .gte("fetched_at", new Date(Date.now() - 48 * 3600_000).toISOString())
     .or("published_at.is.null,published_at.gte." + new Date(Date.now() - 72 * 3600_000).toISOString())
-    .order("published_at", { ascending: false, nullsFirst: false }).order("id").range(page * 100, page * 100 + 100).abortSignal(signal);
+    .order("published_at", { ascending: false, nullsFirst: false }).order("id").range(page * pageSize, page * pageSize + pageSize).abortSignal(signal);
   if (country) query = query.eq("source_country", country);
   const { data, error } = await query;
   if (error) return { items: [], status: "ingestion_not_available" };
-  return { has_more: (data?.length || 0) > 100, items: (data || []).slice(0,100).map(row => ({ id: row.id, title: row.title, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
+  return { has_more: (data?.length || 0) > pageSize, items: (data || []).slice(0,pageSize).map(row => ({ id: row.id, title: row.title, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
 }
 
 Deno.serve(async (req) => {
@@ -298,36 +301,46 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({publisher_news:publisher.items,publisher_status:publisher.status,has_more:'has_more' in publisher && publisher.has_more,page}), {headers:{...corsHeaders,'Content-Type':'application/json'}});
     }
     const source_health: SourceHealth[] = [];
-    const [irlRss, dark, tech, newsApi, tor, journalists, publisher] = await Promise.all([
+    const [irlRss, dark, tech, newsApi, tor, journalists, catalog_health] = await Promise.all([
       fetchFeeds(FEEDS.irl, source_health, signal),
       fetchFeeds(FEEDS.dark, source_health, signal),
       fetchFeeds(FEEDS.tech, source_health, signal),
       fetchNewsApi(source_health, signal),
       fetchTorFeed(source_health, signal),
       fetchJournalistTweets(source_health, signal),
-      fetchPublisherNews(req, signal, country).catch(() => ({ items: [], status: "ingestion_not_available" })),
+      collectCatalog(req, signal).catch(() => []),
     ]);
+    const publisher = await fetchPublisherNews(req, AbortSignal.timeout(5000), country, 0, 1000).catch(() => ({items:[],status:'ingestion_not_available'}));
+    const categorized = {irl: [] as Item[], dark: [] as Item[], tech: [] as Item[]};
+    for (const row of publisher.items) {
+      const source = sourceCatalog.find(s => s.id === row.source_id);
+      categorized[newsColumn(source?.category)].push({...row,time:row.time ?? undefined});
+    }
 
-    const irl = [...newsApi, ...irlRss, ...journalists.irl]
+    const irl = [...newsApi, ...irlRss, ...journalists.irl, ...categorized.irl]
       .sort(newestFirst)
       .map(enrich);
 
-    const darkOut = [...dark, ...tor, ...journalists.dark]
+    const darkOut = [...dark, ...tor, ...journalists.dark, ...categorized.dark]
       .sort(newestFirst)
       .map(enrich);
 
-    const techOut = [...tech, ...journalists.tech]
+    const techOut = [...tech, ...journalists.tech, ...categorized.tech]
       .sort(newestFirst)
       .map(enrich);
 
-    const all = [...irl, ...darkOut, ...techOut, ...publisher.items]
+    const all = [...new Map([...irl, ...darkOut, ...techOut].map(item=>[item.link || item.title,item])).values()]
       .sort(newestFirst)
 ;
 
     source_health.push({ source: "Publisher database", status: publisher.status === "available" ? "available" : publisher.status === "no_recent_articles" ? "empty" : "unavailable", count: publisher.items.length });
     const usable = source_health.some(source => source.status === "available" || source.status === "empty") || publisher.status === "available" || publisher.status === "no_recent_articles";
     const status = !usable ? "unavailable" : source_health.some(source => source.status === "unavailable") ? "degraded" : "available";
-    return new Response(JSON.stringify({ status, source_health, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more }), {
+    const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), backend = Deno.env.get('SUPABASE_URL');
+    if (all.length && service && backend) {
+      await createClient(backend,service).from('warm_state').upsert({key:'news_feed',value:all,expires_at:new Date(Date.now()+1800000).toISOString()},{onConflict:'key'});
+    }
+    return new Response(JSON.stringify({ status, source_health, catalog_health, catalog_total: sourceCatalog.length, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more }), {
       status: usable ? 200 : 503,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

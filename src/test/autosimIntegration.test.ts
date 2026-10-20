@@ -110,4 +110,16 @@ describe('AutoSim real handler and shared engine',()=>{
     expect((await f.call(payload)).status).toBe(200);f.fetcher.mockClear();
     const replay=await f.call(payload);expect(replay.data.replayed).toBe(true);expect(f.fetcher).not.toHaveBeenCalled();
   });
+  it('keeps Nasdaq numerical results when Gemini is rate-limited, without inventing AI analysis',async()=>{
+    const f=fixture();const original=f.fetcher.getMockImplementation();
+    f.fetcher.mockImplementation(async(input:string|URL,init:RequestInit)=>{
+      if(String(input).includes('generativelanguage'))return new Response('',{status:429});
+      if(original)return original(input,init);
+      return new Response('',{status:503});
+    });
+    const response=await f.call({action:'run',job_id:job1,scenario:'A funding liquidity crunch'});
+    expect(response.status).toBe(200);expect(response.data.result.market.asset).toBe('NASDAQ Composite');
+    expect(response.data.result.analysis).toBeNull();expect(response.data.result.model).toBe('none');
+    expect(response.data.result.warnings.join(' ')).toContain('keyword rules');
+  });
 });

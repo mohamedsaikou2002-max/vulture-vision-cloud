@@ -12,7 +12,7 @@ interface Msg { type: "ai" | "user"; text: string; contextEligible?: boolean; }
 const initialMsg: Msg = {
   type: "ai",
   text:
-    "Ask an intelligence research question. Responses use the latest available brief when connected; live monitoring and provider availability must be verified. Operator access is required.",
+    "Vulture Vision intelligence research. Live evidence, explicit assumptions, and no guaranteed forecasts.",
 };
 
 export default function Dashboard() {

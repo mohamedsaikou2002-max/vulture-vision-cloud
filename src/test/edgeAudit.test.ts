@@ -25,7 +25,7 @@ function edge(name: string, fetcher: typeof fetch, values: Record<string, string
       Deno: { env: { get: (key: string) => values[key], toObject: () => ({...values}) }, serve: (value: Handler) => { handler = value; } },
       require: (specifier: string) => {
         if (specifier.endsWith('/access.ts')) return { authorize: async () => denied ? Response.json({ error: 'Operator access required' }, { status: 403 }) : null };
-        if (specifier.startsWith('https://')) return { createClient: () => ({ auth: { getUser: async () => ({ data: { user: null }, error: { message: 'Fixture no session' } }) }, from: query }) };
+        if (specifier.startsWith('https://')) return { createClient: () => ({ auth: { getUser: async () => ({ data: { user: {id:'fixture-member'} }, error: null }) }, rpc:async()=>({data:true,error:null}), from: query }) };
         return load(resolve(dirname(path), specifier));
       },
     });
@@ -78,7 +78,7 @@ describe('Audited edge handler regressions', () => {
     expect(sent.contents[1].parts[0].text).toContain('Unique funding brief');
     expect(sent.contents[1].parts[0].text).toContain('risk_off');
   });
-  it('retains operator authorization without making provider requests', async () => {
+  it('rejects failed authentication without making provider requests', async () => {
     const fetcher = vi.fn();
     const response = await edge('vv-chat', fetcher, {}, true)(new Request('https://fixture.invalid', { method: 'POST', body: '{}' }));
     expect(response.status).toBe(403);

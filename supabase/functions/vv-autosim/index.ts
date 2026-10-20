@@ -166,7 +166,6 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
       });
       interp = validateInterp(data, horizonHint); model = m;
     } catch (e) {
-      if (e instanceof GeminiError && (e.code === "rate_limited" || e.code === "not_configured")) throw e;
       warnings.push(`Gemini interpretation unavailable (${(e as Error).message}); used keyword rules and default event shocks instead.`);
       interp = heuristicInterp(scenario, horizonHint);
     }

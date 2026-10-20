@@ -134,7 +134,6 @@ export default function Analytics() {
           {data?.ts && <span> Observations fetched {new Date(data.ts).toLocaleTimeString()}.{!online && " Showing last available results."}</span>}
           <button className="synthesize-btn" onClick={() => setRefresh(n => n + 1)}>Refresh market data</button>
         </div>
-        <p className="service-note">Analytics and intel chat currently require operator access. Simulation access is a separate pilot capability.</p>
         <div className="stat-row">
           <div className="stat-card panel">
             <div className="stat-label">SPY · 30D median estimate</div>

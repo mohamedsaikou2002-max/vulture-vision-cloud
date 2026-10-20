@@ -2,7 +2,7 @@
 - [x] Import compatible AutoSim source and UI (39 focused tests passed): typed/voice scenarios, ten dimensions, strategy stress tests and history; preserve original splash, $1050 membership, MiroFish permissions. Live runs blocked until staged tables are accepted and service configuration is verified.
 - [x] Simulations page (/simulations) powered by MiroFish
 - [x] Public entrance and information page updated with Grey Company story/socials and lazy Three.js contours; desktop/mobile pages checked. Original video pointer retained; playback unavailable in local browser checks.
-- [ ] Verify AutoSim live runs/history after draft acceptance and new service deployment; verify optional FRED/Gemini configuration.
+- [x] Verify signed-in Nasdaq AutoSim live run and displayed results after deployment; numerical fallback completes HTTP 200 when Gemini fails, with explicit warnings and no invented AI answer.
 - [ ] Verify original video playback in the hosted preview; local Vite serves HTML at its asset path.
 - [ ] Google member profiles and $1050/month Stripe subscriptions; activation depends on payment setup approval and accepting staged membership tables.
 - [x] Display $99.99 paid pilot followed by seven additional free trial days, then unchanged $1050/month membership; checkout remains inactive.
@@ -15,7 +15,10 @@
 - [ ] AI market brief blocked by the configured Gemini key free-tier quota (20/day exhausted); options: enable billing on the key, or cache the brief so one call serves many page loads.
 - [ ] On-chain panel empty: Sepolia gas oracle returns nothing and the whale query targets an address with no transactions.
 - [x] Add and deploy secure Gemini key failover across six existing services; 43 focused tests passed and preview build OK.
-- [ ] Collect seven backup Gemini keys securely (eight total including the existing key), then verify live failover; awaiting secure entries.
+- [x] Collect seven backup Gemini keys securely (eight total including the existing key).
+- [ ] Obtain real Gemini responses on Intel and synthesis: eight slots are securely configured and deployed, but signed-in Intel and synthesis return HTTP 504 timeout; simulator reports upstream AI failure and omits AI analysis. Provider availability/configuration remains the blocker; no keys were changed.
+- [x] Remove publisher desk and route the combined 287-publisher registry (80 original plus all 207 additions) through rotating bounded Cloud collection into existing news columns and simulator evidence; 121 stored headlines from nine publishers verified, later batches advance automatically. Catalog registration does not mean all sources are live.
+- [ ] Verify each requested additional publisher as collection advances; blocked sources remain restricted, empty or unavailable without bypassing access controls. Scheduled collection and minute polling are active.
 - [x] Added Cloudflare Blog, Ethereum Foundation Blog, and The Register to live News feeds; deployed vv-news; signed-in response HTTP 200 with 15 items from each added source; 16 focused tests passed. Uploaded 207-source catalog retained disabled pending source rights review; no external Python worker deployed or UI changes.
 - [x] Socio-economics page removed: /socioeconomics route, nav link, page file, API client, its stylesheet block and the dead news_source_status lookup are gone; 116 tests pass, build OK, the address now shows the not-found page and the nav has four links.
-- [ ] MiroFish pilot/research-chat removal, breaking-news surfacing and 207-source activation were reported done earlier but are absent from the current source (project restored to an earlier snapshot); confirm before re-applying. news_articles index is empty (0 rows), so the publisher desk shows no headlines until the external crawler runs.
+- [ ] MiroFish pilot/research-chat removal remains absent from this source snapshot; earlier removal request remains open. Operator allowlist unchanged. News collection is now on Cloud, not dependent on the external crawler.
