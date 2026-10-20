@@ -727,7 +727,7 @@ h1, h2, h3, h4, h5, h6 { color: white; }
 .page-content { overflow-y: auto; overflow-x: hidden; }
 .page-content > * { flex-shrink: 0; min-width: 0; }
 .page-content > .scroll-inner { flex: 0 0 auto; overflow: visible; width: 100%; }
-.panel, .stat-card, .se-gauge, .news-col, .intel-column { min-width: 0; }
+.panel, .stat-card, .news-col, .intel-column { min-width: 0; }
 .news-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(260px, 1fr); height: auto; overflow: visible; }
 .news-col { overflow: visible; }
 .col-body, .intel-column { max-height: 640px; overflow-y: auto; }
