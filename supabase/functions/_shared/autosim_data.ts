@@ -5,10 +5,15 @@ import type { Observables } from "./autosim_engine.ts";
 
 export interface SourceStatus { id: string; ok: boolean; detail: string }
 
+// AbortSignal.timeout is missing in some runtimes (e.g. jsdom tests); a timed-out fetch there is better than a crash.
+const timeoutSignal = (ms: number): AbortSignal | undefined => {
+  try { return AbortSignal.timeout(ms); } catch { return undefined; }
+};
+
 const FRED = "https://api.stlouisfed.org/fred/series/observations";
 async function fred(series: string, key: string, limit = 14): Promise<{ date: string; value: number }[]> {
   const url = `${FRED}?series_id=${series}&api_key=${key}&file_type=json&sort_order=desc&limit=${limit}`;
-  const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  const r = await fetch(url, { signal: timeoutSignal(8000) });
   if (!r.ok) throw new Error(`FRED ${series} ${r.status}`);
   const j = await r.json();
   return (j.observations ?? []).filter((o: { value: string }) => o.value !== ".").map((o: { date: string; value: string }) => ({ date: o.date, value: parseFloat(o.value) }));
@@ -68,7 +73,7 @@ export function validCandles(payload: unknown, now = Date.now()) {
 }
 export async function loadNasdaqCandles(): Promise<{ closes: number[]; dates: string[]; status: SourceStatus }> {
   try {
-    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(NASDAQ_MARKET.symbol)}?interval=1d&range=1y`, { headers: { "User-Agent": "vulture-vision" }, signal: AbortSignal.timeout(8000) });
+    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(NASDAQ_MARKET.symbol)}?interval=1d&range=1y`, { headers: { "User-Agent": "vulture-vision" }, signal: timeoutSignal(8000) });
     if (!r.ok) throw new Error(`Yahoo ${r.status}`);
     const { closes, dates } = validCandles(await r.json());
     return { closes, dates, status: { id: "yahoo:NASDAQ", ok: true, detail: `${closes.length} completed daily closes to ${dates.at(-1)}` } };
