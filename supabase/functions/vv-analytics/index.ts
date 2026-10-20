@@ -278,14 +278,14 @@ Deno.serve(async (req) => {
     }));
     for (const a of cryptoAssets) if (a) assets.push(a);
 
-    // Equity proxies via Stooq
+    // Equity proxies via Yahoo chart API
     const equities = [
-      { sym: "SPY", stooq: "spy.us" },
-      { sym: "QQQ", stooq: "qqq.us" },
-      { sym: "GLD", stooq: "gld.us" },
+      { sym: "SPY", yahoo: "SPY" },
+      { sym: "QQQ", yahoo: "QQQ" },
+      { sym: "GLD", yahoo: "GLD" },
     ];
     const equityAssets = await Promise.all(equities.map(async (e) => {
-      const hist = await fetchStooq(e.stooq);
+      const hist = await fetchEquity(e.yahoo);
       return hist.length ? await buildAsset(e.sym, "EQUITY", hist[hist.length - 1], hist) : null;
     }));
     for (const a of equityAssets) if (a) assets.push(a);
