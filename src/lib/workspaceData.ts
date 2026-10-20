@@ -16,7 +16,7 @@ export async function observedSocio():Promise<SocioFull>{
     const key=dim==='consumer_activity'?'consumer':dim==='default_risk'?'default':dim;
     signals[key]=detail.value;explanations[key]=[`${detail.source} · ${detail.observed_at || 'date unavailable'} · normalized model dimension, not a direct measurement`];
   }
-  return {observations:state.observations,signals,confidence:{},graph_updates:{version:0,prior_version:0},explanations,narrative:'Current dated market observations. Normalized dimensions are derived estimates; unavailable inputs are omitted. No measured psychological state or calibrated event probabilities are available.',metadata:{timestamp:state.as_of,sources:state.data_status.filter(s=>s.ok).map(s=>s.id)},telemetry:{mode:'observations_only'}};
+  return {observations:state.observations,signals,confidence:{},graph_updates:{version:0,prior_version:0},explanations,narrative:'Nasdaq Composite (^IXIC) daily closes and returns from Yahoo Finance, alongside available dated economic observations. Normalized dimensions are derived estimates; unavailable inputs are omitted. No measured psychological state or calibrated event probabilities are available.',metadata:{timestamp:state.as_of,sources:state.data_status.filter(s=>s.ok).map(s=>s.id)},telemetry:{mode:'observations_only'}};
 }
 /** A current sourced digest when the optional independent synthesis service is absent. */
 export async function indexedBrief():Promise<IntelBrief|null>{

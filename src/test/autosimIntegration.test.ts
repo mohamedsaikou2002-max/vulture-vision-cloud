@@ -81,6 +81,9 @@ describe('AutoSim real handler and shared engine',()=>{
   it('uses the Belicia-style market pulse without invoking an ungrounded AI snapshot',async()=>{
     const f=fixture();const r=await f.call({action:'world_state'});
     expect(r.status).toBe(200);expect(r.data.world_pulse.kind).toBe('derived_market_snapshot');
+    expect(r.data.observations.nasdaq_close.value).toBe(15149);
+    expect(r.data.observations.nasdaq_daily_return.value).toBeCloseTo(15149/15148-1);
+    expect(r.data.observations.nasdaq_close.source).toContain('^IXIC');
     expect(r.data.world_pulse.top_shocks[0].title).toBe('Related funding news');
     expect(r.data.world_pulse.top_shocks.some((h:{title:string})=>h.title==='Old funding news')).toBe(false);
     expect(f.fetcher.mock.calls.some(c=>String(c[0]).includes('generativelanguage'))).toBe(false);

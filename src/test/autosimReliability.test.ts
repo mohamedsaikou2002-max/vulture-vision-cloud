@@ -1,6 +1,6 @@
 import { describe,it,expect,vi,afterEach } from 'vitest';
 import { buildBaseline,backtest,DIMENSIONS,neutralVector } from '../../supabase/functions/_shared/autosim_engine';
-import { NASDAQ_MARKET,loadNasdaqCandles,validCandles } from '../../supabase/functions/_shared/autosim_data';
+import { NASDAQ_MARKET,loadNasdaqCandles,validCandles,nasdaqObservations } from '../../supabase/functions/_shared/autosim_data';
 import { validateAutoSimResult,parseAnalysis,validateWorldState } from '../../supabase/functions/_shared/autosim_contract';
 import { buildWorldPulse } from '../../supabase/functions/_shared/world_pulse';
 import { parseAutoSimRequest } from '../../supabase/functions/_shared/autosim_request';
@@ -84,4 +84,14 @@ describe('Safe numerical results and headline handoff',()=>{
 it('rejects legacy results that would replay a different market under a Nasdaq label',()=>{
  const result=simulationFixture();result.market.asset='BTC-USD';
  expect(()=>validateAutoSimResult(result)).toThrow('not a Nasdaq simulation');
+});
+
+it('exposes Nasdaq close and observed returns with their actual trading date',()=>{
+ const closes=Array.from({length:21},(_,i)=>100+i);
+ const result=nasdaqObservations({closes,dates:Array(21).fill('2026-10-19')});
+ expect(result.nasdaq_close).toMatchObject({value:120,observed_at:'2026-10-19'});
+ expect(result.nasdaq_daily_return.value).toBeCloseTo(120/119-1);
+ expect(result.nasdaq_20_session_return.value).toBeCloseTo(.2);
+ expect(result.nasdaq_close.source).toContain('^IXIC');
+ expect(nasdaqObservations({closes:[],dates:[]})).toEqual({});
 });

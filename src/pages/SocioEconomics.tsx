@@ -40,7 +40,7 @@ export default function SocioEconomics() {
     }
     ping(); loadAll();
     const t1 = setInterval(ping, 15000);
-    const t2 = setInterval(loadAll, 5 * 60 * 1000);
+    const t2 = setInterval(loadAll, 60 * 1000);
     return () => { alive = false; clearInterval(t1); clearInterval(t2); };
   }, []);
 
@@ -126,7 +126,8 @@ export default function SocioEconomics() {
 
 
         <p className="service-notice">{data?.narrative || "Waiting for dated economic observations. Missing values are not measurements."}</p>
-        {data?.observations && <section className="panel" style={{margin:'14px 24px',padding:14,overflowX:'auto'}}><h2 className="panel-title">DATED ECONOMIC OBSERVATIONS</h2><table className="data-table"><thead><tr><th>Metric</th><th>Value</th><th>Source</th><th>Observed</th></tr></thead><tbody>{Object.entries(data.observations).map(([id,o])=><tr key={id}><td>{id.replace(/_/g,' ')}</td><td>{['cpi_yoy','retail_yoy','market_vol_ann'].includes(id)?(o.value*100).toFixed(2)+'%':o.value.toFixed(2)}</td><td>{o.source}</td><td>{o.observed_at}</td></tr>)}</tbody></table></section>}
+        <p className="service-notice">Nasdaq Composite (^IXIC) · Yahoo Finance public REST chart feed · refreshes every minute. Values retain their observation date; daily closes are not intraday quotes. {data && !data.observations?.nasdaq_close && <strong>Nasdaq observations are currently unavailable.</strong>} <button className="synthesize-btn" disabled={loading} onClick={()=>void loadAll()}>{loading ? "Refreshing…" : "Refresh observations"}</button></p>
+        {data?.observations && <section className="panel" style={{margin:'14px 24px',padding:14,overflowX:'auto'}}><h2 className="panel-title">NASDAQ & ECONOMIC OBSERVATIONS</h2><table className="data-table"><thead><tr><th>Metric</th><th>Value</th><th>Source</th><th>Observed</th></tr></thead><tbody>{Object.entries(data.observations).map(([id,o])=><tr key={id}><td>{id.replace(/_/g,' ')}</td><td>{['cpi_yoy','retail_yoy','market_vol_ann','nasdaq_daily_return','nasdaq_20_session_return'].includes(id)?(o.value*100).toFixed(2)+'%':o.value.toFixed(2)}</td><td>{o.source}</td><td>{o.observed_at}</td></tr>)}</tbody></table></section>}
         {/* PRIMARY GAUGES */}
         <div className="se-stat-row">
           {["fear", "trust", "liquidity", "volatility"].map(dim => {

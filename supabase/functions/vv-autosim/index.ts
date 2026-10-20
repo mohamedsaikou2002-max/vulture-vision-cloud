@@ -15,7 +15,7 @@ import {
   autoConfigure, backtest, buildBaseline, buyAndHold, clamp, dailyLogVol, marketConditions, mulberry32,
   runDimensionScenario, scenarioMonteCarlo, type Dim, type EventType, type RiskProfile, type Shock,
 } from "../_shared/autosim_engine.ts";
-import { NASDAQ_MARKET, loadNasdaqCandles, loadMacroObservables, type SourceStatus } from "../_shared/autosim_data.ts";
+import { NASDAQ_MARKET, nasdaqObservations, loadNasdaqCandles, loadMacroObservables, type SourceStatus } from "../_shared/autosim_data.ts";
 
 const cors = { ...corsHeaders, "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
@@ -68,7 +68,7 @@ async function worldState(sb: SupabaseClient) {
   if (candles.closes.length) all.market_vol_ann = { value: dailyLogVol(candles.closes, 30) * Math.sqrt(252), observed_at: candles.dates.at(-1), source: "yahoo:NASDAQ realized vol" };
   const b = buildBaseline(all);
   const evidence = await retrieveEvidence(sb, [], [], true);
-  return json({ observations: all, world_pulse: buildWorldPulse(b.baseline, b.neutral, evidence.selected), ok: true, as_of: new Date().toISOString(), baseline: b.baseline, detail: b.detail, neutral_dimensions: b.neutral, data_status: [...status, candles.status] });
+  return json({ observations: {...all,...nasdaqObservations(candles)}, world_pulse: buildWorldPulse(b.baseline, b.neutral, evidence.selected), ok: true, as_of: new Date().toISOString(), baseline: b.baseline, detail: b.detail, neutral_dimensions: b.neutral, data_status: [...status, candles.status] });
 }
 
 // ── interpretation helpers ───────────────────────────────────

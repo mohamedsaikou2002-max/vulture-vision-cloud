@@ -90,3 +90,18 @@ export async function loadNasdaqCandles(): Promise<{ closes: number[]; dates: st
   }
   return {closes:[],dates:[],status:{id:"yahoo:NASDAQ",ok:false,detail:lastError}};
 }
+
+/** Observed Nasdaq metrics computed only from validated completed daily closes. */
+export function nasdaqObservations(candles: {closes:number[];dates:string[]}) {
+  const n=candles.closes.length;
+  if(n<2||candles.dates.length!==n)return {};
+  const last=candles.closes[n-1],previous=candles.closes[n-2],date=candles.dates[n-1];
+  if(!Number.isFinite(last)||last<=0||!Number.isFinite(previous)||previous<=0)return {};
+  const source='Yahoo Finance:^IXIC completed daily closes';
+  const observations:Record<string,{value:number;source:string;observed_at:string}>={
+    nasdaq_close:{value:last,source,observed_at:date},
+    nasdaq_daily_return:{value:last/previous-1,source,observed_at:date},
+  };
+  if(n>=21 && Number.isFinite(candles.closes[n-21]) && candles.closes[n-21]>0)observations.nasdaq_20_session_return={value:last/candles.closes[n-21]-1,source,observed_at:date};
+  return observations;
+}
