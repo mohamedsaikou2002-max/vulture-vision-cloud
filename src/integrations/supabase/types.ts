@@ -14,13 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      news_source_status: {
-        Row: {source_id:string;source:string;status:string;articles:number;checked_at:string;error_kind:string|null}
-        Insert: {source_id:string;source:string;status:string;articles?:number;checked_at:string;error_kind?:string|null}
-        Update: {source_id?:string;source?:string;status?:string;articles?:number;checked_at?:string;error_kind?:string|null}
-        Relationships: []
-      }
-
       autosim_jobs: {
         Row: {
           completed_at: string | null
@@ -203,6 +196,176 @@ export type Database = {
           generated_at?: string
           source_revision?: number
           version?: never
+        }
+        Relationships: []
+      }
+      quantum_billing_config: {
+        Row: {
+          currency: string
+          est_qpu_secs_per_qubit_shot: number
+          ibm_configured: boolean
+          id: number
+          markup_bp: number
+          max_qubits: number
+          provider_rate_cents_per_qpu_sec: number
+          quote_ttl_seconds: number
+          stripe_configured: boolean
+          updated_at: string
+        }
+        Insert: {
+          currency?: string
+          est_qpu_secs_per_qubit_shot?: number
+          ibm_configured?: boolean
+          id?: number
+          markup_bp?: number
+          max_qubits?: number
+          provider_rate_cents_per_qpu_sec?: number
+          quote_ttl_seconds?: number
+          stripe_configured?: boolean
+          updated_at?: string
+        }
+        Update: {
+          currency?: string
+          est_qpu_secs_per_qubit_shot?: number
+          ibm_configured?: boolean
+          id?: number
+          markup_bp?: number
+          max_qubits?: number
+          provider_rate_cents_per_qpu_sec?: number
+          quote_ttl_seconds?: number
+          stripe_configured?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      quantum_job_events: {
+        Row: {
+          created_at: string
+          data: Json
+          event: string
+          id: string
+          job_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          event: string
+          id?: string
+          job_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          event?: string
+          id?: string
+          job_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quantum_job_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "quantum_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quantum_jobs: {
+        Row: {
+          adjustment_cents: number
+          approved_cap_cents: number | null
+          authorized_at: string | null
+          backend: string | null
+          charge_cents: number | null
+          created_at: string
+          currency: string
+          data_hash: string | null
+          error: string | null
+          est_qpu_secs: number
+          id: string
+          idempotency_key: string
+          markup_cents: number | null
+          n_qubits: number
+          payment_intent_id: string | null
+          payment_provider: string | null
+          payment_status: string
+          provider_cost_cents: number | null
+          provider_job_id: string | null
+          provider_reported_qpu_secs: number | null
+          quote_cents: number
+          quote_expires_at: string | null
+          rate_snapshot: Json
+          refund_cents: number
+          settlement_status: string
+          shots: number
+          status: string
+          strategy_hash: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          adjustment_cents?: number
+          approved_cap_cents?: number | null
+          authorized_at?: string | null
+          backend?: string | null
+          charge_cents?: number | null
+          created_at?: string
+          currency?: string
+          data_hash?: string | null
+          error?: string | null
+          est_qpu_secs: number
+          id?: string
+          idempotency_key: string
+          markup_cents?: number | null
+          n_qubits: number
+          payment_intent_id?: string | null
+          payment_provider?: string | null
+          payment_status?: string
+          provider_cost_cents?: number | null
+          provider_job_id?: string | null
+          provider_reported_qpu_secs?: number | null
+          quote_cents: number
+          quote_expires_at?: string | null
+          rate_snapshot?: Json
+          refund_cents?: number
+          settlement_status?: string
+          shots: number
+          status?: string
+          strategy_hash?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          adjustment_cents?: number
+          approved_cap_cents?: number | null
+          authorized_at?: string | null
+          backend?: string | null
+          charge_cents?: number | null
+          created_at?: string
+          currency?: string
+          data_hash?: string | null
+          error?: string | null
+          est_qpu_secs?: number
+          id?: string
+          idempotency_key?: string
+          markup_cents?: number | null
+          n_qubits?: number
+          payment_intent_id?: string | null
+          payment_provider?: string | null
+          payment_status?: string
+          provider_cost_cents?: number | null
+          provider_job_id?: string | null
+          provider_reported_qpu_secs?: number | null
+          quote_cents?: number
+          quote_expires_at?: string | null
+          rate_snapshot?: Json
+          refund_cents?: number
+          settlement_status?: string
+          shots?: number
+          status?: string
+          strategy_hash?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
