@@ -1,7 +1,7 @@
 import { authorize } from '../_shared/access.ts';
 import { hasConfiguredAI, generateConfigured } from '../_shared/gemini.ts';
 import { summarizeMarketStatus, type MarketSource } from '../_shared/market_status.ts';
-const fetchMarket: typeof fetch = (input, init = {}) => fetch(input, { ...init, signal: init.signal ?? AbortSignal.timeout(8000) });
+const fetchMarket: typeof fetch = (input, init = {}) => fetch(input, { ...init, signal: ('signal' in init ? init.signal : undefined) ?? AbortSignal.timeout(8000) });
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 // Live market analytics. CoinGecko for crypto, Stooq for SPY/equities (no key).

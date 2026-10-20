@@ -81,8 +81,10 @@ export class Normalizer {
   normalizeOanda(raw: OandaMessage): Tick | null {
     try {
       if (raw?.type !== "PRICE") return null;
-      const bid = parseFloat(raw?.bids?.[0]?.price);
-      const ask = parseFloat(raw?.asks?.[0]?.price);
+      const bidText = raw.bids?.[0]?.price, askText = raw.asks?.[0]?.price;
+      if (!bidText || !askText) return null;
+      const bid = parseFloat(bidText);
+      const ask = parseFloat(askText);
       if (!raw.instrument || !bid || !ask) return null;
       return this.enrich({
         id: raw.instrument, price: (bid + ask) / 2, bid, ask,
