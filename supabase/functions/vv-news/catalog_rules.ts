@@ -16,7 +16,7 @@ export function robotsAllowed(text: string, path: string): boolean {
     else if (/crawl-delay/i.test(key)) current.delay = Number(value) || 0;
   }
   groups.push(current);
-  const explicit = groups.filter(g => g.agents.some(a => a !== '*' && 'vulturevisionnewsbot'.includes(a)));
+  const explicit = groups.filter(g => g.agents.some(a => a === 'vulturevisionnewsbot'));
   const selected = explicit.length ? explicit : groups.filter(g => g.agents.includes('*'));
   // Respect delayed sources conservatively rather than issuing a burst in a short-lived worker.
   if (selected.some(g => g.delay > 0)) return false;
@@ -25,6 +25,16 @@ export function robotsAllowed(text: string, path: string): boolean {
     return new RegExp('^' + pattern).test(path);
   }).sort((a,b) => b.path.length - a.path.length || Number(b.allow) - Number(a.allow));
   return matches[0]?.allow ?? true;
+}
+export function publicAddress(ip: string): boolean {
+  if (ip.includes(':')) {
+    // Only global-unicast IPv6; exclude documentation and IPv4-mapped/private forms.
+    return /^[23][0-9a-f]{3}:/i.test(ip) && !/^2001:(db8|0|10|20):/i.test(ip);
+  }
+  const p=ip.split('.').map(Number);
+  if(p.length!==4||p.some(n=>!Number.isInteger(n)||n<0||n>255))return false;
+  const [a,b,c]=p;
+  return a>0&&a<224&&a!==10&&a!==127&&!(a===100&&b>=64&&b<=127)&&!(a===169&&b===254)&&!(a===172&&b>=16&&b<=31)&&!(a===192&&(b===168||b===0||b===2))&&!(a===198&&(b===18||b===19||(b===51&&c===100)))&&!(a===203&&b===0&&c===113);
 }
 export function structuredHeadlines(html: string, base: string) {
   const items: {title: string; link: string; time?: string}[] = [];

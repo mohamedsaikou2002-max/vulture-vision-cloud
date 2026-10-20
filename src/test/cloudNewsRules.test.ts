@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {sourceCatalog} from '../../supabase/functions/vv-news/source_catalog';
-import {robotsAllowed,structuredHeadlines,newsColumn} from '../../supabase/functions/vv-news/catalog_rules';
+import {robotsAllowed,structuredHeadlines,newsColumn,publicAddress} from '../../supabase/functions/vv-news/catalog_rules';
 describe('Cloud publisher rules',()=>{
   it('includes all 207 added sources beside every original source',()=>{
     expect(sourceCatalog.filter(s=>s.id.startsWith('global-extra-'))).toHaveLength(207);
@@ -18,5 +18,9 @@ describe('Cloud publisher rules',()=>{
   });
   it('routes macro, technology and cyber headlines into existing feeds',()=>{
     expect(newsColumn('macro')).toBe('irl');expect(newsColumn('tech')).toBe('tech');expect(newsColumn('security')).toBe('dark');
+  });
+  it('rejects private and reserved network addresses in both address families',()=>{
+    for(const ip of ['127.0.0.1','10.1.2.3','100.64.1.2','198.18.0.1','192.168.1.2','::1','fc00::1','::ffff:127.0.0.1'])expect(publicAddress(ip)).toBe(false);
+    expect(publicAddress('8.8.8.8')).toBe(true);expect(publicAddress('2606:4700:4700::1111')).toBe(true);
   });
 });

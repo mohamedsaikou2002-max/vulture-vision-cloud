@@ -1,5 +1,5 @@
 import { sourceCatalog } from './source_catalog.ts';
-import { robotsAllowed, structuredHeadlines } from './catalog_rules.ts';
+import { robotsAllowed, structuredHeadlines, publicAddress } from './catalog_rules.ts';
 import { parseRss, publicationTime } from '../_shared/news_feed.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -17,11 +17,14 @@ export async function collectCatalog(req: Request, signal: AbortSignal): Promise
   const {data: saved, error: readError} = await db.from('warm_state').select('value').eq('key','news_catalog_collection').maybeSingle();
   if (readError) return [{source:'Cloud publisher collection',status:'unavailable',count:0}];
   const state: State = saved?.value ?? {cursor: 0,last_attempt: 0,health: {}};
-  if (Date.now()-state.last_attempt < 60000) return Object.values(state.health);
+  if (Date.now()-state.last_attempt < 60000) return sourceCatalog.map(s=>state.health[s.id] ?? {source:s.name,status:'waiting',count:0});
+  const previousAttempt = state.last_attempt;
   const start = state.cursor % sourceCatalog.length;
   state.cursor = (start + BATCH) % sourceCatalog.length; state.last_attempt = Date.now();
-  const {error: reserveError} = await db.from('warm_state').upsert({key:'news_catalog_collection',value:state,expires_at:null},{onConflict:'key'});
-  if (reserveError) return [{source:'Cloud publisher collection',status:'unavailable',count:0}];
+  const reservation = saved
+    ? await db.from('warm_state').update({value:state}).eq('key','news_catalog_collection').eq('value->>last_attempt',String(previousAttempt)).select('key')
+    : await db.from('warm_state').insert({key:'news_catalog_collection',value:state,expires_at:null}).select('key');
+  if (reservation.error || !reservation.data?.length) return [{source:'Cloud publisher collection',status:'waiting',count:0}];
   await Promise.all(Array.from({length:BATCH},(_,i)=>sourceCatalog[(start+i)%sourceCatalog.length]).map(async source => {
     const hosts = new Set([source.homepage,...source.feed_urls].flatMap(u=>{const h=new URL(u).hostname; return [h,h.startsWith('www.')?h.slice(4):'www.'+h];}));
     for (const host of source.allowed_hosts) hosts.add(host);
@@ -29,8 +32,9 @@ export async function collectCatalog(req: Request, signal: AbortSignal): Promise
     async function validated(input: string) {
       const u = new URL(input);
       if (u.protocol!=='https:' || u.username || u.password || (u.port && u.port!=='443') || !hosts.has(u.hostname)) throw new Error('restricted');
-      const addresses = await Deno.resolveDns(u.hostname,'A');
-      if (!addresses.length || addresses.some(ip=>/^(0|10|127|169\.254|192\.168|172\.(1[6-9]|2\d|3[01]))\./.test(ip) || Number(ip.split('.')[0])>=224)) throw new Error('restricted');
+      const resolved = await Promise.allSettled([Deno.resolveDns(u.hostname,'A'),Deno.resolveDns(u.hostname,'AAAA')]);
+      const addresses = resolved.flatMap(r=>r.status==='fulfilled'?r.value:[]);
+      if (!addresses.length || addresses.some(ip=>!publicAddress(ip))) throw new Error('restricted');
       return u;
     }
     async function request(input:string, robots = false):Promise<{text:string;url:string}> {
@@ -74,6 +78,6 @@ export async function collectCatalog(req: Request, signal: AbortSignal): Promise
       state.health[source.id]={source:source.name,status:rows.length?'available':'empty',count:rows.length,checked_at:new Date().toISOString()};
     } catch (e) {state.health[source.id]={source:source.name,status:e instanceof Error && e.message==='restricted'?'restricted':'unavailable',count:0,checked_at:new Date().toISOString()};}
   }));
-  await db.from('warm_state').upsert({key:'news_catalog_collection',value:state,expires_at:null},{onConflict:'key'});
+  await db.from('warm_state').update({value:state}).eq('key','news_catalog_collection').eq('value->>last_attempt',String(state.last_attempt));
   return sourceCatalog.map(s=>state.health[s.id] ?? {source:s.name,status:'waiting',count:0});
 }
