@@ -267,13 +267,15 @@ Deno.serve(async (req) => {
     const cryptoSymbols = ["BTC", "ETH", "SOL", "ADA"];
     const assets: Asset[] = [];
 
-    // Crypto assets
-    for (const sym of cryptoSymbols) {
+    // Crypto assets — histories fetched concurrently so one slow source
+    // cannot push the handler past the platform idle timeout.
+    const cryptoAssets = await Promise.all(cryptoSymbols.map(async (sym) => {
       const c = crypto.find(x => x.symbol === sym);
-      if (!c) continue;
+      if (!c) return null;
       const hist = await fetchHistory(SYMBOL_TO_GECKO[sym], 60);
-      if (hist.length) assets.push(await buildAsset(sym, "CRYPTO", c.price, hist));
-    }
+      return hist.length ? await buildAsset(sym, "CRYPTO", c.price, hist) : null;
+    }));
+    for (const a of cryptoAssets) if (a) assets.push(a);
 
     // Equity proxies via Stooq
     const equities = [
@@ -281,10 +283,11 @@ Deno.serve(async (req) => {
       { sym: "QQQ", stooq: "qqq.us" },
       { sym: "GLD", stooq: "gld.us" },
     ];
-    for (const e of equities) {
+    const equityAssets = await Promise.all(equities.map(async (e) => {
       const hist = await fetchStooq(e.stooq);
-      if (hist.length) assets.push(await buildAsset(e.sym, "EQUITY", hist[hist.length - 1], hist));
-    }
+      return hist.length ? await buildAsset(e.sym, "EQUITY", hist[hist.length - 1], hist) : null;
+    }));
+    for (const a of equityAssets) if (a) assets.push(a);
 
     // Portfolio aggregates
     const counts: Record<string, number> = {};
