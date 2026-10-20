@@ -11,3 +11,6 @@
 - [x] Verify merged PR #5 files match merge commit, existing quota/RLS/service-only grants, secure Gemini secret, deployment, and 12 passing tests; signed-in chat returns 502 (Gemini upstream 404), signed-out returns 401; no allowlist changes, publishing, or charges.
 - [ ] Simulation chat live success blocked by configured Gemini model returning upstream 404; existing page clips Send question below viewport (Enter-to-send tested); Git sync refresh/status cannot be controlled by agent. Preserve merged code pending provider/configuration resolution.
 - [x] News feed page shows news only: scenario suggestions section and plug-into-simulation links removed; four feed columns verified live.
+- [x] Analytics service: timeout crash fixed (per-source fetch catches, concurrent history loads), operator gate removed so members can load it, equity history moved to Yahoo (Stooq now serves an anti-bot page); verified 200 with SPY/QQQ/GLD live in the page.
+- [ ] AI market brief blocked by the configured Gemini key free-tier quota (20/day exhausted); options: enable billing on the key, or cache the brief so one call serves many page loads.
+- [ ] On-chain panel empty: Sepolia gas oracle returns nothing and the whale query targets an address with no transactions.
