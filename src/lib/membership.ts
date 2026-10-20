@@ -1,5 +1,6 @@
-export const MEMBERSHIP = { amountCents: 105000, currency: "usd", interval: "month", trialHours: 24 } as const;
-// Stripe trials are set in whole days; 24h = 1 day.
+export const MEMBERSHIP = { amountCents: 105000, pilotAmountCents: 9999, currency: "usd", interval: "month", trialHours: 168 } as const;
+export const MEMBERSHIP_START_SEQUENCE = ["paid_pilot", "free_trial", "monthly_membership"] as const;
+// The seven-day free trial follows the paid pilot; checkout remains unconfigured.
 export const TRIAL_PERIOD_DAYS = MEMBERSHIP.trialHours / 24;
 
 export interface MembershipRecord {
