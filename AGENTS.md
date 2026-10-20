@@ -4,7 +4,7 @@
 - Use an asset pointer for the original uploaded video and lazy-load the decorative R3F contours so media and content remain available if WebGL fails.
 - Link billing customers to stable authenticated user IDs; subscription state is server-written and never derived from editable profile metadata.
 - Stage draft schema additions only; do not activate checkout or enforce a new subscription gate before payment configuration and staged membership tables are accepted.
-- Keep AutoSim at /simulations and the existing MiroFish pilot/research chat at /simulations/pilot so automatic stress tests never replace operator permissions or research chat.
+- AutoSim is the only simulator at /simulations; the MiroFish pilot/research chat was removed at the owner's request — do not re-add it. The MiroFish operator allowlist (vv-mirofish, vv-simulation) is untouched.
 - Share the deterministic AutoSim calculation engine between browser visualization and server calculation; label its uncalibrated and missing-data assumptions explicitly.
 - Claim AutoSim jobs atomically server-side before provider calls; replay IDs cannot launch another run and agent questions use the existing research quota.
 - Scope AutoSim and public information styles to their own page roots to prevent changes to the existing terminal and pilot pages.
