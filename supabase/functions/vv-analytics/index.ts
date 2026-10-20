@@ -50,14 +50,15 @@ async function fetchHistory(geckoId: string, days = 60): Promise<number[]> {
   return (j.prices as [number, number][]).map(p => p[1]);
 }
 
-async function fetchStooq(symbol: string): Promise<number[]> {
-  // Daily CSV — last ~6 months
-  const r = await fetch(`https://stooq.com/q/d/l/?s=${symbol}&i=d`).catch(() => null);
+async function fetchEquity(symbol: string): Promise<number[]> {
+  // Daily closes, last ~6 months. Stooq's CSV endpoint now serves an anti-bot
+  // page instead of data, so equity history comes from the Yahoo chart API.
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=6mo&interval=1d`;
+  const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } }).catch(() => null);
   if (!r || !r.ok) return [];
-  const text = await r.text().catch(() => "");
-  if (!text.trim()) return [];
-  const rows = text.trim().split("\n").slice(1);
-  const closes = rows.map(line => parseFloat(line.split(",")[4])).filter(n => !isNaN(n));
+  const j = await r.json().catch(() => null);
+  const raw = (j?.chart?.result?.[0]?.indicators?.quote?.[0]?.close as (number | null)[]) || [];
+  const closes = raw.filter((v): v is number => typeof v === "number" && !Number.isNaN(v));
   return closes.slice(-90);
 }
 
