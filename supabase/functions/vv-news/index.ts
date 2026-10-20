@@ -1,4 +1,5 @@
 import { parseRss, newestFirst, publicationTime, safeNewsUrl, type SourceHealth } from "../_shared/news_feed.ts";
+import { additionalTechFeeds } from "./additional_sources.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -91,6 +92,7 @@ const FEEDS = {
     { url: "https://www.404media.co/rss/", source: "404 Media" },
   ],
   tech: [
+    ...additionalTechFeeds,
     { url: "https://hnrss.org/frontpage", source: "Hacker News" },
     { url: "https://www.theverge.com/rss/index.xml", source: "The Verge" },
     { url: "https://techcrunch.com/feed/", source: "TechCrunch" },

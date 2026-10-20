@@ -9,3 +9,4 @@
 - Claim AutoSim jobs atomically server-side before provider calls; replay IDs cannot launch another run and agent questions use the existing research quota.
 - Scope AutoSim and public information styles to their own page roots to prevent changes to the existing terminal and pilot pages.
 - Route all Gemini provider calls through the server-only shared credential transport: discover numbered secret slots, fail over only on HTTP 429, honor per-model Retry-After in warm workers, preserve a total request deadline and sanitize errors; Google remains the quota authority and worker cooldowns are not globally durable.
+- Keep additional live RSS subscriptions in the news function's source registry; preserve uploaded crawler catalogs as disabled review candidates, since technical feed availability does not establish crawling or redistribution rights.
