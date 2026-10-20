@@ -29,7 +29,8 @@ describe('World-state provenance and freshness',()=>{
     const closes=ts.map((_,i)=>100+i);
     expect(validCandles(payload(ts,closes)).closes).toHaveLength(100);
     expect(validCandles(payload(ts,closes.map((c,i)=>i===50?null:c))).closes).toHaveLength(99);
-    expect(()=>validCandles(payload([...ts,day],[...closes,closes[99]]))).toThrow('Duplicate');
+    const dupTs=[...ts];dupTs.splice(50,0,ts[50]);
+    expect(()=>validCandles(payload(dupTs,[...closes,closes[50]]))).toThrow('Duplicate');
     expect(()=>validCandles(payload(ts.map(t=>t-365*86400),closes))).toThrow('stale');
     expect(()=>validCandles(payload(ts,closes.map((c,i)=>i===5?NaN:c)))).toThrow('Invalid');
   });
