@@ -57,7 +57,7 @@ export async function collectCatalog(req: Request, signal: AbortSignal): Promise
       throw new Error('restricted');
     }
     try {
-      let candidates: {title:string;link?:string;time?:string}[]=[];
+      const candidates: {title:string;link?:string;time?:string}[]=[];
       for (const feed of source.feed_urls.slice(0,1)) {try {const page=await request(feed); candidates.push(...parseRss(page.text,source.name,new URL(page.url).origin));} catch {/* Try permitted index metadata next. */}}
       if (!candidates.length) {
         const page=await request(source.homepage);

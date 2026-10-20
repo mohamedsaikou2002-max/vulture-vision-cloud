@@ -73,7 +73,7 @@ export const ENGINE_ASSUMPTIONS = {
   coefficients: "Illustrative and uncalibrated. Agent responses are bounded heuristics, not observed behavior.",
   deviations_measured_from: "the estimated starting state (not a fixed 0.5)",
 };
-export const ENGINE_VERSION = "autosim-1.2.0";
+export const ENGINE_VERSION = "autosim-1.3.0";
 
 // ── helpers ──────────────────────────────────────────────────
 export const clamp = (v: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
@@ -177,7 +177,7 @@ const norm = (v: number, lo: number, hi: number, invert = false) => {
   return invert ? 1 - x : x;
 };
 export function buildBaseline(obs: Observables, now = Date.now()): { baseline: DimVector; detail: Record<Dim, BaselineDim>; neutral: Dim[] } {
-  const maxAge: Record<string, number> = { vix: 7, hy_spread: 7, curve_10y2y: 7, unrate: 70, cpi_yoy: 70, nfci: 21, umcsent: 70, retail_yoy: 70, market_vol_ann: 3 };
+  const maxAge: Record<string, number> = { vix: 7, hy_spread: 7, curve_10y2y: 7, unrate: 70, cpi_yoy: 70, nfci: 21, umcsent: 70, consumer_confidence_balance: 70, retail_yoy: 70, market_vol_ann: 3 };
   obs = Object.fromEntries(Object.entries(obs).filter(([key, value]) => {
     const age = value?.observed_at ? (now - Date.parse(value.observed_at)) / 86400000 : Infinity;
     return value && Number.isFinite(value.value) && Number.isFinite(age) && age >= -1 && age <= (maxAge[key] ?? 7);
@@ -191,7 +191,7 @@ export function buildBaseline(obs: Observables, now = Date.now()): { baseline: D
     employment: () => obs.unrate ? { v: norm(obs.unrate.value, 3, 8, true), o: obs.unrate } : null,
     growth: () => obs.curve_10y2y ? { v: norm(obs.curve_10y2y.value, -1.5, 2.5), o: obs.curve_10y2y } : null,
     liquidity: () => obs.nfci ? { v: norm(obs.nfci.value, -.8, .8, true), o: obs.nfci } : null,
-    trust: () => obs.umcsent ? { v: norm(obs.umcsent.value, 50, 110), o: obs.umcsent } : null,
+    trust: () => obs.umcsent ? { v: norm(obs.umcsent.value, 50, 110), o: obs.umcsent } : obs.consumer_confidence_balance ? {v:norm(obs.consumer_confidence_balance.value,-100,100),o:obs.consumer_confidence_balance} : null,
     consumer_activity: () => obs.retail_yoy ? { v: norm(obs.retail_yoy.value, -.02, .1), o: obs.retail_yoy } : null,
   };
   const baseline = neutralVector();

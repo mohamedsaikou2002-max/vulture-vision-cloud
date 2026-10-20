@@ -20,7 +20,7 @@ async function fred(series: string, key: string, limit = 14): Promise<{ date: st
 }
 async function fredPublic(series: string, limit: number): Promise<{date:string;value:number}[]> {
   const start=new Date();start.setUTCFullYear(start.getUTCFullYear()-2);
-  const response=await fetch(`https://fred.stlouisfed.org/graph/graph.csv?id=${series}&cosd=${start.toISOString().slice(0,10)}`,{signal:timeoutSignal(8000)});
+  const response=await fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${series}&cosd=${start.toISOString().slice(0,10)}`,{signal:timeoutSignal(8000)});
   if(!response.ok)throw new Error(`FRED public ${response.status}`);
   const text=await response.text();if(text.length>300000)throw new Error('FRED response too large');
   return text.trim().split(/\r?\n/).slice(1).map(line=>{const [date,value]=line.split(',');return {date,value:parseFloat(value)};}).filter(row=>/^\d{4}-\d{2}-\d{2}$/.test(row.date)&&Number.isFinite(row.value)).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,limit);
@@ -46,7 +46,20 @@ export async function loadMacroObservables(): Promise<{ obs: Observables; status
       if(!Number.isFinite(age)||age < -1||age > maxAge)throw new Error('Latest observation is stale or undated');
       obs[id] = { value: v, observed_at: rows[0].date, source: `FRED:${series}` };
       status.push({ id: `fred:${series}`, ok: true, detail: `latest ${rows[0].date}` });
-    } catch (e) { status.push({ id: `fred:${series}`, ok: false, detail: (e as Error).message }); }
+    } catch (e) {
+      if(id==='umcsent') {
+        try {
+          const fallback='USACSCICP02STSAM';
+          const rows=key?await fred(fallback,key,3).catch(()=>fredPublic(fallback,3)):await fredPublic(fallback,3);
+          const latest=rows[0],age=latest?(Date.now()-Date.parse(latest.date))/86400000:Infinity;
+          if(!latest||!Number.isFinite(latest.value)||latest.value < -100||latest.value > 100||!Number.isFinite(age)||age < -1||age>70)throw new Error('Consumer confidence fallback is stale');
+          obs.consumer_confidence_balance={value:latest.value,observed_at:latest.date,source:'FRED:USACSCICP02STSAM (OECD consumer confidence, percentage balance)'};
+          status.push({id:'fred:USACSCICP02STSAM',ok:true,detail:`latest ${latest.date}; UMCSENT unavailable/stale; OECD confidence proxy used`});
+          return;
+        }catch{/* Preserve missing-data reporting if both independent series are unavailable. */}
+      }
+      status.push({ id: `fred:${series}`, ok: false, detail: (e as Error).message });
+    }
   }));
   return { obs, status };
 }

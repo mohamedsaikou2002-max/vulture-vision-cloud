@@ -141,7 +141,7 @@ export function parseSimulationChatAnswer(raw: string, mode: AnalystMode, validN
  * Only fail over after a 404; never retry chargeable or ambiguous provider failures.
  */
 export function availableGeminiModels(configured?: string | null): string[] {
-  const preferred = configured?.trim() || "gemini-3.8-flash";
+  const preferred = configured?.trim() || "gemini-2.5-flash";
   if (!/^[A-Za-z0-9_.-]{3,80}$/.test(preferred)) throw new Error("Invalid Gemini model configuration");
   return [...new Set([preferred, "gemini-2.5-flash", "gemini-2.5-flash-lite"])].slice(0, 3);
 }

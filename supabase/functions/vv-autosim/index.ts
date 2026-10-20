@@ -162,7 +162,7 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
       const { data, model: m } = await generateJSON<Record<string, unknown>>({
         system: "You convert a trader's scenario into structured economic inputs. Respond with JSON only.",
         prompt: `Scenario: """${scenario}"""\n\nThe simulated market is the ${NASDAQ_MARKET.label} index (${NASDAQ_MARKET.symbol}) — do not pick or output any asset.\n\nReturn JSON with keys: event_type (one of ${EVENT_TYPES.join(", ")}), summary (one sentence), is_hypothetical (true unless the scenario describes something already widely reported), horizon_days (1-30), regions (array), sectors (array), search_keywords (4-8 short lowercase words or phrases useful for searching news headlines), shocks (object: dimension -> number between -0.2 and 0.2 = how far the scenario moves that 0-1 dimension; omit unaffected dimensions), shock_rationale (object: dimension -> under 20 words), risk_profile ("balanced" unless the scenario text explicitly asks for conservative or aggressive), confidence (0-1).\nDimensions: ${DIMENSIONS.join(", ")}. Meaning: ${DIM_HELP}.`,
-        maxOutputTokens: 1500, temperature: 0.2,
+        maxOutputTokens: 1500, temperature: 0.2, timeoutMs: 25000,
       });
       interp = validateInterp(data, horizonHint); model = m;
     } catch (e) {
@@ -261,7 +261,7 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
       const { data } = await generateJSON<Record<string, unknown>>({
         system: "You explain the output of a numerical economic simulator to a fast-moving trader. Use ONLY numbers present in the data. Never invent probabilities, prices or returns. Call results 'simulated'. Be direct and brief.",
         prompt: `Data:\n${JSON.stringify(compact)}\n\nReturn JSON: headline (max 12 words), summary (max 110 words), drivers (3-5 short strings: which dimensions moved and why, citing the numbers), risks (2-4 strings), gaps (strings: missing data, uncorroborated assumptions, contradictions in headlines), what_would_change_this (2-3 strings), spoken_summary (max 55 words, plain speech, no symbols or markdown).`,
-        maxOutputTokens: 1400, temperature: 0.3,
+        maxOutputTokens: 1400, temperature: 0.3, timeoutMs: 35000,
       });
       analysis = parseAnalysis(data);
       if (!analysis) warnings.push("The AI explanation had an invalid structure and was omitted. Numerical results remain available.");

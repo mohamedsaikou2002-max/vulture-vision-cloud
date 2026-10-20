@@ -38,7 +38,11 @@ export function createGeminiFailover(deps: {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': value },
           body, signal: AbortSignal.timeout(remaining),
         });
-      } catch { throw new Error('Gemini request unavailable'); }
+      } catch(error) {
+        const timedOut=error instanceof Error && /TimeoutError|AbortError/.test(error.name);
+        const failure=new Error(timedOut?'Gemini request timed out':'Gemini request unavailable');
+        failure.name=timedOut?'TimeoutError':'Error';throw failure;
+      }
       if (response.ok) return response;
       if (response.status !== 429) {
         await response.body?.cancel();

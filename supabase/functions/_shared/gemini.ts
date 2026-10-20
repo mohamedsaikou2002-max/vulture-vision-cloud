@@ -21,12 +21,27 @@ export async function generateGemini(key: string, configuredModel: string | unde
     try {
       const remaining = deadline - Date.now();
       if (remaining <= 0) throw new Error('deadline');
-      response = await send(model, JSON.stringify(body), remaining);
-    } catch { throw new GeminiError('timeout', 'AI request timed out', 504); }
+      const requestBody = body && typeof body === 'object' ? {...body as Record<string,unknown>} : body;
+      if(/^gemini-2\.5-flash(?:-lite)?$/.test(model) && requestBody && typeof requestBody === 'object'){
+        const config=(requestBody as Record<string,unknown>).generationConfig;
+        if(config && typeof config==='object' && 'responseMimeType' in config && config.responseMimeType==='application/json')
+          (requestBody as Record<string,unknown>).generationConfig={...config,thinkingConfig:{thinkingBudget:0}};
+      }
+      response = await send(model, JSON.stringify(requestBody), remaining);
+    } catch(e) {
+      const timedOut=Date.now()>=deadline || (e instanceof Error && /timeout|abort|timed out/i.test(e.name+' '+e.message));
+      throw new GeminiError(timedOut?'timeout':'upstream',timedOut?'AI request timed out':'AI provider connection unavailable',timedOut?504:502);
+    }
     if (response.status === 404) { await response.body?.cancel(); continue; }
-    if (!response.ok) throw new GeminiError(response.status === 429 ? 'rate_limited' : 'upstream', response.status === 429 ? 'AI provider is rate-limited. Try again later.' : 'AI provider request failed.', response.status === 429 ? 429 : 502);
+    if (!response.ok) {
+      const message=response.status===429?'AI provider is rate-limited. Try again later.':response.status===401||response.status===403?'AI provider rejected the server credential or model access. Check the hosted Gemini secret and model.':response.status===400?'AI provider rejected the model or generation settings. Check GEMINI_MODEL.':`AI provider unavailable (HTTP ${response.status}).`;
+      throw new GeminiError(response.status===429?'rate_limited':'upstream',message,response.status===429?429:502);
+    }
     let result;
-    try { result = await response.json(); } catch { throw new GeminiError('bad_output', 'AI returned invalid JSON', 502); }
+    try { result = await response.json(); } catch(e) {
+      if(Date.now()>=deadline || (e instanceof Error && /TimeoutError|AbortError/.test(e.name)))throw new GeminiError('timeout','AI request timed out while reading the answer',504);
+      throw new GeminiError('bad_output', 'AI returned invalid JSON', 502);
+    }
     const parts = result?.candidates?.[0]?.content?.parts;
     const text = Array.isArray(parts) ? parts.filter((p: {thought?: boolean}) => !p.thought).map((p: {text?: unknown}) => typeof p.text === 'string' ? p.text : '').join('').trim() : '';
     if (!text) throw new GeminiError('bad_output', 'AI provider returned no answer.', 502);
