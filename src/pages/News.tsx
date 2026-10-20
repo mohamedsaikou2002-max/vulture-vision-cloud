@@ -83,6 +83,7 @@ export default function News() {
 
   return (
     <VVLayout>
+      <div className="news-page">
       <NewsScenarioSuggestions />
       <section className="mx-4 my-6 rounded-xl border border-border bg-background/90 p-5 md:mx-8">
         <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">Global publisher desk</h2><p className="mt-1 text-xs text-muted-foreground">Local reporting across {marketRegistry.length} office markets · country tags identify the publisher, not the subject of the story.</p></div><div><label htmlFor="news-country" className="sr-only">Publisher country or market</label><select id="news-country" value={country} onChange={e => setCountry(e.target.value)} className="rounded-lg border border-border bg-background p-2 text-sm"><option value="">All markets</option>{marketRegistry.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select></div></div>
@@ -93,6 +94,7 @@ export default function News() {
         <Column title="Dark Web Intel" tone="gold" items={data.dark} badge="badge-dark" badgeText="ALERT" />
         <Column title="Tech Intelligence" tone="cyan" items={data.tech} badge="badge-tech" badgeText="NEW" />
         <IntelSynthesisColumn brief={brief} synthBusy={synthBusy} onSynthesize={onSynthesize} />
+      </div>
       </div>
       <div className="ticker-bar">
         <div className="ticker-label">// SIGNALS</div>
@@ -130,7 +132,7 @@ function Column({ title, tone, items, badge, badgeText }: {
               <div className="news-title">
                 {it.link ? (
                   <a href={it.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
-                    {it.title}
+                    {decodeEntities(it.title)}
                   </a>
                 ) : it.title}
               </div>
@@ -290,4 +292,12 @@ function IntelSynthesisColumn({ brief, synthBusy, onSynthesize }: {
       )}
     </div>
   );
+}
+
+function decodeEntities(s: string = ""): string {
+  const map: Record<string, string> = { amp: "&", apos: "'", quot: '"', lt: "<", gt: ">", nbsp: " " };
+  return s.replace(/&(?:amp;)?(#x?[0-9a-f]+|[a-z]+);/gi, (m, e: string) => {
+    if (e[0] === "#") { const n = e[1].toLowerCase() === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return Number.isFinite(n) ? String.fromCodePoint(n) : m; }
+    return map[e.toLowerCase()] ?? m;
+  });
 }
