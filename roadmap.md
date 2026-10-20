@@ -10,3 +10,4 @@
 - [ ] Keep $1050/mo copilot proposed-only (no Stripe activation); quantum strictly per-job PAYG; no auto-trading
 - [x] Verify merged PR #5 files match merge commit, existing quota/RLS/service-only grants, secure Gemini secret, deployment, and 12 passing tests; signed-in chat returns 502 (Gemini upstream 404), signed-out returns 401; no allowlist changes, publishing, or charges.
 - [ ] Simulation chat live success blocked by configured Gemini model returning upstream 404; existing page clips Send question below viewport (Enter-to-send tested); Git sync refresh/status cannot be controlled by agent. Preserve merged code pending provider/configuration resolution.
+- [x] News feed page shows news only: scenario suggestions section and plug-into-simulation links removed; four feed columns verified live.
