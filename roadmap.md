@@ -4,6 +4,7 @@
 - [ ] Verify AutoSim live runs/history after draft acceptance and new service deployment; verify optional FRED/Gemini configuration.
 - [ ] Verify original video playback in the hosted preview; local Vite serves HTML at its asset path.
 - [ ] Google member profiles and $1050/month Stripe subscriptions; activation depends on payment setup approval and accepting staged membership tables.
+- [x] Display $99.99 paid pilot followed by seven additional free trial days, then unchanged $1050/month membership; checkout remains inactive.
 - [x] Seed simulations from socio-economics corpus (events, agents, scenario blends)
 - [ ] IBM Quantum optional pay-per-job: schema (ledger, audit events, quotes), edge functions (quote, authorize, dispatch, webhook, reconcile), UI (toggle, cap, usage & billing page), tests
 - [ ] Keep $1050/mo copilot proposed-only (no Stripe activation); quantum strictly per-job PAYG; no auto-trading
