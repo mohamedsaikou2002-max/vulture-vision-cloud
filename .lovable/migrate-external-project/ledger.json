@@ -1,18 +1,96 @@
 {
   "source": "vulture-vision-autopilot.zip",
   "capabilities": [
-    {"capability":"code","source":"React/Vite archive","outcome":"Import AutoSim and public-page enhancements selectively","status":"in_progress","next_action":"Adapt and test"},
-    {"capability":"schema","source":"AutoSim migration","outcome":"Stage additive jobs and entitlement support; omit quantum deletion","status":"pending","next_action":"Accept draft before database verification"},
-    {"capability":"records","source":"Existing Lovable Cloud","outcome":"Preserve existing records; no separate record export in archive","status":"preserved","next_action":null},
-    {"capability":"auth identities","source":"Existing Lovable Cloud Google auth","outcome":"Preserve existing users and sign-in","status":"preserved","next_action":null},
-    {"capability":"authorization","source":"Existing guards and operator allowlist","outcome":"Preserve MiroFish permissions; authenticate AutoSim and server-scope job ownership","status":"in_progress","next_action":"Test new quota and ownership rules"},
-    {"capability":"uploaded file bytes","source":"public/video.mp4","outcome":"Reuse existing original video asset pointer","status":"preserved","next_action":null},
-    {"capability":"external providers","source":"Gemini, FRED, Coinbase","outcome":"Retain Gemini server-side; add optional FRED and public Coinbase observables","status":"pending","next_action":"Verify providers after accepting draft"},
-    {"capability":"public endpoints/callbacks/webhooks","source":"Existing functions and Google callback","outcome":"Preserve existing endpoints; add vv-autosim without deploying live changes","status":"preserved","next_action":"Deploy new service after acceptance"},
-    {"capability":"schedules","source":"No new schedules supplied","outcome":"AutoSim runs only on user initiation; preserve existing ingestion schedules","status":"preserved","next_action":null},
-    {"capability":"secrets","source":"Uploaded environment excluded","outcome":"Keep existing keys unchanged; FRED is optional","status":"pending","next_action":"Confirm configuration securely before live verification"},
-    {"capability":"payments","source":"Checkout reference and placeholder prices","outcome":"Retain $99/month and inactive checkout; preserve optional IBM billing","status":"blocked","next_action":"Configure payments from main project"},
-    {"capability":"cutover","source":"Project draft","outcome":"No publishing or destructive changes","status":"pending","next_action":"Accept draft"},
-    {"capability":"verification","source":"AutoSim tests and UI","outcome":"Run focused tests and public UI checks; live simulations require staged tables","status":"in_progress","next_action":"Test compatible source"}
+    {
+      "capability": "code",
+      "source": "React/Vite archive",
+      "outcome": "Imported simulator, voice input, deterministic stress-test engine and public information styles; preserved MiroFish pilot and quantum",
+      "status": "code_complete",
+      "next_action": "Accept draft and verify new service live"
+    },
+    {
+      "capability": "schema",
+      "source": "AutoSim migration",
+      "outcome": "Stage additive jobs and entitlement support; omit quantum deletion",
+      "status": "staged",
+      "next_action": "Accept draft; verify grants, ownership and atomic claims against database"
+    },
+    {
+      "capability": "records",
+      "source": "Existing Lovable Cloud",
+      "outcome": "Preserve existing records; no separate record export in archive",
+      "status": "preserved",
+      "next_action": null
+    },
+    {
+      "capability": "auth identities",
+      "source": "Existing Lovable Cloud Google auth",
+      "outcome": "Preserve existing users and sign-in",
+      "status": "preserved",
+      "next_action": null
+    },
+    {
+      "capability": "authorization",
+      "source": "Existing guards and operator allowlist",
+      "outcome": "Preserve MiroFish permissions; authenticate AutoSim and server-scope job ownership",
+      "status": "implemented_unverified",
+      "next_action": "Verify server ownership/quota after staged tables are accepted"
+    },
+    {
+      "capability": "uploaded file bytes",
+      "source": "public/video.mp4",
+      "outcome": "Reuse existing original video asset pointer",
+      "status": "preserved",
+      "next_action": null
+    },
+    {
+      "capability": "external providers",
+      "source": "Gemini, FRED, Coinbase",
+      "outcome": "Retain Gemini server-side; add optional FRED and public Coinbase observables",
+      "status": "pending",
+      "next_action": "Verify providers after accepting draft"
+    },
+    {
+      "capability": "public endpoints/callbacks/webhooks",
+      "source": "Existing functions and Google callback",
+      "outcome": "Preserve existing endpoints; add vv-autosim without deploying live changes",
+      "status": "preserved",
+      "next_action": "Deploy new service after acceptance"
+    },
+    {
+      "capability": "schedules",
+      "source": "No new schedules supplied",
+      "outcome": "AutoSim runs only on user initiation; preserve existing ingestion schedules",
+      "status": "preserved",
+      "next_action": null
+    },
+    {
+      "capability": "secrets",
+      "source": "Uploaded environment excluded",
+      "outcome": "Keep existing keys unchanged; FRED is optional",
+      "status": "pending",
+      "next_action": "Confirm configuration securely before live verification"
+    },
+    {
+      "capability": "payments",
+      "source": "Checkout reference and placeholder prices",
+      "outcome": "Retain $99/month and inactive checkout; preserve optional IBM billing",
+      "status": "blocked",
+      "next_action": "Configure payments from main project"
+    },
+    {
+      "capability": "cutover",
+      "source": "Project draft",
+      "outcome": "No publishing or destructive changes",
+      "status": "pending",
+      "next_action": "Accept draft"
+    },
+    {
+      "capability": "verification",
+      "source": "AutoSim tests and UI",
+      "outcome": "39 focused tests pass; automatic build OK; signed-in simulator and pilot navigation checked; no run submitted; desktop/mobile information pages checked; video playback could not be verified locally",
+      "status": "partial",
+      "next_action": "Accept draft, deploy vv-autosim with confirmation, verify live run/history and hosted video playback"
+    }
   ]
 }
