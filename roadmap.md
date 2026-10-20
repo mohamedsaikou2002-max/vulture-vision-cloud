@@ -17,3 +17,4 @@
 - [ ] On-chain panel empty: Sepolia gas oracle returns nothing and the whale query targets an address with no transactions.
 - [x] Add and deploy secure Gemini key failover across six existing services; 43 focused tests passed and preview build OK.
 - [ ] Collect seven backup Gemini keys securely (eight total including the existing key), then verify live failover; awaiting secure entries.
+- [ ] Connect additional public publisher feeds without changing the News page; retain the uploaded 207-source catalog as disabled review candidates.
