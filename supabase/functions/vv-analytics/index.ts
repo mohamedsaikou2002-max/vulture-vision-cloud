@@ -25,9 +25,10 @@ interface Asset {
 async function fetchCrypto(): Promise<Crypto[]> {
   const ids = "bitcoin,ethereum,solana,cardano,ripple,dogecoin,polkadot,chainlink";
   const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&price_change_percentage=1h,24h,7d`;
-  const r = await fetch(url, { headers: { "User-Agent": "VultureVision/1.0" } });
-  if (!r.ok) return [];
-  const data = await r.json() as {id:string;symbol:string;name:string;current_price:number;price_change_percentage_24h:number;price_change_percentage_1h_in_currency?:number;price_change_percentage_24h_in_currency?:number;price_change_percentage_7d_in_currency?:number;market_cap:number;total_volume:number;sparkline_in_7d?:{price:number[]}}[];
+  const r = await fetch(url, { headers: { "User-Agent": "VultureVision/1.0" } }).catch(() => null);
+  if (!r || !r.ok) return [];
+  const data = await r.json().catch(() => null) as {id:string;symbol:string;name:string;current_price:number;price_change_percentage_24h:number;price_change_percentage_1h_in_currency?:number;price_change_percentage_24h_in_currency?:number;price_change_percentage_7d_in_currency?:number;market_cap:number;total_volume:number;sparkline_in_7d?:{price:number[]}}[] | null;
+  if (!data) return [];
   return data.map(d => ({
     symbol: d.symbol.toUpperCase(),
     name: d.name,
@@ -42,19 +43,22 @@ async function fetchCrypto(): Promise<Crypto[]> {
 
 async function fetchHistory(geckoId: string, days = 60): Promise<number[]> {
   const url = `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=${days}&interval=daily`;
-  const r = await fetch(url);
-  if (!r.ok) return [];
-  const j = await r.json();
+  const r = await fetch(url).catch(() => null);
+  if (!r || !r.ok) return [];
+  const j = await r.json().catch(() => null);
+  if (!j?.prices) return [];
   return (j.prices as [number, number][]).map(p => p[1]);
 }
 
-async function fetchStooq(symbol: string): Promise<number[]> {
-  // Daily CSV — last ~6 months
-  const r = await fetch(`https://stooq.com/q/d/l/?s=${symbol}&i=d`);
-  if (!r.ok) return [];
-  const text = await r.text();
-  const rows = text.trim().split("\n").slice(1);
-  const closes = rows.map(line => parseFloat(line.split(",")[4])).filter(n => !isNaN(n));
+async function fetchEquity(symbol: string): Promise<number[]> {
+  // Daily closes, last ~6 months. Stooq's CSV endpoint now serves an anti-bot
+  // page instead of data, so equity history comes from the Yahoo chart API.
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=6mo&interval=1d`;
+  const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } }).catch(() => null);
+  if (!r || !r.ok) return [];
+  const j = await r.json().catch(() => null);
+  const raw = (j?.chart?.result?.[0]?.indicators?.quote?.[0]?.close as (number | null)[]) || [];
+  const closes = raw.filter((v): v is number => typeof v === "number" && !Number.isNaN(v));
   return closes.slice(-90);
 }
 
@@ -256,7 +260,7 @@ async function fetchOnchain(ethUsd: number) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const denied = await authorize(req, true);
+  const denied = await authorize(req);
   if (denied) return denied;
   try {
     const crypto = await fetchCrypto();
@@ -264,24 +268,27 @@ Deno.serve(async (req) => {
     const cryptoSymbols = ["BTC", "ETH", "SOL", "ADA"];
     const assets: Asset[] = [];
 
-    // Crypto assets
-    for (const sym of cryptoSymbols) {
+    // Crypto assets — histories fetched concurrently so one slow source
+    // cannot push the handler past the platform idle timeout.
+    const cryptoAssets = await Promise.all(cryptoSymbols.map(async (sym) => {
       const c = crypto.find(x => x.symbol === sym);
-      if (!c) continue;
+      if (!c) return null;
       const hist = await fetchHistory(SYMBOL_TO_GECKO[sym], 60);
-      if (hist.length) assets.push(await buildAsset(sym, "CRYPTO", c.price, hist));
-    }
+      return hist.length ? await buildAsset(sym, "CRYPTO", c.price, hist) : null;
+    }));
+    for (const a of cryptoAssets) if (a) assets.push(a);
 
-    // Equity proxies via Stooq
+    // Equity proxies via Yahoo chart API
     const equities = [
-      { sym: "SPY", stooq: "spy.us" },
-      { sym: "QQQ", stooq: "qqq.us" },
-      { sym: "GLD", stooq: "gld.us" },
+      { sym: "SPY", yahoo: "SPY" },
+      { sym: "QQQ", yahoo: "QQQ" },
+      { sym: "GLD", yahoo: "GLD" },
     ];
-    for (const e of equities) {
-      const hist = await fetchStooq(e.stooq);
-      if (hist.length) assets.push(await buildAsset(e.sym, "EQUITY", hist[hist.length - 1], hist));
-    }
+    const equityAssets = await Promise.all(equities.map(async (e) => {
+      const hist = await fetchEquity(e.yahoo);
+      return hist.length ? await buildAsset(e.sym, "EQUITY", hist[hist.length - 1], hist) : null;
+    }));
+    for (const a of equityAssets) if (a) assets.push(a);
 
     // Portfolio aggregates
     const counts: Record<string, number> = {};

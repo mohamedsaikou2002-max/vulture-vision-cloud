@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import VVLayout from "@/components/VVLayout";
-import NewsScenarioSuggestions from "@/components/NewsScenarioSuggestions";
-import { Link } from "react-router-dom";
 import marketRegistry from "@/data/newsMarkets.json";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -84,10 +82,9 @@ export default function News() {
   return (
     <VVLayout>
       <div className="news-page">
-      <NewsScenarioSuggestions />
       <section className="mx-4 my-6 rounded-xl border border-border bg-background/90 p-5 md:mx-8">
         <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">Global publisher desk</h2><p className="mt-1 text-xs text-muted-foreground">Local reporting across {marketRegistry.length} office markets · country tags identify the publisher, not the subject of the story.</p></div><div><label htmlFor="news-country" className="sr-only">Publisher country or market</label><select id="news-country" value={country} onChange={e => setCountry(e.target.value)} className="rounded-lg border border-border bg-background p-2 text-sm"><option value="">All markets</option>{marketRegistry.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select></div></div>
-        {publisherItems.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{publisherItems.map(it => <article key={it.link} className="rounded-lg border border-border p-4 hover:border-primary"><p className="mb-2 text-xs text-primary">{it.source_country} · {it.source} · {it.language}</p><a href={it.link} target="_blank" rel="noopener noreferrer" className="text-sm leading-relaxed hover:underline">{it.title}</a><p className="mt-3 text-xs text-muted-foreground">{it.time ? timeAgo(it.time) : "Publication time unavailable"}</p>{it.id && <Link className="mt-3 inline-block text-xs text-primary underline" to={"/simulations?" + new URLSearchParams({ scenario: "Explore the consequences of: " + it.title, articles: it.id })}>Plug into simulation</Link>}</article>)}</div> : <p role="status" className="mt-5 text-sm text-muted-foreground">{publisherStatus === "loading" ? "Loading publisher headlines…" : publisherStatus === "no_recent_articles" ? "No recent publisher headlines for this market." : "Publisher ingestion is not available yet."}</p>}
+        {publisherItems.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{publisherItems.map(it => <article key={it.link} className="rounded-lg border border-border p-4 hover:border-primary"><p className="mb-2 text-xs text-primary">{it.source_country} · {it.source} · {it.language}</p><a href={it.link} target="_blank" rel="noopener noreferrer" className="text-sm leading-relaxed hover:underline">{it.title}</a><p className="mt-3 text-xs text-muted-foreground">{it.time ? timeAgo(it.time) : "Publication time unavailable"}</p></article>)}</div> : <p role="status" className="mt-5 text-sm text-muted-foreground">{publisherStatus === "loading" ? "Loading publisher headlines…" : publisherStatus === "no_recent_articles" ? "No recent publisher headlines for this market." : "Publisher ingestion is not available yet."}</p>}
       </section>
       <div className="news-grid">
         <Column title="IRL News" tone="red" items={data.irl} badge="badge-red" badgeText="FEED" />
