@@ -16,6 +16,7 @@
 - [ ] On-chain panel empty: Sepolia gas oracle returns nothing and the whale query targets an address with no transactions.
 - [x] Add and deploy secure Gemini key failover across six existing services; 43 focused tests passed and preview build OK.
 - [x] Collect seven backup Gemini keys securely (eight total including the existing key).
+- [ ] Resolve reported AutoSim Gemini timeouts and FRED 404 observations; verify a signed-in scenario with genuine explanation and dated data, preserving honest fallback warnings.
 - [ ] Obtain real Gemini responses on Intel and synthesis: eight slots are securely configured and deployed, but signed-in Intel and synthesis return HTTP 504 timeout; simulator reports upstream AI failure and omits AI analysis. Provider availability/configuration remains the blocker; no keys were changed.
 - [x] Remove publisher desk and route the combined 287-publisher registry (80 original plus all 207 additions) through rotating bounded Cloud collection into existing news columns and simulator evidence; 121 stored headlines from nine publishers verified, later batches advance automatically. Catalog registration does not mean all sources are live.
 - [ ] Verify each requested additional publisher as collection advances; blocked sources remain restricted, empty or unavailable without bypassing access controls. Scheduled collection and minute polling are active.
