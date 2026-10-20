@@ -40,31 +40,39 @@ export async function loadMacroObservables(): Promise<{ obs: Observables; status
   return { obs, status };
 }
 
-export const SUPPORTED_ASSETS = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "ADA-USD", "DOGE-USD", "LINK-USD", "AVAX-USD"];
+// The simulated market is the Nasdaq Composite index — not any single crypto asset.
+export const NASDAQ_MARKET = { label: "NASDAQ Composite", symbol: "^IXIC" } as const;
 
-// Coinbase Exchange public candles — no key needed. Returns up to 300 daily closes, oldest first.
-export function validCandles(rows: unknown, now = Date.now()) {
-  if (!Array.isArray(rows)) throw new Error('Invalid candle response');
-  const today = Math.floor(now / 86400000) * 86400;
+// Yahoo Finance chart API daily closes for ^IXIC — no key needed. Weekends and market holidays
+// appear as missing or null entries and are skipped; trading-day gaps are valid daily returns.
+export function validCandles(payload: unknown, now = Date.now()) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("Invalid chart response");
+  const chart = (payload as { chart?: { result?: unknown[] } }).chart?.result?.[0];
+  if (!chart || typeof chart !== "object") throw new Error("Invalid chart response");
+  const r = chart as { timestamp?: unknown; indicators?: { quote?: { close?: unknown }[] } };
+  const ts = r.timestamp, close = r.indicators?.quote?.[0]?.close;
+  if (!Array.isArray(ts) || !Array.isArray(close) || ts.length !== close.length) throw new Error("Invalid chart response");
   const completed = new Map<number, number>();
-  for (const r of rows) {
-    if (!Array.isArray(r) || r.length < 6 || r.some(n => typeof n !== 'number' || !Number.isFinite(n)) || r[0] % 86400 !== 0 || r[1] <= 0 || r[2] < r[1] || r[3] < r[1] || r[3] > r[2] || r[4] < r[1] || r[4] > r[2] || r[5] < 0) throw new Error('Invalid candle observation');
-    if (r[0] >= today) continue;
-    if (completed.has(r[0])) throw new Error('Duplicate candle date');
-    completed.set(r[0], r[4]);
+  for (let i = 0; i < ts.length; i++) {
+    const t = ts[i], v = close[i];
+    if (typeof t !== "number" || !Number.isInteger(t) || v === null) continue; // market holiday placeholder
+    if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) throw new Error("Invalid chart observation");
+    const day = Math.floor(t / 86400) * 86400;
+    if (completed.has(day)) throw new Error("Duplicate candle date");
+    completed.set(day, v);
   }
-  const sorted = [...completed].sort((a,b)=>a[0]-b[0]);
-  if (sorted.length < 90 || today - sorted[sorted.length-1][0] > 4*86400) throw new Error('Insufficient or stale completed candles');
-  if (sorted.some((r,i)=>i>0 && r[0]-sorted[i-1][0]!==86400)) throw new Error('Incomplete daily history');
-  return { closes: sorted.map(r=>r[1]), dates: sorted.map(r=>new Date(r[0]*1000).toISOString().slice(0,10)) };
+  const sorted = [...completed].sort((a, b) => a[0] - b[0]);
+  if (sorted.length < 90 || now / 1000 - sorted[sorted.length - 1][0] > 5 * 86400) throw new Error("Insufficient or stale completed candles");
+  if (sorted.some((r, i) => i > 0 && r[0] - sorted[i - 1][0] > 10 * 86400)) throw new Error("Multi-week gap in daily history");
+  return { closes: sorted.map(r => r[1]), dates: sorted.map(r => new Date(r[0] * 1000).toISOString().slice(0, 10)) };
 }
-export async function loadCandles(product: string): Promise<{ closes: number[]; dates: string[]; status: SourceStatus }> {
+export async function loadNasdaqCandles(): Promise<{ closes: number[]; dates: string[]; status: SourceStatus }> {
   try {
-    const r = await fetch(`https://api.exchange.coinbase.com/products/${product}/candles?granularity=86400`, { headers: { "User-Agent": "vulture-vision" }, signal: AbortSignal.timeout(8000) });
-    if (!r.ok) throw new Error(`Coinbase ${r.status}`);
+    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(NASDAQ_MARKET.symbol)}?interval=1d&range=1y`, { headers: { "User-Agent": "vulture-vision" }, signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error(`Yahoo ${r.status}`);
     const { closes, dates } = validCandles(await r.json());
-    return { closes, dates, status: { id: `coinbase:${product}`, ok: true, detail: `${closes.length} completed daily candles to ${dates.at(-1)}` } };
+    return { closes, dates, status: { id: "yahoo:NASDAQ", ok: true, detail: `${closes.length} completed daily closes to ${dates.at(-1)}` } };
   } catch (e) {
-    return { closes: [], dates: [], status: { id: `coinbase:${product}`, ok: false, detail: (e as Error).message } };
+    return { closes: [], dates: [], status: { id: "yahoo:NASDAQ", ok: false, detail: (e as Error).message } };
   }
 }
