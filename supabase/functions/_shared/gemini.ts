@@ -1,3 +1,4 @@
+import { geminiFetch, hasGeminiKeys } from "./gemini_failover.ts";
 // Server-only adapter. Use the approved bounded model list; retry only model 404s.
 import { availableGeminiModels } from "./simulation_chat_contract.ts";
 
@@ -8,23 +9,18 @@ export class GeminiError extends Error {
 }
 export interface GenOpts { system?: string; prompt: string; json?: boolean; maxOutputTokens?: number; temperature?: number; timeoutMs?: number }
 export async function generate(o: GenOpts): Promise<{ text: string; model: string }> {
-  const key = Deno.env.get("GEMINI_API_KEY");
-  if (!key) throw new GeminiError("not_configured", "AI service is not configured", 503);
+  if (!hasGeminiKeys()) throw new GeminiError("not_configured", "AI service is not configured", 503);
   let models: string[];
   try { models = availableGeminiModels(Deno.env.get("GEMINI_MODEL")); }
   catch { throw new GeminiError("model_unavailable", "Invalid Gemini model configuration", 503); }
   for (const model of models) {
     let r: Response;
     try {
-      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        signal: AbortSignal.timeout(o.timeoutMs ?? 18000),
-        body: JSON.stringify({
+      r = await geminiFetch(model, JSON.stringify({
           ...(o.system ? { systemInstruction: { parts: [{ text: o.system }] } } : {}),
           contents: [{ role: "user", parts: [{ text: o.prompt }] }],
           generationConfig: { maxOutputTokens: o.maxOutputTokens ?? 2000, temperature: o.temperature ?? 0.4, ...(o.json ? { responseMimeType: "application/json" } : {}) },
-        }),
-      });
+        }), o.timeoutMs ?? 18000);
     } catch { throw new GeminiError("timeout", "AI request timed out", 504); }
     if (r.status === 404) { console.warn("Gemini model unavailable", model, 404); continue; }
     if (!r.ok) {

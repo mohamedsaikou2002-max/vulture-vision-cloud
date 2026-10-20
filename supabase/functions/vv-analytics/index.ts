@@ -1,3 +1,4 @@
+import { geminiFetch, hasGeminiKeys } from "../_shared/gemini_failover.ts";
 interface Whale {tx_hash:string;value_usd:number;from_addr:string;to_addr:string;ts:number;}
 import { authorize } from '../_shared/access.ts';
 const __origFetch = globalThis.fetch;
@@ -179,8 +180,7 @@ async function buildAsset(symbol: string, type: "CRYPTO" | "EQUITY", price: numb
 }
 
 async function aiNarrative(crypto: Crypto[], assets: Asset[], port: {dominant_regime:string;avg_quantum_score:number;avg_prob_up_30d:number}): Promise<string> {
-  const GEMINI = Deno.env.get("GEMINI_API_KEY");
-  if (!GEMINI) return "AI synthesis offline — GEMINI_API_KEY not configured.";
+  if (!hasGeminiKeys()) return "AI synthesis offline — GEMINI_API_KEY not configured.";
 
   const prompt = `VULTURE VISION INTEL BRIEF — ${new Date().toISOString()}
 
@@ -195,26 +195,19 @@ Portfolio: regime=${port.dominant_regime} avgQ=${port.avg_quantum_score.toFixed(
 Provide a 4-sentence intelligence brief: market sentiment, dominant narrative, key risks, conviction. Tight clipped operational tone.`;
 
   try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${GEMINI}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: "You are Vulture Vision. Be concise, analytical, operational." }] },
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 2048, temperature: 0.6 },
-        }),
-      },
-    );
+    const r = await geminiFetch("gemini-3.8-flash", JSON.stringify({
+      systemInstruction: { parts: [{ text: "You are Vulture Vision. Be concise, analytical, operational." }] },
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 2048, temperature: 0.6 },
+    }), 12000);
     const j = await r.json();
     if (!r.ok) {
-      console.error("Gemini narrative error:", r.status, j);
+      console.error("Gemini narrative error:", r.status);
       return `AI synthesis error: ${j?.error?.message || r.status}`;
     }
     return j?.candidates?.[0]?.content?.parts?.map((p: {thought?:boolean;text?:string}) => p.thought ? "" : (p.text || "")).join("") || "";
   } catch (e) {
-    console.error("Gemini narrative threw:", e);
+    console.error("Gemini narrative unavailable");
     return "AI synthesis offline — engine running on raw quantitative signals only.";
   }
 }
