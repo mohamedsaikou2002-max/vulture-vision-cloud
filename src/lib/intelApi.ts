@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 import { indexedBrief } from './workspaceData';
 import { backendOrigin } from './backendOrigin';
+import { functionError } from './functionError';
 const BASE_URL = backendOrigin(import.meta.env.VITE_INTEL_HOST, false, 8000, typeof location !== 'undefined' && location.protocol === 'https:');
 const WS_URL = BASE_URL?.replace(/^http/, 'ws');
 
@@ -81,7 +82,10 @@ export interface IntelBrief {
 // ── REST calls ──────────────────────────────────────────────
 
 export async function fetchLatestBrief(): Promise<IntelBrief | null> {
-  if (!BASE_URL) return indexedBrief().catch(()=>null);
+  if (!BASE_URL) {
+    const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'latest'}});
+    return !error && data?.brief ? data.brief : indexedBrief().catch(()=>null);
+  }
   try {
     const res = await fetch(`${BASE_URL}/brief/latest`, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
@@ -108,7 +112,12 @@ export async function fetchHealth(): Promise<{ status: string; queue_depth: numb
 }
 
 export async function triggerSynthesis(): Promise<{ message: string } | null> {
-  if (!BASE_URL) return null;
+  if (!BASE_URL) {
+    const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'generate'}});
+    if(error)throw new Error(await functionError(error,'Synthesis unavailable'));
+    if(data?.error)throw new Error(data.error);
+    return data;
+  }
   try {
     const res = await fetch(`${BASE_URL}/synthesize/now`, { method: "POST", signal: AbortSignal.timeout(90000) });
     if (!res.ok) return null;
@@ -124,7 +133,7 @@ export function subscribeToIntelBriefs(
 ): () => void {
   if (!WS_URL) {
     let active=true;
-    const refresh=()=>{void indexedBrief().then(b=>{if(active&&b)onBrief(b);}).catch(()=>{});};
+    const refresh=()=>{void fetchLatestBrief().then(b=>{if(active&&b)onBrief(b);}).catch(()=>{});};
     const channel=supabase.channel('intel-indexed-news').on('postgres_changes',{event:'INSERT',schema:'public',table:'news_articles'},refresh).subscribe();
     const timer=setInterval(refresh,60000);
     return ()=>{active=false;clearInterval(timer);void supabase.removeChannel(channel);};

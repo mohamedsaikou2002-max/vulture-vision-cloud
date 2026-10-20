@@ -9,4 +9,6 @@
 - Claim AutoSim jobs atomically server-side before provider calls; replay IDs cannot launch another run and agent questions use the existing research quota.
 - Scope AutoSim and public information styles to their own page roots to prevent changes to the existing terminal and pilot pages.
 - Route all Gemini provider calls through the server-only shared credential transport: discover numbered secret slots, fail over only on HTTP 429, honor per-model Retry-After in warm workers, preserve a total request deadline and sanitize errors; Google remains the quota authority and worker cooldowns are not globally durable.
-- Keep additional live RSS subscriptions in the news function registry. The owner explicitly requested all 207 global metadata candidates: catalog.load_sources enables them at runtime, while retaining original research flags and enforcing robots, bounded metadata extraction, access restrictions and per-source diagnostics.
+- Keep additional RSS subscriptions and combined publisher metadata in the Cloud news registry; collect bounded rotating batches with robots, access restrictions and source diagnostics, and retain original research flags.
+- Member Intel chat and Cloud brief synthesis use authenticated server-side validation and the existing shared research quota; MiroFish operator-only functions retain their allowlist.
+- Persist Cloud-generated briefs and live RSS metadata in expiring warm state so member pages can read shared evidence without a Python host or invented regime predictions.

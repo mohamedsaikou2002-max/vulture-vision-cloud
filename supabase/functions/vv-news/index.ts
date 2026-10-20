@@ -1,5 +1,8 @@
 import { parseRss, newestFirst, publicationTime, safeNewsUrl, type SourceHealth } from "../_shared/news_feed.ts";
 import { additionalTechFeeds } from "./additional_sources.ts";
+import { collectCatalog } from './catalog_ingestion.ts';
+import { sourceCatalog } from './source_catalog.ts';
+import { newsColumn } from './catalog_rules.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -298,36 +301,46 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({publisher_news:publisher.items,publisher_status:publisher.status,has_more:'has_more' in publisher && publisher.has_more,page}), {headers:{...corsHeaders,'Content-Type':'application/json'}});
     }
     const source_health: SourceHealth[] = [];
-    const [irlRss, dark, tech, newsApi, tor, journalists, publisher] = await Promise.all([
+    const [irlRss, dark, tech, newsApi, tor, journalists, catalog_health] = await Promise.all([
       fetchFeeds(FEEDS.irl, source_health, signal),
       fetchFeeds(FEEDS.dark, source_health, signal),
       fetchFeeds(FEEDS.tech, source_health, signal),
       fetchNewsApi(source_health, signal),
       fetchTorFeed(source_health, signal),
       fetchJournalistTweets(source_health, signal),
-      fetchPublisherNews(req, signal, country).catch(() => ({ items: [], status: "ingestion_not_available" })),
+      collectCatalog(req, signal).catch(() => []),
     ]);
+    const publisher = await fetchPublisherNews(req, AbortSignal.timeout(5000), country).catch(() => ({items:[],status:'ingestion_not_available'}));
+    const categorized = {irl: [] as Item[], dark: [] as Item[], tech: [] as Item[]};
+    for (const row of publisher.items) {
+      const source = sourceCatalog.find(s => s.id === row.source_id);
+      categorized[newsColumn(source?.category)].push({...row,time:row.time ?? undefined});
+    }
 
-    const irl = [...newsApi, ...irlRss, ...journalists.irl]
+    const irl = [...newsApi, ...irlRss, ...journalists.irl, ...categorized.irl]
       .sort(newestFirst)
       .map(enrich);
 
-    const darkOut = [...dark, ...tor, ...journalists.dark]
+    const darkOut = [...dark, ...tor, ...journalists.dark, ...categorized.dark]
       .sort(newestFirst)
       .map(enrich);
 
-    const techOut = [...tech, ...journalists.tech]
+    const techOut = [...tech, ...journalists.tech, ...categorized.tech]
       .sort(newestFirst)
       .map(enrich);
 
-    const all = [...irl, ...darkOut, ...techOut, ...publisher.items]
+    const all = [...new Map([...irl, ...darkOut, ...techOut].map(item=>[item.link || item.title,item])).values()]
       .sort(newestFirst)
 ;
 
     source_health.push({ source: "Publisher database", status: publisher.status === "available" ? "available" : publisher.status === "no_recent_articles" ? "empty" : "unavailable", count: publisher.items.length });
     const usable = source_health.some(source => source.status === "available" || source.status === "empty") || publisher.status === "available" || publisher.status === "no_recent_articles";
     const status = !usable ? "unavailable" : source_health.some(source => source.status === "unavailable") ? "degraded" : "available";
-    return new Response(JSON.stringify({ status, source_health, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more }), {
+    const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'), backend = Deno.env.get('SUPABASE_URL');
+    if (all.length && service && backend) {
+      await createClient(backend,service).from('warm_state').upsert({key:'news_feed',value:all,expires_at:new Date(Date.now()+1800000).toISOString()},{onConflict:'key'});
+    }
+    return new Response(JSON.stringify({ status, source_health, catalog_health, catalog_total: sourceCatalog.length, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more }), {
       status: usable ? 200 : 503,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
