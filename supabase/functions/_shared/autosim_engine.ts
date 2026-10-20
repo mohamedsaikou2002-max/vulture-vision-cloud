@@ -177,14 +177,14 @@ const norm = (v: number, lo: number, hi: number, invert = false) => {
   return invert ? 1 - x : x;
 };
 export function buildBaseline(obs: Observables, now = Date.now()): { baseline: DimVector; detail: Record<Dim, BaselineDim>; neutral: Dim[] } {
-  const maxAge: Record<string, number> = { vix: 7, hy_spread: 7, curve_10y2y: 7, unrate: 70, cpi_yoy: 70, nfci: 21, umcsent: 70, retail_yoy: 70, crypto_vol_ann: 3 };
+  const maxAge: Record<string, number> = { vix: 7, hy_spread: 7, curve_10y2y: 7, unrate: 70, cpi_yoy: 70, nfci: 21, umcsent: 70, retail_yoy: 70, market_vol_ann: 3 };
   obs = Object.fromEntries(Object.entries(obs).filter(([key, value]) => {
     const age = value?.observed_at ? (now - Date.parse(value.observed_at)) / 86400000 : Infinity;
     return value && Number.isFinite(value.value) && Number.isFinite(age) && age >= -1 && age <= (maxAge[key] ?? 7);
   }));
   const spec: Record<Dim, () => { v: number; o?: Observable } | null> = {
-    fear: () => obs.vix ? { v: norm(obs.vix.value, 12, 40), o: obs.vix } : obs.crypto_vol_ann ? { v: norm(obs.crypto_vol_ann.value, .3, 1.2), o: obs.crypto_vol_ann } : null,
-    volatility: () => obs.crypto_vol_ann ? { v: norm(obs.crypto_vol_ann.value, .3, 1.2), o: obs.crypto_vol_ann } : obs.vix ? { v: norm(obs.vix.value, 12, 40), o: obs.vix } : null,
+    fear: () => obs.vix ? { v: norm(obs.vix.value, 12, 40), o: obs.vix } : obs.market_vol_ann ? { v: norm(obs.market_vol_ann.value, .1, .8), o: obs.market_vol_ann } : null,
+    volatility: () => obs.market_vol_ann ? { v: norm(obs.market_vol_ann.value, .1, .8), o: obs.market_vol_ann } : obs.vix ? { v: norm(obs.vix.value, 12, 40), o: obs.vix } : null,
     credit: () => obs.hy_spread ? { v: norm(obs.hy_spread.value, 3, 10, true), o: obs.hy_spread } : null,
     default_risk: () => obs.hy_spread ? { v: norm(obs.hy_spread.value, 3, 10), o: obs.hy_spread } : null,
     inflation: () => obs.cpi_yoy ? { v: norm(obs.cpi_yoy.value, 0, .08), o: obs.cpi_yoy } : null,
