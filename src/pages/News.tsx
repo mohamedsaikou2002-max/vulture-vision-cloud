@@ -1,9 +1,7 @@
-import { Link } from "react-router-dom";
-import newsSources from "@/data/newsSources.json";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { functionError } from "@/lib/functionError";
 import VVLayout from "@/components/VVLayout";
-import marketRegistry from "@/data/newsMarkets.json";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchLatestBrief, subscribeToIntelBriefs, triggerSynthesis,
@@ -38,16 +36,7 @@ function timeAgo(iso?: string) {
 }
 
 export default function News() {
-  const [hasMore, setHasMore] = useState(false);
-  const [page, setPage] = useState(0);
-  const [moreBusy, setMoreBusy] = useState(false);
-  const [country, setCountry] = useState("");
-  const filterRef=useRef(country);filterRef.current=country;
-  const pageRef=useRef(0);
   const lastLiveRefresh=useRef(0);
-  const loadedCountry=useRef<string|null>(null);
-  const [publisherItems, setPublisherItems] = useState<Item[]>([]);
-  const [publisherStatus, setPublisherStatus] = useState("loading");
   const [data, setData] = useState<NewsData>({ irl: [], dark: [], tech: [] });
   const [brief, setBrief] = useState<IntelBrief | null>(null);
   const [synthBusy, setSynthBusy] = useState(false);
@@ -63,27 +52,25 @@ export default function News() {
     async function load() {
       if(loading)return;loading=true;
       try {
-        const { data: res, error } = await supabase.functions.invoke("vv-news", { body: { country } });
+        const { data: res, error } = await supabase.functions.invoke("vv-news", { body: {} });
         if (error) {
           const explanation = await functionError(error, "News sources are unavailable. Please try again shortly.");
           const failure = await error.context?.clone?.().json().catch(() => null);
           if (alive) {
-            setPublisherStatus("ingestion_not_available"); setFeedStatus('unavailable'); setFeedError(explanation);
+            setFeedStatus('unavailable'); setFeedError(explanation);
             setSourceHealth(Array.isArray(failure?.source_health) ? failure.source_health.filter((s: {source?:unknown;status?:unknown;count?:unknown}) => typeof s.source === 'string' && typeof s.status === 'string' && typeof s.count === 'number') : []);
           }
           return;
         }
         if (alive && res) {
-          setFeedStatus(res.status || "degraded"); setFeedError(res.error || null); setSourceHealth(res.source_health || []);
+          setFeedStatus(res.status || "degraded"); setFeedError(res.error || null); setSourceHealth([...(res.source_health || []),...(res.catalog_health || [])]);
           setData({ irl: res.irl || [], dark: res.dark || [], tech: res.tech || [] });
-          setPublisherItems(old=>[...new Map([...(res.publisher_news || []),...old].map(it=>[it.id||it.link,it])).values()]); if(pageRef.current===0)setHasMore(!!res.has_more);
-          setPublisherStatus(res.publisher_status || "ingestion_not_available");
+
         }
-      } catch { if (alive) { setPublisherStatus("ingestion_not_available"); setFeedStatus("unavailable"); setFeedError("News sources are unavailable."); } }
+      } catch { if (alive) { setFeedStatus("unavailable"); setFeedError("News sources are unavailable."); } }
       finally{loading=false;}
     }
-    if(loadedCountry.current!==country){setPublisherItems([]);setPage(0);pageRef.current=0;loadedCountry.current=country;}
-    setPublisherStatus("loading");setFeedStatus("loading");
+    setFeedStatus("loading");
     load();
     fetchLatestBrief().then(b => alive && b && setBrief(b));
     const id = setInterval(load, 60000);
@@ -91,21 +78,7 @@ export default function News() {
     const bId = setInterval(() => fetchLatestBrief().then(b => alive && b && setBrief(b)), 15 * 60 * 1000);
     const unsub = subscribeToIntelBriefs(b => { if (alive) setBrief(b); });
     return () => { alive = false; void supabase.removeChannel(channel); clearInterval(id); clearInterval(bId); unsub(); };
-  }, [country, refresh]);
-
-  async function loadMore() {
-    if (moreBusy) return;
-    setMoreBusy(true);
-    try {
-      const {data:res,error}=await supabase.functions.invoke('vv-news',{body:{country,page:page+1,publisher_only:true}});
-      if(filterRef.current!==country)return;
-      if(error)throw error;
-      if(res.publisher_status !== 'available' && res.publisher_status !== 'no_recent_articles')throw new Error();
-      setPublisherItems(old=>[...new Map([...old,...res.publisher_news].map(it=>[it.id||it.link,it])).values()]);
-      pageRef.current=page+1;setPage(n=>n+1);setHasMore(!!res.has_more);
-    } catch { setFeedError('Could not load the next page. Your current headlines are retained.'); }
-    finally {setMoreBusy(false);}
-  }
+  }, [refresh]);
 
   async function onSynthesize() {
     if (synthBusy) return;
@@ -117,7 +90,7 @@ export default function News() {
       const updated = await fetchLatestBrief();
       if (updated) setBrief(updated);
       setSynthesisNotice("Synthesis requested. Only verified brief updates are displayed.");
-    } finally { setSynthBusy(false); }
+    } catch(e) { setSynthesisNotice(e instanceof Error ? e.message : "Synthesis unavailable"); } finally { setSynthBusy(false); }
   }
 
   // ticker: use signals if brief present
@@ -130,16 +103,10 @@ export default function News() {
     <VVLayout status={{ label: feedStatus === 'loading' ? 'CHECKING NEWS' : feedStatus === 'available' ? 'NEWS AVAILABLE' : feedStatus === 'degraded' ? 'PARTIAL NEWS COVERAGE' : 'NEWS UNAVAILABLE', tone: feedStatus === 'available' ? 'green' : 'gold' }}>
       <div className="service-notice" role="status">
         {feedError || (feedStatus === 'loading' ? 'Checking news sources…' : feedStatus === 'degraded' ? 'Some news sources are unavailable. Coverage is incomplete.' : feedStatus === 'available' ? 'News source checks completed.' : 'News is unavailable.')}
-        <button className="synthesize-btn" onClick={() => setRefresh(n => n + 1)}>Refresh news</button>
+        <Button className="synthesize-btn" onClick={() => setRefresh(n => n + 1)}>Refresh news</Button>
         {synthesisNotice && <p>{synthesisNotice}</p>}
         {sourceHealth.length > 0 && <details className="source-health"><summary>{sourceHealth.filter(s => s.status === 'available' || s.status === 'empty').length} of {sourceHealth.length} sources responded — view source status</summary><ul>{sourceHealth.map((s, i) => <li key={i}>{s.source}: {s.status.replace(/_/g, ' ')} ({s.count} items)</li>)}</ul></details>}
       </div>
-      <section className="mx-4 my-6 rounded-xl border border-border bg-background/90 p-5 md:mx-8">
-        <div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-semibold">Global publisher desk</h2><p className="mt-1 text-xs text-muted-foreground">207 additional publishers across {new Set(newsSources.map(s=>s.source_country)).size} markets · country tags identify the publisher, not the subject of the story.</p></div><div><label htmlFor="news-country" className="sr-only">Publisher country or market</label><select id="news-country" value={country} onChange={e => setCountry(e.target.value)} className="rounded-lg border border-border bg-background p-2 text-sm"><option value="">All markets</option>{[...new Map([...marketRegistry,...newsSources.map(s=>({code:s.source_country,name:s.country_name}))].map(m=>[m.code,m])).values()].sort((a,b)=>a.name.localeCompare(b.name)).map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select></div></div>
-        {publisherItems.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{publisherItems.map(it => <article key={it.link} className="rounded-lg border border-border p-4 hover:border-primary"><p className="mb-2 text-xs text-primary">{it.source_country} · {it.source} · {it.language}</p><a href={it.link} target="_blank" rel="noopener noreferrer" className="text-sm leading-relaxed hover:underline">{decodeEntities(it.title)}</a><p className="mt-3 text-xs text-muted-foreground">{it.time ? timeAgo(it.time) : "Publication time unavailable"}</p>{it.id && <Link className="mt-3 inline-block text-xs text-primary underline" to={"/simulations?"+new URLSearchParams({scenario:"Explore the consequences of: "+it.title,articles:it.id})}>Explore in simulator</Link>}</article>)}</div> : <p role="status" className="mt-5 text-sm text-muted-foreground">{publisherStatus === "loading" ? "Loading publisher headlines…" : publisherStatus === "no_recent_articles" ? "No recent publisher headlines for this market." : "Publisher ingestion is not available yet."}</p>}
-        {hasMore && <button className="synthesize-btn" disabled={moreBusy} onClick={()=>void loadMore()}>{moreBusy?'Loading…':'Load more headlines'}</button>}
-        <details className="mt-4 text-xs"><summary>207-source catalog</summary><p>Collected metadata appears above. Restricted or unreachable publishers are skipped; no feed can guarantee all news. Headlines are ordered by publication time and refresh every minute.</p><ul>{newsSources.map(s=><li key={s.id}>{s.name} · {s.country_name}</li>)}</ul></details>
-      </section>
       <div className="news-grid">
         <Column title="IRL News" tone="red" items={data.irl} badge="badge-red" badgeText="FEED" unavailable={feedStatus === "unavailable"} />
         <Column title="Dark Web Intel" tone="gold" items={data.dark} badge="badge-dark" badgeText="ALERT" unavailable={feedStatus === "unavailable"} />
@@ -209,7 +176,7 @@ function Column({ title, tone, items, badge, badgeText, unavailable }: {
             </div>
           );
         })}
-        {visible<items.length && <button className="synthesize-btn" onClick={()=>setVisible(n=>n+20)}>Show more headlines ({items.length-visible} remaining)</button>}
+        {visible<items.length && <Button className="synthesize-btn" onClick={()=>setVisible(n=>n+20)}>Show more headlines ({items.length-visible} remaining)</Button>}
       </div>
     </div>
   );
@@ -224,14 +191,14 @@ function IntelSynthesisColumn({ brief, synthBusy, onSynthesize }: {
         <div className="status-dot gold" />
         <span>// VULTURE VISION INTEL</span>
         <span className="badge badge-gold" style={{ marginLeft: 4 }}>SYNTHESIZED</span>
-        <button
+        <Button
           className="synthesize-btn"
           style={{ marginLeft: "auto" }}
           disabled={synthBusy}
           onClick={onSynthesize}
         >
           {synthBusy ? "SYNTHESIZING…" : "SYNTHESIZE NOW"}
-        </button>
+        </Button>
       </div>
 
       {!brief && !synthBusy && (
