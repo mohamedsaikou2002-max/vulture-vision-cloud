@@ -29,9 +29,10 @@ const output = {
 };
 describe("Podroom-inspired Vulture simulation chat contract", () => {
   it("uses current Flash models by default and falls back when legacy models return 404", () => {
-    expect(availableGeminiModels()).toEqual(["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
-    expect(availableGeminiModels("gemini-configured")).toEqual(["gemini-configured", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
-    expect(availableGeminiModels("gemini-2.5-flash")).toHaveLength(2);
+    expect(availableGeminiModels()).toEqual(["gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+    expect(availableGeminiModels("gemini-configured")).toEqual(["gemini-configured", "gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+    expect(availableGeminiModels(" gemini-2.5-flash ")).toEqual(["gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+    expect(availableGeminiModels("gemini-3.8-flash")).toHaveLength(2);
     expect(() => availableGeminiModels("../not-a-model")).toThrow("Invalid Gemini model");
   });
   it("accepts bounded scenario, role panel and news context", () => {
