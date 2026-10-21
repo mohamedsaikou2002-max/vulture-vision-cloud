@@ -273,7 +273,7 @@ async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: s
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authorization }, fetch: (input, init) => fetch(input, { ...init, signal }) } });
   const { data: { user }, error: authError } = await db.auth.getUser();
   if (authError || !user) return { items: [], status: "sign_in_required" };
-  let query = db.from("news_articles").select("id,title,original_title,translated_title_en,translation_status,translation_source_language,translated_at,source,canonical_url,published_at,fetched_at,source_country,language,source_id")
+  let query = db.from("news_articles").select("*")
     .gte("fetched_at", new Date(Date.now() - 48 * 3600_000).toISOString())
     .or("published_at.is.null,published_at.gte." + new Date(Date.now() - 72 * 3600_000).toISOString())
     .order("published_at", { ascending: false, nullsFirst: false }).order("id").range(page * pageSize, page * pageSize + pageSize).abortSignal(signal);
