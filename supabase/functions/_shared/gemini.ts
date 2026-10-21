@@ -8,6 +8,28 @@ export class GeminiError extends Error {
   }
 }
 const isAbortError=(error:unknown)=>!!error&&typeof error==='object'&&'name' in error&&typeof error.name==='string'&&/^(TimeoutError|AbortError)$/.test(error.name);
+async function readAnswer(response: Response, deadline: number): Promise<any> {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) throw new DOMException('Answer deadline exceeded', 'TimeoutError');
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('Missing answer body');
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => { void reader.cancel().catch(() => {}); reject(new DOMException('Answer deadline exceeded', 'TimeoutError')); }, remaining);
+  });
+  const read = async () => {
+    const decoder = new TextDecoder(); let text = '';
+    while (true) {
+      const chunk = await reader.read();
+      if (Date.now() >= deadline) throw new DOMException('Answer deadline exceeded', 'TimeoutError');
+      if (chunk.done) break;
+      text += decoder.decode(chunk.value, {stream: true});
+    }
+    return JSON.parse(text + decoder.decode());
+  };
+  try { return await Promise.race([read(), expired]); }
+  finally { if (timer !== undefined) clearTimeout(timer); reader.releaseLock(); }
+}
 export const hasConfiguredAI = () => hasGeminiKeys() || !!Deno.env.get('LOVABLE_API_KEY');
 export interface GenOpts { system?: string; prompt: string; json?: boolean; maxOutputTokens?: number; temperature?: number; timeoutMs?: number; model?:string; gatewayModel?:string }
 export async function generateGemini(key: string, configuredModel: string | undefined, body: unknown, fetcher: typeof fetch = fetch, timeoutMs = 18000, transport?: typeof geminiFetch): Promise<{text: string; model: string}> {
@@ -39,7 +61,7 @@ export async function generateGemini(key: string, configuredModel: string | unde
       throw new GeminiError(response.status===429?'rate_limited':'upstream',message,response.status===429?429:502);
     }
     let result;
-    try { result = await response.json(); } catch(e) {
+    try { result = await readAnswer(response, deadline); } catch(e) {
       if(Date.now()>=deadline || (e instanceof Error && /TimeoutError|AbortError/.test(e.name)))throw new GeminiError('timeout','AI request timed out while reading the answer',504);
       throw new GeminiError('bad_output', 'AI returned invalid JSON', 502);
     }
@@ -90,7 +112,7 @@ export async function generateConfigured(body: GenerationBody, timeoutMs = 18000
     throw new GeminiError(timeout?'timeout':'upstream',timeout?'AI request timed out':'AI gateway connection unavailable',timeout?504:502);
   }
   if(!response.ok)throw new GeminiError(response.status===429?'rate_limited':'upstream',response.status===429?'AI provider is rate-limited. Try again later.':'AI gateway request failed.',response.status===429?429:502);
-  let data;try{data=await response.json();}catch(e){
+  let data;try{data=await readAnswer(response, deadline);}catch(e){
     const timeout=Date.now()>=deadline||isAbortError(e);
     throw new GeminiError(timeout?'timeout':'bad_output',timeout?'AI request timed out while reading the answer':'AI gateway returned invalid JSON',timeout?504:502);
   }

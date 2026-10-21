@@ -26,3 +26,13 @@ it('identifies timeout while reading a gateway response separately from malforme
  vi.stubGlobal('fetch',vi.fn(async()=>new Response(new ReadableStream({start(controller){controller.error(new DOMException('The operation timed out','TimeoutError'));}}))));
  await expect(generateConfigured({contents:[]},1000)).rejects.toMatchObject({code:'timeout',status:504,message:'AI request timed out while reading the answer'});
 });
+it('bounds a stalled Gemini answer body without launching another request',async()=>{
+ const send=vi.fn(async()=>new Response(new ReadableStream({start(){}})));
+ await expect(generateGemini('fixture',undefined,{},send,50)).rejects.toMatchObject({code:'timeout',status:504});
+ expect(send).toHaveBeenCalledTimes(1);
+});
+it('bounds a stalled gateway answer body to the original deadline',async()=>{
+ const send=vi.fn(async()=>new Response(new ReadableStream({start(){}})));vi.stubGlobal('fetch',send);
+ await expect(generateConfigured({contents:[]},50)).rejects.toMatchObject({code:'timeout',status:504});
+ expect(send).toHaveBeenCalledTimes(1);
+});
