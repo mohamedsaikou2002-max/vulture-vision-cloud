@@ -280,7 +280,14 @@ async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: s
   if (country) query = query.eq("source_country", country);
   const { data, error } = await query;
   if (error) return { items: [], status: "ingestion_not_available" };
-  return { has_more: (data?.length || 0) > pageSize, items: (data || []).slice(0,pageSize).map(row => ({ id: row.id, title: row.translated_title_en || row.title, original_title:row.original_title||row.title, translated_title_en:row.translated_title_en, translation_status:row.translation_status, translation_source_language:row.translation_source_language, translated_at:row.translated_at, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: data?.length ? "available" : "no_recent_articles" };
+  const eligible = (data || []).filter(row => {
+    const language = (row.language || "").trim().toLowerCase().replace("_", "-");
+    if (row.translated_title_en?.trim()) return true;
+    if (row.translation_status === "original_english" || language === "en" || language.startsWith("en-")) return true;
+    // Fail closed for CJK headlines until the translation worker has supplied English.
+    return !/[\u2E80-\u2EFF\u3000-\u30FF\u3100-\u312F\u3130-\u318F\u31A0-\u31BF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF]/u.test(row.title || "");
+  });
+  return { has_more: (data?.length || 0) > pageSize, items: eligible.slice(0,pageSize).map(row => ({ id: row.id, title: row.translated_title_en?.trim() || row.title, original_title:row.original_title||row.title, translated_title_en:row.translated_title_en, translation_status:row.translation_status, translation_source_language:row.translation_source_language, translated_at:row.translated_at, source: row.source, link: row.canonical_url, time: row.published_at, fetched_at: row.fetched_at, source_country: row.source_country, language: row.language, source_id: row.source_id })), status: eligible.length ? "available" : data?.length ? "translation_pending" : "no_recent_articles" };
 }
 
 Deno.serve(async (req) => {
