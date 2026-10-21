@@ -6,6 +6,7 @@ import { simulationFixture } from './fixtures/autosim';
 const api=vi.hoisted(()=>({run:vi.fn(),ask:vi.fn(),list:vi.fn(),load:vi.fn(),status:vi.fn()}));
 vi.mock('@/components/VVLayout',()=>({default:({children}:{children:React.ReactNode})=><>{children}</>}));
 vi.mock('@/components/sim/WorldState',()=>({default:()=>null}));
+vi.mock('@/components/sim/RecentNews',()=>({default:()=>null}));
 vi.mock('@/lib/autoSimApi',()=>({ApiError:class extends Error {constructor(public code:string,message:string,public status:number){super(message)}},runSimulation:api.run,interrogateAgent:api.ask,listJobs:api.list,loadJob:api.load,jobStatus:api.status}));
 import Simulator from '@/pages/Simulator';
 import { ApiError } from '@/lib/autoSimApi';
