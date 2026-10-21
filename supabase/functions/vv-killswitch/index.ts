@@ -32,7 +32,8 @@ Deno.serve(async (req) => {
         count: data?.length || 0,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    // Safely parse body (may be empty when used as a GET-like fetch)
+    if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: corsHeaders });
+    // Mutations are POST-only; GET requests above are read-only.
     let body: {reason?:string;source?:string;level?:string;payload?:Record<string,unknown>;set_active?:boolean} = {};
     try {
       const text = await req.text();
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    if (req.method === "POST" || req.method === "GET") {
+    if (req.method === "POST") {
       const { level = "warning", reason, source, payload = {}, set_active } = body;
       const { data, error } = await db.from("kill_switch_alerts")
         .insert({ level, reason, source, payload }).select().single();

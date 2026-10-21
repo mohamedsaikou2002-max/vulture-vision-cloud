@@ -35,7 +35,8 @@ services/voice/__pycache__/
 services/voice/tests/__pycache__/
 *.ggml
 
-# Server secrets and local environment overrides
+# Local environment files and server secrets
+.env
 .env.*
 !.env.example
 *.pem
