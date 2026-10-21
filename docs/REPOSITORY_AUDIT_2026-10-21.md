@@ -38,7 +38,7 @@ The first CI run failed on `prefer-const` in `src/integrations/supabase/previewA
 ### P2 — Operator ingestion endpoints need additional hardening
 **Evidence:** `vv-tor-ingest` parses a request JSON body and inserts a list of supplied records without an explicit body-size or item-count cap. It is operator-authorized, which reduces exposure, but limits are still needed to protect the function and database from mistakes or compromised operator credentials. Operator-only history functions should also reject unsupported HTTP methods consistently. The kill-switch handler was changed so mutations are POST-only; GET remains read-only.
 
-**Action:** cap request bytes, cap batch item count, validate each field and URL, and return bounded errors. Add negative tests for oversized batches and malformed input.
+**Remediation pushed:** the endpoint now caps the body at 512 KB, caps batches at 500 records, validates field lengths/types, bounds tags and ping values, and accepts only HTTP(S) URLs without embedded credentials. Add regression tests for oversized batches and malformed input before calling this fully verified.
 
 ### P2 — Translation enforcement must be consistent across all surfaces
 **Evidence:** the News page now prefers translated English and suppresses common non-Latin headlines when a translation is unavailable. The publisher feed endpoint filters CJK headlines without translations. Other surfaces, including the simulator's RecentNews panel and intelligence synthesis path, consume indexed articles and cached RSS metadata; the latter can lack explicit language metadata. The simulator's RecentNews panel now selects translation metadata and suppresses rows that are neither translated nor explicitly English.
