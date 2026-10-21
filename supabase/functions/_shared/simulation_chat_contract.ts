@@ -141,7 +141,7 @@ export function parseSimulationChatAnswer(raw: string, mode: AnalystMode, validN
  * Do not spend a short simulation deadline probing speculative version names.
  */
 export function availableGeminiModels(configured?: string | null): string[] {
-  const preferred = configured?.trim() || "gemini-2.5-flash";
+  const preferred = configured?.trim() || "gemini-3.8-flash";
   if (!/^[A-Za-z0-9_.-]{3,80}$/.test(preferred)) throw new Error("Invalid Gemini model configuration");
-  return [...new Set([preferred, "gemini-2.5-flash", "gemini-2.5-flash-lite"])];
+  return [...new Set([preferred, "gemini-3.8-flash", "gemini-3.5-flash-lite"])].slice(0, 3);
 }

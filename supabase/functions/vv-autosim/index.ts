@@ -22,7 +22,7 @@ const cors = { ...corsHeaders, "Access-Control-Allow-Methods": "POST, OPTIONS" }
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
 const fail = (code: string, message: string, status: number) => json({ ok: false, error: { code, message } }, status);
 // Fast structured generation for simulation stages; operators may override each provider.
-const simulationAI=()=>({model:Deno.env.get('GEMINI_AUTOSIM_MODEL')||Deno.env.get('GEMINI_MODEL')||'gemini-2.5-flash-lite',gatewayModel:Deno.env.get('LOVABLE_AUTOSIM_MODEL')||Deno.env.get('LOVABLE_AI_MODEL')||'google/gemini-2.5-flash-lite'});
+const simulationAI=()=>({model:Deno.env.get('GEMINI_AUTOSIM_MODEL')||Deno.env.get('GEMINI_MODEL')||'gemini-3.5-flash-lite',gatewayModel:Deno.env.get('LOVABLE_AUTOSIM_MODEL')||Deno.env.get('LOVABLE_AI_MODEL')||'google/gemini-2.5-flash-lite'});
 const DISCLAIMER = "Scenario-conditional simulation using uncalibrated coefficients. Not a forecast, not investment advice. Trading, especially with leverage, can lose more than you intend to risk.";
 
 const DIM_HELP = "fear↑=more fear; trust↑=more trust; liquidity↑=easier funding; volatility↑=larger swings; credit↑=easier credit; consumer_activity↑=stronger demand; inflation↑=more price pressure; employment↑=stronger labor market; growth↑=stronger output; default_risk↑=more borrower stress";
