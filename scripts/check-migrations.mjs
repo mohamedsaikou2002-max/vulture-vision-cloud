@@ -3,7 +3,7 @@ import { readFile,readdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const db=new PGlite();
 try {
- await db.exec('CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS; CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);');
+ await db.exec("CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS; CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY); CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $; GRANT USAGE ON SCHEMA auth TO authenticated;");
  for(const name of (await readdir('supabase/migrations')).filter(n=>n.endsWith('.sql')).sort())await db.exec(await readFile('supabase/migrations/'+name,'utf8'));
  const scalar=async(sql)=>(await db.query(sql)).rows[0];
  for(const table of ['warm_state','trade_history','synthesis_history','kill_switch_alerts']) {
@@ -28,7 +28,7 @@ try {
  assert.ok((await db.query('SELECT news_context_status()')).rows.length);
  await assert.rejects(db.query('SELECT * FROM news_context_queue'));
  await assert.rejects(db.query('SELECT * FROM claim_news_context()'));
- await db.exec("RESET ROLE; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$; GRANT USAGE ON SCHEMA auth TO authenticated;");
+ await db.exec("RESET ROLE;");
  // Staged SQL is exercised only in this disposable database, never activated remotely by this test.
  // Canonical schema is now ordered in supabase/migrations. Do not replay archived Drizzle SQL.
  const staged=(await db.query("SELECT to_regclass('public.workspace_release_policy') AS policy, to_regclass('public.news_source_status') AS sources, to_regclass('public.headline_translation_queue') AS translations")).rows[0];
