@@ -6,8 +6,8 @@ export default function RecentNews(){
  useEffect(()=>{
   let active=true,running=false;
   const load=async()=>{if(running)return;running=true;try{
-   const {data,error}=await supabase.from('news_articles').select('id,title,translated_title_en,translation_status,language,source,published_at').gte('fetched_at',new Date(Date.now()-48*3600000).toISOString()).gte('published_at',new Date(Date.now()-24*3600000).toISOString()).order('published_at',{ascending:false}).limit(12).abortSignal(AbortSignal.timeout(8000));
-   if(active){if(error)setError('Indexed news is unavailable.');else{setNews((data||[]).filter(n=>Date.parse(n.published_at!)<=Date.now()+300000 && (Boolean(n.translated_title_en?.trim()) || n.translation_status==='original_english' || /^(en)(-|$)/i.test(n.language||''))));setError('');}}
+   const {data,error}=await supabase.from('news_articles').select('*').gte('fetched_at',new Date(Date.now()-48*3600000).toISOString()).gte('published_at',new Date(Date.now()-24*3600000).toISOString()).order('published_at',{ascending:false}).limit(12).abortSignal(AbortSignal.timeout(8000));
+   if(active){if(error)setError('Indexed news is unavailable.');else{setNews(((data||[]) as unknown as {id:string;title:string;translated_title_en?:string|null;translation_status?:string|null;language?:string|null;source:string;published_at:string|null}[]).filter(n=>Date.parse(n.published_at!)<=Date.now()+300000 && (Boolean(n.translated_title_en?.trim()) || n.translation_status==='original_english' || /^(en)(-|$)/i.test(n.language||''))));setError('');}}
   }catch{if(active)setError('Indexed news is unavailable.');}finally{running=false;}};
   void load();const timer=setInterval(()=>void load(),60000);
   const channel=supabase.channel('sim-recent-news').on('postgres_changes',{event:'INSERT',schema:'public',table:'news_articles'},()=>void load()).subscribe();
