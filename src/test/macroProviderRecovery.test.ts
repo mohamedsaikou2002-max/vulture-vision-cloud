@@ -37,16 +37,16 @@ it('uses the current Gemini default without legacy-only generation settings',asy
  const fetcher=vi.fn(async()=>Response.json({candidates:[{content:{parts:[{text:'{"summary":"Dated observations"}'}]}}]}));
  await generateGemini('fixture',undefined,{generationConfig:{responseMimeType:'application/json',maxOutputTokens:1400}},fetcher);
  const args=fetcher.mock.calls[0] as unknown as [string,RequestInit];
- expect(args[0]).toContain('/gemini-3.8-flash:generateContent');
+ expect(args[0]).toContain('/gemini-2.5-flash-lite:generateContent');
  expect(JSON.parse(String(args[1].body)).generationConfig).toEqual({maxOutputTokens:1400,responseMimeType:'application/json'});
 });
 it('falls back from a legacy model only after 404 and returns the real current-model answer',async()=>{
  const fetcher=vi.fn().mockResolvedValueOnce(new Response('',{status:404})).mockResolvedValueOnce(Response.json({candidates:[{content:{parts:[{text:'{"summary":"Actual provider answer"}'}]}}]}));
  const result=await generateGemini('fixture','gemini-2.5-flash',{generationConfig:{responseMimeType:'application/json',maxOutputTokens:1400}},fetcher);
- expect(result).toEqual({model:'gemini-3.8-flash',text:'{"summary":"Actual provider answer"}'});
+ expect(result).toEqual({model:'gemini-2.5-flash-lite',text:'{"summary":"Actual provider answer"}'});
  expect(fetcher).toHaveBeenCalledTimes(2);
  expect(JSON.parse(String(fetcher.mock.calls[0][1].body)).generationConfig.thinkingConfig).toEqual({thinkingBudget:0});
- expect(String(fetcher.mock.calls[1][0])).toContain('/gemini-3.8-flash:generateContent');
+ expect(String(fetcher.mock.calls[1][0])).toContain('/gemini-2.5-flash-lite:generateContent');
 });
 it('reports credential rejection distinctly and does not retry it with other models',async()=>{
  const fetcher=vi.fn(async()=>new Response('private-provider-details',{status:403}));
