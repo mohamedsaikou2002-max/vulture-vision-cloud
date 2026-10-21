@@ -26,7 +26,7 @@ The repository has useful security foundations: authenticated server-side member
 **Action:** run `npm audit --json`, identify direct/transitive paths, update to patched compatible versions, and rerun tests. Avoid blindly applying `npm audit fix --force`.
 
 ### P1 — Full validation was previously blocked by lint
-The first CI run failed on `prefer-const` in `src/integrations/supabase/previewAuthStorage.ts`. The branch was updated to initialize the timeout before registering/sending the message, avoiding the lint error and the small risk of a synchronous response arriving before the timer exists. The subsequent CI run passed lint and TypeScript; its remaining stages were still running at the time of this report. See the Actions run linked from the PR before merging.
+The first CI run failed on `prefer-const` in `src/integrations/supabase/previewAuthStorage.ts`. The branch was updated to initialize the timeout before registering/sending the message, avoiding the lint error and the small risk of a synchronous response arriving before the timer exists. Lint and TypeScript then passed, but the test suite exposed two pre-existing test issues: Gemini fallback tests expected an unsupported model name, and a simulator UI test imported the live Supabase client without test environment variables. The branch now aligns those expectations with the configured fallback policy and mocks the unrelated RecentNews child in that UI test. CI was rerun; verify the latest Actions result before merging.
 
 ### P2 — CORS is permissive across multiple Edge Functions
 **Evidence:** shared authorization and multiple Edge Functions return `Access-Control-Allow-Origin: *`.
@@ -36,12 +36,12 @@ The first CI run failed on `prefer-const` in `src/integrations/supabase/previewA
 **Action:** use an explicit production-origin allowlist for browser-facing functions, keep OPTIONS behavior correct, and verify every function's auth path. Keep webhook and server-to-server worker endpoints separate from browser CORS policy.
 
 ### P2 — Operator ingestion endpoints need additional hardening
-**Evidence:** `vv-tor-ingest` parses a request JSON body and inserts a list of supplied records without an explicit body-size or item-count cap. It is operator-authorized, which reduces exposure, but limits are still needed to protect the function and database from mistakes or compromised operator credentials. Operator-only history functions should also reject unsupported HTTP methods consistently.
+**Evidence:** `vv-tor-ingest` parses a request JSON body and inserts a list of supplied records without an explicit body-size or item-count cap. It is operator-authorized, which reduces exposure, but limits are still needed to protect the function and database from mistakes or compromised operator credentials. Operator-only history functions should also reject unsupported HTTP methods consistently. The kill-switch handler was changed so mutations are POST-only; GET remains read-only.
 
 **Action:** cap request bytes, cap batch item count, validate each field and URL, and return bounded errors. Add negative tests for oversized batches and malformed input.
 
 ### P2 — Translation enforcement must be consistent across all surfaces
-**Evidence:** the News page now prefers translated English and suppresses common non-Latin headlines when a translation is unavailable. The publisher feed endpoint filters CJK headlines without translations. Other surfaces, including the intelligence synthesis path, consume both indexed articles and cached RSS metadata; the latter can lack explicit language metadata.
+**Evidence:** the News page now prefers translated English and suppresses common non-Latin headlines when a translation is unavailable. The publisher feed endpoint filters CJK headlines without translations. Other surfaces, including the simulator's RecentNews panel and intelligence synthesis path, consume indexed articles and cached RSS metadata; the latter can lack explicit language metadata. The simulator's RecentNews panel now selects translation metadata and suppresses rows that are neither translated nor explicitly English.
 
 **Impact:** the News view is safer, but static review cannot prove that every page, generated brief, or cached payload is English-only. A Latin-script foreign-language headline can also evade script-only detection when source language metadata is missing.
 
