@@ -23,4 +23,7 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  // Generated preview-auth broker assigns its timer after registering a callback.
+  // Keep the generated file untouched; the declaration is intentionally mutable.
+  { files: ["src/integrations/supabase/previewAuthStorage.ts"], rules: { "prefer-const": "off" } },
 );
