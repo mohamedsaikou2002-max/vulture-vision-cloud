@@ -30,7 +30,9 @@ try {
  await assert.rejects(db.query('SELECT * FROM claim_news_context()'));
  await db.exec("RESET ROLE; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$; GRANT USAGE ON SCHEMA auth TO authenticated;");
  // Staged SQL is exercised only in this disposable database, never activated remotely by this test.
- for(const name of (await readdir('drizzle/migrations')).filter(n=>n.endsWith('.sql')).sort())await db.exec(await readFile('drizzle/migrations/'+name,'utf8'));
+ // Canonical schema is now ordered in supabase/migrations. Do not replay archived Drizzle SQL.
+ const staged=(await db.query("SELECT to_regclass('public.workspace_release_policy') AS policy, to_regclass('public.news_source_status') AS sources, to_regclass('public.headline_translation_queue') AS translations")).rows[0];
+ assert.ok(staged.policy && staged.sources && staged.translations, 'Supabase migrations must install all billing, source and security prerequisites');
  const userA='00000000-0000-4000-8000-000000000001',userB='00000000-0000-4000-8000-000000000002';
  const jobA='00000000-0000-4000-8000-000000000003',jobB='00000000-0000-4000-8000-000000000004';
  const claimAutoSim=async(user,job,parent=null)=>(await db.query('SELECT vv_claim_autosim($1,$2,$3,$4,1) AS outcome',[user,job,'Local staged migration test',parent])).rows[0].outcome;
