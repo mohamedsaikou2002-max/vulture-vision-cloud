@@ -27,6 +27,23 @@ interface Item {
 interface NewsData { irl: Item[]; dark: Item[]; tech: Item[]; }
 
 
+// The feed is English-only. Prefer a verified translation; accept an untranslated title
+// only when the source explicitly identifies it as English. For legacy RSS items without
+// language metadata, conservatively suppress common non-Latin scripts rather than leaking CJK.
+function getEnglishHeadline(item: Item): string | null {
+  const translated = item.translated_title_en?.trim();
+  if (translated) return translated;
+  const language = (item.language || "").trim().toLowerCase().replace("_", "-");
+  if (item.translation_status === "original_english" || language === "en" || language.startsWith("en-")) {
+    return item.title?.trim() || null;
+  }
+  if (!language && /[\u2E80-\u2EFF\u3000-\u30FF\u3100-\u312F\u3130-\u318F\u31A0-\u31BF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF]/u.test(item.title || "")) {
+    return null;
+  }
+  // Unknown-language items without translation metadata are not considered verified English.
+  return null;
+}
+
 function timeAgo(iso?: string) {
   if (!iso) return "";
   const d = new Date(iso).getTime();
@@ -151,13 +168,15 @@ function Column({ title, tone, items, badge, badgeText, unavailable }: {
             <div className="news-item" key={i}>
               {i === 0 && <span className={`badge ${badge}`}>{badgeText}</span>}
               <div className="news-title">
-                {it.link ? (
-                  <a href={it.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
-                    {decodeEntities(it.title)}
-                  </a>
-                ) : decodeEntities(it.title)}
-                {it.translated_title_en && <details className="news-original"><summary>Translated to English · original</summary><span lang={it.language}>{it.original_title}</span></details>}
-                {!it.translated_title_en && it.translation_status && it.translation_status!=="original_english" && <small>Original headline · translation {it.translation_status.replace(/_/g," ")}</small>}
+                {getEnglishHeadline(it) ? (
+                  it.link ? (
+                    <a href={it.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                      {decodeEntities(getEnglishHeadline(it)!)}
+                    </a>
+                  ) : decodeEntities(getEnglishHeadline(it)!)
+                ) : (
+                  <span className="dim-text" role="status">English translation pending — original headline hidden.</span>
+                )}
               </div>
               <div className="news-meta" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {sourceHref ? (
