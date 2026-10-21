@@ -14,3 +14,4 @@
 - Keep additional RSS subscriptions and combined publisher metadata in the Cloud news registry; collect bounded rotating batches with robots, access restrictions and source diagnostics, and retain original research flags.
 - Member Intel chat and Cloud brief synthesis use authenticated server-side validation and the existing shared research quota; MiroFish operator-only functions retain their allowlist.
 - Persist Cloud-generated briefs and live RSS metadata in expiring warm state so member pages can read shared evidence without a Python host or invented regime predictions.
+- Temporarily allow session-only frontend workspace entry for testing; server membership and operator checks remain independent to protect premium APIs and records.
