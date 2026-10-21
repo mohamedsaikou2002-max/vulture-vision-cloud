@@ -17,7 +17,11 @@ Deno.serve(async (req) => {
   const denied = await authorize(req, true);
   if (denied) return denied;
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+    if (new TextEncoder().encode(rawBody).byteLength > 512_000) {
+      return new Response(JSON.stringify({ error: "Payload exceeds 512 KB" }), { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const body = JSON.parse(rawBody || "null");
     let raw: Incoming[] = [];
     if (Array.isArray(body?.entries)) {
       raw = body.entries;
@@ -35,6 +39,24 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "expected { entries: [...] } or TorBot JSON" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (raw.length > 500) {
+      return new Response(JSON.stringify({ error: "At most 500 discovery entries may be ingested at once" }), { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const invalid = raw.some((r) => {
+      if (!r || typeof r !== "object" || typeof r.url !== "string" || !r.url.trim() || r.url.length > 2048) return true;
+      if (r.name !== undefined && (typeof r.name !== "string" || r.name.length > 200)) return true;
+      if (r.description !== undefined && (typeof r.description !== "string" || r.description.length > 2000)) return true;
+      if (r.category !== undefined && (typeof r.category !== "string" || r.category.length > 64)) return true;
+      if (r.status !== undefined && (typeof r.status !== "string" || r.status.length > 64)) return true;
+      if (r.tags !== undefined && (!Array.isArray(r.tags) || r.tags.length > 20 || r.tags.some((tag) => typeof tag !== "string" || tag.length > 64))) return true;
+      if (r.ping_ms !== undefined && r.ping_ms !== null && (typeof r.ping_ms !== "number" || !Number.isFinite(r.ping_ms) || r.ping_ms < 0 || r.ping_ms > 600_000)) return true;
+      try { const url = new URL(r.url); if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || !url.hostname) return true; } catch { return true; }
+      return false;
+    });
+    if (invalid) {
+      return new Response(JSON.stringify({ error: "One or more discovery entries have invalid fields" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const rows = raw

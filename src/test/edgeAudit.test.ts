@@ -20,7 +20,7 @@ function edge(name: string, fetcher: typeof fetch, values: Record<string, string
   function load(path: string): Record<string, unknown> {
     if (modules.has(path)) return modules.get(path)!;
     const exports = {};
-    const scope = createContext({ exports, URL, URLSearchParams, Request, Response, Headers, AbortSignal, TextEncoder, console,
+    const scope = createContext({ exports, URL, URLSearchParams, Request, Response, Headers, AbortSignal, DOMException, setTimeout, clearTimeout, TextEncoder, TextDecoder, console,
       fetch: fetcher,
       Deno: { env: { get: (key: string) => values[key], toObject: () => ({...values}) }, serve: (value: Handler) => { handler = value; } },
       require: (specifier: string) => {

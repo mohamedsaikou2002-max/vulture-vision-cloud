@@ -3,11 +3,11 @@ import {transferableAbortController} from 'node:util';
 import {generateConfigured,generateGemini} from '../../supabase/functions/_shared/gemini';
 beforeEach(()=>{vi.stubGlobal('AbortSignal',transferableAbortController().signal.constructor);vi.stubGlobal('Deno',{env:{toObject:()=>({LOVABLE_API_KEY:'fixture-gateway'}),get:(name:string)=>name==='LOVABLE_API_KEY'?'fixture-gateway':undefined}});});
 afterEach(()=>vi.unstubAllGlobals());
-it('uses an established default model with structured thinking disabled',async()=>{
+it('uses the current default without legacy thinking settings',async()=>{
  const send=vi.fn(async(_input:unknown,_init?:RequestInit)=>Response.json({candidates:[{content:{parts:[{text:'{"summary":"Fixture"}'}]}}]}));
  await generateGemini('fixture',undefined,{contents:[],generationConfig:{responseMimeType:'application/json'}},send);
- expect(String(send.mock.calls[0][0])).toContain('/gemini-2.5-flash:generateContent');
- expect(JSON.parse(String(send.mock.calls[0][1].body)).generationConfig.thinkingConfig).toEqual({thinkingBudget:0});
+ expect(String(send.mock.calls[0][0])).toContain('/gemini-3.8-flash:generateContent');
+ expect(JSON.parse(String(send.mock.calls[0][1].body)).generationConfig.thinkingConfig).toBeUndefined();
 });
 it('honors the simulation-specific fast gateway model',async()=>{
  const send=vi.fn(async(_input:unknown,_init?:RequestInit)=>Response.json({choices:[{message:{content:'{"summary":"Fixture"}'}}]}));vi.stubGlobal('fetch',send);
@@ -25,4 +25,20 @@ it('bounds hanging gateway requests and never launches another inference',async(
 it('identifies timeout while reading a gateway response separately from malformed JSON',async()=>{
  vi.stubGlobal('fetch',vi.fn(async()=>new Response(new ReadableStream({start(controller){controller.error(new DOMException('The operation timed out','TimeoutError'));}}))));
  await expect(generateConfigured({contents:[]},1000)).rejects.toMatchObject({code:'timeout',status:504,message:'AI request timed out while reading the answer'});
+});
+it('bounds a stalled Gemini answer body without launching another request',async()=>{
+ const send=vi.fn(async()=>new Response(new ReadableStream({start(){}})));
+ await expect(generateGemini('fixture',undefined,{},send,50)).rejects.toMatchObject({code:'timeout',status:504});
+ expect(send).toHaveBeenCalledTimes(1);
+});
+it('bounds a stalled gateway answer body to the original deadline',async()=>{
+ const send=vi.fn(async()=>new Response(new ReadableStream({start(){}})));vi.stubGlobal('fetch',send);
+ await expect(generateConfigured({contents:[]},50)).rejects.toMatchObject({code:'timeout',status:504});
+ expect(send).toHaveBeenCalledTimes(1);
+});
+it('rejects an oversized provider body and cancels its stream without retrying',async()=>{
+ const cancelled=vi.fn();
+ const send=vi.fn(async()=>new Response(new ReadableStream({start(controller){controller.enqueue(new Uint8Array(1_048_577));},cancel:cancelled})));
+ await expect(generateGemini('fixture',undefined,{},send,1000)).rejects.toMatchObject({code:'bad_output',status:502});
+ expect(send).toHaveBeenCalledTimes(1);expect(cancelled).toHaveBeenCalledTimes(1);
 });

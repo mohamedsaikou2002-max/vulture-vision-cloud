@@ -15,3 +15,4 @@
 - Member Intel chat and Cloud brief synthesis use authenticated server-side validation and the existing shared research quota; MiroFish operator-only functions retain their allowlist.
 - Persist Cloud-generated briefs and live RSS metadata in expiring warm state so member pages can read shared evidence without a Python host or invented regime predictions.
 - Deploy database changes exclusively from ordered `supabase/migrations/`; the former Drizzle staged SQL is consolidated into the 20261021020000 canonical migration, not a second deployment path. Do not replay schema already recorded in Supabase migrations.
+- Temporarily allow session-only frontend workspace entry for testing; server membership and operator checks remain independent to protect premium APIs and records.

@@ -28,11 +28,16 @@ const output = {
   evidence_ids: [ref, "invented-source"],
 };
 describe("Podroom-inspired Vulture simulation chat contract", () => {
-  it("uses current Flash models by default and falls back when legacy models return 404", () => {
-    expect(availableGeminiModels()).toEqual(["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
-    expect(availableGeminiModels("gemini-configured")).toEqual(["gemini-configured", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
-    expect(availableGeminiModels(" gemini-2.5-flash ")).toEqual(["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
-    expect(availableGeminiModels("gemini-3.8-flash")).toHaveLength(3);
+  it("defaults to approved current candidates", () => {
+    expect(availableGeminiModels()).toEqual(["gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+  });
+  it("keeps a configured legacy model before bounded fallbacks", () => {
+    expect(availableGeminiModels(" gemini-2.5-flash ")).toEqual(["gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+  });
+  it("deduplicates configured current models", () => {
+    expect(availableGeminiModels("gemini-3.8-flash")).toEqual(["gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+  });
+  it("rejects invalid model configuration", () => {
     expect(() => availableGeminiModels("../not-a-model")).toThrow("Invalid Gemini model");
   });
   it("accepts bounded scenario, role panel and news context", () => {
