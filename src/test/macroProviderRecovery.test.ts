@@ -37,7 +37,7 @@ it('uses the current Gemini default without legacy-only generation settings',asy
  const fetcher=vi.fn(async()=>Response.json({candidates:[{content:{parts:[{text:'{"summary":"Dated observations"}'}]}}]}));
  await generateGemini('fixture',undefined,{generationConfig:{responseMimeType:'application/json',maxOutputTokens:1400}},fetcher);
  const args=fetcher.mock.calls[0] as unknown as [string,RequestInit];
- expect(args[0]).toContain('/gemini-2.5-flash-lite:generateContent');
+ expect(args[0]).toContain('/gemini-2.5-flash:generateContent');
  expect(JSON.parse(String(args[1].body)).generationConfig).toEqual({maxOutputTokens:1400,responseMimeType:'application/json'});
 });
 it('falls back from a legacy model only after 404 and returns the real current-model answer',async()=>{
