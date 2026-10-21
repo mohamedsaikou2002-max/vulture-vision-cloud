@@ -24,7 +24,7 @@ export default function WorldState({compact=false}:{compact?:boolean}) {
       <p className="sim-note">{DIMENSIONS.length-ws.neutral_dimensions.length} of {DIMENSIONS.length} dimensions have fresh observations; {ws.neutral_dimensions.length} use neutral defaults.</p>
       <p className="sim-fine">Fetched {new Date(ws.as_of).toLocaleString()}. Each observation retains its own date.</p>
       {pulse && <section className="world-pulse" aria-label="World market pulse">
-        <h3 className="sim-h3">World pulse · Belicia-inspired</h3>
+        <h3 className="sim-h3">World economic pulse</h3>
         <div className="sim-sources"><span className="sim-chip">Shock {pulse.shock_level===null?'unavailable':pct(pulse.shock_level, 0)}</span><span className="sim-chip">Market mood: {pulse.world_mood}</span><span className="sim-chip">{pulse.status}</span></div>
         <p className="sim-fine">{pulse.note}</p>
         <ul className="sim-news">{pulse.top_shocks.map(h=><li key={h.url}><a href={h.url} target="_blank" rel="noopener noreferrer">{h.title}</a><p>{h.source} · {h.published_at?new Date(h.published_at).toLocaleString():'Publication time unknown'}</p></li>)}</ul>

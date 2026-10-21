@@ -1,5 +1,7 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import "@/styles/belicia-theme.css";
+import "@/styles/pr7-workspace.css";
+import BackgroundVideo from "@/components/BackgroundVideo";
 import { NavLink } from "react-router-dom";
 
 interface Props {
@@ -11,9 +13,10 @@ interface Props {
 const links = [
   { to: "/dashboard", label: "INTEL" },
   { to: "/analytics", label: "ANALYTICS" },
-  { to: "/simulations", label: "POD ROOM" },
-  { to: "/simulations/simple", label: "QUICK SIM" },
+  { to: "/socioeconomics", label: "SOCIO-ECONOMICS" },
+  { to: "/simulations", label: "SIMULATIONS" },
   { to: "/news", label: "NEWS FEED" },
+  { to: "/account", label: "ACCOUNT / BILLING" },
 ];
 
 export default function VVLayout({ children, status }: Props) {
@@ -43,7 +46,11 @@ export default function VVLayout({ children, status }: Props) {
   const statusLabel = newIntel ? "NEW INTEL" : (status?.label || "STATUS UNVERIFIED");
 
   return (
-    <div className="belicia-workspace">
+    <div className="belicia-workspace pr7-workspace">
+      <div className="video-bg blurred"><BackgroundVideo /></div><div className="video-overlay" />
+      <div className="scanlines" aria-hidden="true"/><div className="noise" aria-hidden="true"/>
+      <div className="corner corner-tl" aria-hidden="true"/><div className="corner corner-tr" aria-hidden="true"/>
+      <div className="corner corner-bl" aria-hidden="true"/><div className="corner corner-br" aria-hidden="true"/>
       <nav className="nav" ref={navRef} aria-label="Main navigation">
         <NavLink to="/" className="nav-logo">VULTURE VISION</NavLink>
         <div className="nav-links">
