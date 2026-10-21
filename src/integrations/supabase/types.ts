@@ -98,6 +98,11 @@ export type Database = {
           id: string
           ingestion_method: string
           language: string | null
+          original_title: string | null
+          translated_title_en: string | null
+          translation_status: string
+          translation_source_language: string | null
+          translated_at: string | null
           published_at: string | null
           source: string
           source_country: string
@@ -110,6 +115,11 @@ export type Database = {
           id: string
           ingestion_method: string
           language?: string | null
+          original_title?: string | null
+          translated_title_en?: string | null
+          translation_status?: string
+          translation_source_language?: string | null
+          translated_at?: string | null
           published_at?: string | null
           source: string
           source_country: string
@@ -122,6 +132,11 @@ export type Database = {
           id?: string
           ingestion_method?: string
           language?: string | null
+          original_title?: string | null
+          translated_title_en?: string | null
+          translation_status?: string
+          translation_source_language?: string | null
+          translated_at?: string | null
           published_at?: string | null
           source?: string
           source_country?: string
