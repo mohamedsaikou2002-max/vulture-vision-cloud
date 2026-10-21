@@ -33,12 +33,12 @@ it('recovers from a rejected FRED key through public data and retains source dat
  const result=await loadMacroObservables();expect(result.status.every(s=>s.ok)).toBe(true);
  expect(result.obs.unrate?.source).toBe('FRED:UNRATE');expect(result.obs.unrate?.observed_at).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 });
-it('uses the current Gemini default without legacy-only generation settings',async()=>{
+it('uses the configured Gemini default with structured thinking disabled',async()=>{
  const fetcher=vi.fn(async()=>Response.json({candidates:[{content:{parts:[{text:'{"summary":"Dated observations"}'}]}}]}));
  await generateGemini('fixture',undefined,{generationConfig:{responseMimeType:'application/json',maxOutputTokens:1400}},fetcher);
  const args=fetcher.mock.calls[0] as unknown as [string,RequestInit];
- expect(args[0]).toContain('/gemini-3.8-flash:generateContent');
- expect(JSON.parse(String(args[1].body)).generationConfig).toEqual({maxOutputTokens:1400,responseMimeType:'application/json'});
+ expect(args[0]).toContain('/gemini-2.5-flash:generateContent');
+ expect(JSON.parse(String(args[1].body)).generationConfig).toEqual({maxOutputTokens:1400,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}});
 });
 it('falls back from a legacy model only after 404 and returns the real current-model answer',async()=>{
  const fetcher=vi.fn().mockResolvedValueOnce(new Response('',{status:404})).mockResolvedValueOnce(Response.json({candidates:[{content:{parts:[{text:'{"summary":"Actual provider answer"}'}]}}]}));
