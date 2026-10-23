@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { withRequestDeadline } from './requestDeadline';
 import type { Dim, Agent, DimDistribution, StrategyAgg } from "../../supabase/functions/_shared/autosim_engine";
 
 export class ApiError extends Error {
@@ -20,9 +21,12 @@ const FRIENDLY: Record<string, string> = {
   unauthorized: "Your session expired. Sign in again.",
   gemini_not_configured: "The AI key isn't configured on the server yet.",
 };
+const wasAborted = (value: unknown) => value !== null && typeof value === 'object' && 'name' in value && /timeout|abort/i.test(String(value.name));
 
 export async function callAutoSim<T = Record<string, unknown>>(payload: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
+ try {return await withRequestDeadline(async deadline => {
   const { data: { session } } = await supabase.auth.getSession();
+  deadline.throwIfAborted();
   if (!session) throw new ApiError("unauthorized", FRIENDLY.unauthorized, 401);
   let res: Response;
   try {
@@ -30,9 +34,9 @@ export async function callAutoSim<T = Record<string, unknown>>(payload: Record<s
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
       body: JSON.stringify(payload),
-      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(120000)]) : AbortSignal.timeout(payload.action === "world_state" ? 30000 : 120000),
+      signal: deadline,
     });
-  } catch (e) { throw new ApiError(e instanceof Error && /timeout|abort/i.test(e.name) ? "timeout" : "network", "The response could not be confirmed. Check the pending run before starting another.", 0); }
+  } catch (e) { throw new ApiError(wasAborted(e) ? "timeout" : "network", "The response could not be confirmed. Check the pending run before starting another.", 0); }
   if (res.status === 401) throw new ApiError('unauthorized', FRIENDLY.unauthorized, 401);
   if (res.status === 403) throw new ApiError('forbidden', 'This account does not have access to the requested workspace feature.', 403);
   if (res.status === 404) throw new ApiError('not_deployed', 'The simulation service has not been deployed to this workspace yet.', 404);
@@ -51,6 +55,11 @@ export async function callAutoSim<T = Record<string, unknown>>(payload: Record<s
     throw new ApiError(e?.code ?? "error", FRIENDLY[e?.code ?? ""] ?? e?.message ?? "The simulation failed.", res.status);
   }
   return parsed as T;
+ },payload.action === 'world_state' ? 30000 : 120000,signal);
+ }catch(e){
+  if(e instanceof ApiError)throw e;
+  throw new ApiError(wasAborted(e) ? 'timeout' : 'network','The response could not be confirmed. Check the pending run before starting another.',0);
+ }
 }
 
 export const parseResult = (value: unknown): AutoSimResult => validateAutoSimResult(value) as unknown as AutoSimResult;
