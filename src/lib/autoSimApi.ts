@@ -21,6 +21,7 @@ const FRIENDLY: Record<string, string> = {
   unauthorized: "Your session expired. Sign in again.",
   gemini_not_configured: "The AI key isn't configured on the server yet.",
 };
+const wasAborted = (value: unknown) => value !== null && typeof value === 'object' && 'name' in value && /timeout|abort/i.test(String(value.name));
 
 export async function callAutoSim<T = Record<string, unknown>>(payload: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
  try {return await withRequestDeadline(async deadline => {
@@ -35,7 +36,7 @@ export async function callAutoSim<T = Record<string, unknown>>(payload: Record<s
       body: JSON.stringify(payload),
       signal: deadline,
     });
-  } catch (e) { throw new ApiError(e instanceof Error && /timeout|abort/i.test(e.name) ? "timeout" : "network", "The response could not be confirmed. Check the pending run before starting another.", 0); }
+  } catch (e) { throw new ApiError(wasAborted(e) ? "timeout" : "network", "The response could not be confirmed. Check the pending run before starting another.", 0); }
   if (res.status === 401) throw new ApiError('unauthorized', FRIENDLY.unauthorized, 401);
   if (res.status === 403) throw new ApiError('forbidden', 'This account does not have access to the requested workspace feature.', 403);
   if (res.status === 404) throw new ApiError('not_deployed', 'The simulation service has not been deployed to this workspace yet.', 404);
@@ -57,7 +58,7 @@ export async function callAutoSim<T = Record<string, unknown>>(payload: Record<s
  },payload.action === 'world_state' ? 30000 : 120000,signal);
  }catch(e){
   if(e instanceof ApiError)throw e;
-  throw new ApiError(e instanceof Error && /timeout|abort/i.test(e.name) ? 'timeout' : 'network','The response could not be confirmed. Check the pending run before starting another.',0);
+  throw new ApiError(wasAborted(e) ? 'timeout' : 'network','The response could not be confirmed. Check the pending run before starting another.',0);
  }
 }
 
