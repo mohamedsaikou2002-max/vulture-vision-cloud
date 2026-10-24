@@ -18,7 +18,10 @@ The adaptation uses Vulture Vision's existing scenario inputs, news snapshots, M
 - The role modes are full-panel synthesis, bull, bear, macro, and risk. Gemini creates distinct synthetic perspectives in **one call**. Independent multi-agent modelling is provided only by the separately configured MiroFish engine.
 - History: at most four prior user/assistant exchanges are carried into a request. They remain in the browser state and are not written to the database.
 - Provider availability: no mocked answers; if Gemini fails or is absent the UI reports an error.
-- Source provenance: evidence IDs are filtered against the app-provided news set. These are not independently verified claims. Users should open and cross-check source links from the surrounding Simulations screen.
+- Source provenance: supplied evidence IDs are resolved from recent server-owned news rows before Gemini is called; individual model-produced IDs are limited to those resolved IDs. This validates identity/recency, **not factual support for a thesis**. Users should open and cross-check source articles.
+- Semantic evidence graph: each synthetic specialist now provides bounded assumptions, invalidators, and cited news IDs when available. `_shared/swarm_interoperability.ts` composes `vv.swarm.semantic.v1` typed claim/source nodes with citation edges and explicit coverage warnings. The UI renders citation coverage, not a confidence percentage or a verified causal graph.
+- Current-event MiroFish seed / evaluation requirements include heterogeneous synthetic actor profiles, dependency semantics, disagreements and reproducible sensitivity-test proposals; no gradient engine has been deployed.
+- Paper mapping and a future differentiable-optimization design are in [swarm-research-integration.md](./swarm-research-integration.md).
 
 ## Required Supabase setup
 1. Apply \`supabase/migrations/20261012034000_scenario_synthesis_quota.sql\` (or ensure its RPC is installed). \`claim_scenario_synthesis(uuid)\` allows up to **six** AI synthesis calls per authenticated user per hour across features using that RPC.
