@@ -38,6 +38,32 @@ describe("simulation conversation room", () => {
     expect(await screen.findByText("This is exploratory only.")).toBeTruthy();
     expect(screen.getByText("Funding pressure")).toBeTruthy();
   });
+  it("renders typed evidence-map coverage and falsifiable assumptions", async () => {
+    ask.mockResolvedValueOnce({
+      ...result,
+      specialists: [{
+        ...result.specialists[0],
+        assumptions: ["Liquidity tightens"],
+        invalidators: ["Bank funding spreads normalize"],
+        evidence_ids: ["a".repeat(64)],
+      }],
+      interoperability: {
+        schema_version: "vv.swarm.semantic.v1",
+        linked_claims: 1,
+        total_claims: 1,
+        verification: "structure_and_source_ids_only",
+        limitations: ["Source content is not independently verified."],
+        claims: [], sources: [], edges: [],
+      },
+    });
+    render(<SimulationSwarmChat {...input}/>);
+    fireEvent.click(screen.getByRole("button", {name:/BEAR.*Adversarial downside/i}));
+    fireEvent.change(screen.getByRole("textbox",{name:"Ask the simulation panel"}),{target:{value:"Test the evidence"}});
+    fireEvent.click(screen.getByRole("button",{name:/Send question/i}));
+    expect(await screen.findByText(/Liquidity tightens/)).toBeTruthy();
+    expect(screen.getByText(/Bank funding spreads normalize/)).toBeTruthy();
+    expect(screen.getByTestId("swarm-interoperability").textContent).toMatch(/1 of 1 analyst positions/);
+  });
   it("reports provider errors without inventing a response", async () => {
     ask.mockRejectedValueOnce(new Error("Gemini is not configured"));
     render(<SimulationSwarmChat {...input}/>);
