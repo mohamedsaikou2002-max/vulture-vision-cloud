@@ -79,6 +79,43 @@ describe("Podroom-inspired Vulture simulation chat contract", () => {
     expect(() => parseSimulationChatRequest({ ...input, news: [{ id: "<script>", title: "Example", source: "Test" }] })).toThrow(/news id/i);
     expect(() => parseSimulationChatRequest({ ...input, round: 25 })).toThrow(/round/i);
   });
+  it("adds a bounded semantic evidence graph with no invented sources", () => {
+    const enriched = {
+      ...output,
+      specialists: output.specialists.map((entry, i) => ({
+        ...entry,
+        assumptions: i === 0 ? ["Funding remains open", "Reserves adequate"] : [],
+        invalidators: i === 0 ? ["Credit spreads exceed stress threshold"] : [],
+        evidence_ids: i === 0 ? [ref, "f".repeat(64), ref] : [],
+      })),
+    };
+    const result = parseSimulationChatAnswer(JSON.stringify(enriched), "panel", [ref], "gemini");
+    expect(result.interoperability.schema_version).toBe("vv.swarm.semantic.v1");
+    expect(result.interoperability.claims).toHaveLength(4);
+    expect(result.interoperability.linked_claims).toBe(1);
+    expect(result.interoperability.total_claims).toBe(4);
+    expect(result.interoperability.edges).toEqual([
+      { from: "claim:bull", to: "source:" + ref, relation: "cites" },
+    ]);
+    expect(result.specialists[0].evidence_ids).toEqual([ref]);
+    expect(result.specialists[0].invalidators).toEqual(["Credit spreads exceed stress threshold"]);
+    expect(result.interoperability.sources.map(source => source.id)).toEqual([ref]);
+    expect(result.interoperability.verification).toBe("structure_and_source_ids_only");
+    expect(result.interoperability.limitations.join(" ")).toMatch(/do not establish factual/i);
+  });
+  it("preserves legacy model answers and never claims unlinked news evidence", () => {
+    const result = parseSimulationChatAnswer(JSON.stringify(output), "bear", [ref], "gemini");
+    expect(result.specialists[0].assumptions).toEqual([]);
+    expect(result.interoperability.linked_claims).toBe(0);
+    expect(result.interoperability.edges).toEqual([]);
+    expect(result.interoperability.limitations.join(" ")).toMatch(/lack direct source links/);
+  });
+  it("prompts heterogeneous synthetic behavioral agents without implying calibrated gradients", () => {
+    const prompt = buildSimulationChatPrompt(input);
+    expect(prompt.system).toMatch(/Semantic interoperability/);
+    expect(prompt.system).toMatch(/heterogeneous synthetic agents/);
+    expect(prompt.system).toMatch(/do not claim gradients/i);
+  });
   it("won't treat unknown role as a valid specialist", () => {
     expect(() => parseSimulationChatAnswer(JSON.stringify({ ...output, specialists: [{ role: "trader", position: "Buy", reasoning: "none" }] }), "panel", [ref], "gemini")).toThrow(/requested analyst/);
   });
