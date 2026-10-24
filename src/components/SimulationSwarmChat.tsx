@@ -154,9 +154,17 @@ export default function SimulationSwarmChat(props: SimulationRoomProps) {
                         <h3 className={"text-xs font-bold tracking-widest " + specialists[agent.role].accent}>{specialists[agent.role].label}</h3>
                         <p className="mt-2 text-sm font-medium">{agent.position}</p>
                         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{agent.reasoning}</p>
+                        {!!agent.assumptions?.length && <p className="mt-2 text-xs text-muted-foreground"><span className="font-semibold">Assumptions:</span> {agent.assumptions.join(" · ")}</p>}
+                        {!!agent.invalidators?.length && <p className="mt-2 text-xs text-muted-foreground"><span className="font-semibold">Invalidators:</span> {agent.invalidators.join(" · ")}</p>}
+                        {!!agent.evidence_ids?.length && <p className="mt-2 text-xs text-muted-foreground">Cites {agent.evidence_ids.length} supplied news reference{agent.evidence_ids.length === 1 ? "" : "s"} (not independently verified).</p>}
                       </div>
                     ))}
                   </div>
+                  {exchange.result.interoperability && <div className="rounded-lg border border-border bg-primary/5 p-3 text-xs text-muted-foreground" data-testid="swarm-interoperability">
+                    <p className="font-semibold text-foreground">Semantic evidence map · {exchange.result.interoperability.schema_version}</p>
+                    <p className="mt-1">{exchange.result.interoperability.linked_claims} of {exchange.result.interoperability.total_claims} analyst positions cite an attached news ID. This checks linkage, not whether the citation proves the position.</p>
+                    {exchange.result.interoperability.limitations.map((note, i) => <p key={i} className="mt-1">{note}</p>)}
+                  </div>}
                   {!!exchange.result.disagreements.length && <div><p className="text-xs font-semibold text-primary">Points of disagreement</p><ul className="mt-2 list-inside list-disc text-xs leading-relaxed text-muted-foreground">{exchange.result.disagreements.map((v, i) => <li key={i}>{v}</li>)}</ul></div>}
                   {!!exchange.result.missing_evidence.length && <div><p className="text-xs font-semibold text-primary">Missing evidence</p><ul className="mt-2 list-inside list-disc text-xs leading-relaxed text-muted-foreground">{exchange.result.missing_evidence.map((v, i) => <li key={i}>{v}</li>)}</ul></div>}
                   {!!exchange.result.experiments.length && <div><p className="text-xs font-semibold text-primary">Next research tests</p><ul className="mt-2 list-inside list-disc text-xs leading-relaxed text-muted-foreground">{exchange.result.experiments.map((v, i) => <li key={i}>{v}</li>)}</ul></div>}
