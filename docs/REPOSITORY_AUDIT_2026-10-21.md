@@ -1,8 +1,11 @@
 # Vulture Vision — repository audit and remediation log
 
-**Audit date:** 2026-10-21  
-**Branch reviewed:** `fix/english-responsive-security-audit`  
-**Scope:** repository tree (354 tracked entries), React/Vite entry points and major routes, Supabase Edge Function authorization/billing/news paths, SQL migrations, CI workflow, Python news crawler, voice service, deployment compose file, and existing test suites.  
+**Audit date:** 2026-10-21
+
+**Branch reviewed:** `fix/english-responsive-security-audit`
+
+**Scope:** repository tree (354 tracked entries), React/Vite entry points and major routes, Supabase Edge Function authorization/billing/news paths, SQL migrations, CI workflow, Python news crawler, voice service, deployment compose file, and existing test suites.
+
 **Method:** static source/config review plus GitHub Actions CI. This is not a penetration test and does not establish the state of the live Supabase project or deployed services.
 
 ## Executive summary

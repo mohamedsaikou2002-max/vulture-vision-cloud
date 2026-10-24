@@ -6,6 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import Welcome from "./pages/Welcome";
+const Account=lazy(()=>import("./pages/Account"));
+const SocioEconomics=lazy(()=>import("./pages/SocioEconomics"));
 const Dashboard=lazy(()=>import("./pages/Dashboard"));
 const Analytics=lazy(()=>import("./pages/Analytics"));
 const News=lazy(()=>import("./pages/News"));
@@ -27,9 +29,11 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/pricing" element={<Welcome />} />
+          <Route path="/account" element={<Account />} />
           <Route element={<AuthGate />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/socioeconomics" element={<SocioEconomics />} />
           <Route path="/news" element={<News />} />
           <Route path="/simulations/simple" element={<SimpleSimulator />} />
           <Route path="/simulations" element={<Simulator />} />

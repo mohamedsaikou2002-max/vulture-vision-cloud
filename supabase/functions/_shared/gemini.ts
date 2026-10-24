@@ -8,7 +8,11 @@ export class GeminiError extends Error {
   }
 }
 const isAbortError=(error:unknown)=>!!error&&typeof error==='object'&&'name' in error&&typeof error.name==='string'&&/^(TimeoutError|AbortError)$/.test(error.name);
-async function readAnswer(response: Response, deadline: number): Promise<any> {
+interface ProviderAnswer {
+ candidates?:{content?:{parts?:{text?:unknown;thought?:boolean}[]}}[];
+ choices?:{message?:{content?:unknown}}[];
+}
+async function readAnswer(response: Response, deadline: number): Promise<ProviderAnswer> {
   const remaining = deadline - Date.now();
   if (remaining <= 0) throw new DOMException('Answer deadline exceeded', 'TimeoutError');
   const reader = response.body?.getReader();
@@ -18,17 +22,21 @@ async function readAnswer(response: Response, deadline: number): Promise<any> {
     timer = setTimeout(() => { void reader.cancel().catch(() => {}); reject(new DOMException('Answer deadline exceeded', 'TimeoutError')); }, remaining);
   });
   const read = async () => {
-    const decoder = new TextDecoder(); let text = '';
+    const decoder = new TextDecoder(); let text = '',bytes=0;
     while (true) {
       const chunk = await reader.read();
       if (Date.now() >= deadline) throw new DOMException('Answer deadline exceeded', 'TimeoutError');
       if (chunk.done) break;
+      bytes+=chunk.value.byteLength;
+      if(bytes>1_048_576)throw new Error('AI answer exceeds response limit');
       text += decoder.decode(chunk.value, {stream: true});
     }
-    return JSON.parse(text + decoder.decode());
+    const value:unknown=JSON.parse(text+decoder.decode());
+    if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Invalid AI response object');
+    return value as ProviderAnswer;
   };
   try { return await Promise.race([read(), expired]); }
-  finally { if (timer !== undefined) clearTimeout(timer); reader.releaseLock(); }
+  finally { if (timer !== undefined) clearTimeout(timer); void reader.cancel().catch(()=>{}); reader.releaseLock(); }
 }
 export const hasConfiguredAI = () => hasGeminiKeys() || !!Deno.env.get('LOVABLE_API_KEY');
 export interface GenOpts { system?: string; prompt: string; json?: boolean; maxOutputTokens?: number; temperature?: number; timeoutMs?: number; model?:string; gatewayModel?:string }

@@ -36,3 +36,9 @@ it('bounds a stalled gateway answer body to the original deadline',async()=>{
  await expect(generateConfigured({contents:[]},50)).rejects.toMatchObject({code:'timeout',status:504});
  expect(send).toHaveBeenCalledTimes(1);
 });
+it('rejects an oversized provider body and cancels its stream without retrying',async()=>{
+ const cancelled=vi.fn();
+ const send=vi.fn(async()=>new Response(new ReadableStream({start(controller){controller.enqueue(new Uint8Array(1_048_577));},cancel:cancelled})));
+ await expect(generateGemini('fixture',undefined,{},send,1000)).rejects.toMatchObject({code:'bad_output',status:502});
+ expect(send).toHaveBeenCalledTimes(1);expect(cancelled).toHaveBeenCalledTimes(1);
+});

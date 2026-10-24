@@ -38,23 +38,9 @@ customer invoice history and payment-method/cancellation management.
 
 ## 1. Verify environment and schema
 
-Use separate staging and production Supabase/Stripe configurations. Check which
-migrations are already applied before applying anything: the SQL in
-`supabase/migrations` and the staged Drizzle files are separate migration paths.
-Do not rerun `0001_autosim.sql` if those objects already exist.
+Use separate staging and production Supabase/Stripe configurations. **The single canonical migration stream is now `supabase/migrations/`.** Run `20261020040000_news_source_status.sql` and `20261021010000_headline_translation.sql` first (where not already recorded), then `20261021020000_autosim_billing_workspace.sql`. This last migration combines the prior Drizzle AutoSim, billing, and workspace release policy SQL in dependency order. Do not run the deleted `drizzle/migrations/0001..0003` files or replay their SQL in another migration system. Inspect the applied migration history and pre-existing tables before applying anything. 
 
-Review and apply the staged `drizzle/migrations/0002_billing.sql` after the accepted
-AutoSim subscription schema exists. It adds private customer/checkout/event
-tables, subscription lifecycle fields and service-only RPCs. It does not drop
-records or recreate profiles. It has only been applied to a disposable local
-Postgres-compatible database during this task. Existing client policies must not
-allow users to update subscriptions or the new private tables.
-
-Apply staged `0003_workspace_security.sql` after billing; it defaults the database release policy to false. Keep `BILLING_ENABLED=false` and leave `workspace_release_policy.paid_access_required` false during setup. Activate only through the staged process in [PRODUCTION_AUDIT.md](PRODUCTION_AUDIT.md).
-The opt-in gate protects member Intel/chat/analytics, research chat, and both
-AutoSim views server-side; the separate MiroFish operator allowlist stays intact.
-Do not turn on a new subscription gate until the payment flow and accepted
-schema have been verified. No live checkout or charges were created by this task.
+Stage the database release policy with `paid_access_required=false` until actual staging Stripe checkout and entitlement tests succeed. **Do not expose the premium workspace to unpaid users while this flag is false.** `BILLING_ENABLED=false` initially. The new server handlers fail closed if the entitlement RPC/schema is missing. Preserve operator access separately.
 
 ## 2. Configure Google sign-in
 

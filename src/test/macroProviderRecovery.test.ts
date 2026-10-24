@@ -47,6 +47,7 @@ it('falls back from a legacy model only after 404 and returns the real current-m
  expect(fetcher).toHaveBeenCalledTimes(2);
  expect(JSON.parse(String(fetcher.mock.calls[0][1].body)).generationConfig.thinkingConfig).toEqual({thinkingBudget:0});
  expect(String(fetcher.mock.calls[1][0])).toContain('/gemini-3.8-flash:generateContent');
+ expect(JSON.parse(String(fetcher.mock.calls[1][1].body)).generationConfig.thinkingConfig).toBeUndefined();
 });
 it('reports credential rejection distinctly and does not retry it with other models',async()=>{
  const fetcher=vi.fn(async()=>new Response('private-provider-details',{status:403}));
