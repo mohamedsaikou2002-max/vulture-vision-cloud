@@ -8,7 +8,11 @@ export class GeminiError extends Error {
   }
 }
 const isAbortError=(error:unknown)=>!!error&&typeof error==='object'&&'name' in error&&typeof error.name==='string'&&/^(TimeoutError|AbortError)$/.test(error.name);
-async function readAnswer(response: Response, deadline: number): Promise<any> {
+interface GeminiWireResponse {
+  candidates?: { content?: { parts?: { thought?: boolean; text?: unknown }[] } }[];
+  choices?: { message?: { content?: unknown } }[];
+}
+async function readAnswer(response: Response, deadline: number): Promise<GeminiWireResponse> {
   const remaining = deadline - Date.now();
   if (remaining <= 0) throw new DOMException('Answer deadline exceeded', 'TimeoutError');
   const reader = response.body?.getReader();
