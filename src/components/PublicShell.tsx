@@ -33,7 +33,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
     <PublicContours />
     <header className="public-header">
       <Link className="public-wordmark" to="/">VV<span>VULTURE VISION</span></Link>
-      <nav aria-label="Main navigation"><Link to="/welcome">The perspective</Link><Button asChild variant="outline" size="sm"><Link to="/welcome#membership">Get access <ArrowUpRight /></Link></Button></nav>
+      <nav aria-label="Main navigation"><Link to="/welcome">The perspective</Link><Button asChild variant="outline" size="sm"><Link to="/dashboard">Open workspace <ArrowUpRight /></Link></Button></nav>
     </header>
     {children}
     <footer className="public-footer"><Link to="/" className="public-wordmark">VV</Link><p>Built by <strong>GREY COMPANY</strong></p><SocialLinks /><small>© {new Date().getFullYear()} Grey Company</small></footer>

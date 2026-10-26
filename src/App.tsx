@@ -15,7 +15,7 @@ const ResearchChat=lazy(()=>import("./pages/ResearchChat"));
 const SimpleSimulator=lazy(()=>import("./pages/SimpleSimulator"));
 const Simulator=lazy(()=>import("./pages/Simulator"));
 import NotFound from "./pages/NotFound";
-import AuthGate from "./components/AuthGate";
+
 
 const queryClient = new QueryClient();
 
@@ -30,7 +30,6 @@ const App = () => (
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/pricing" element={<Welcome />} />
           <Route path="/account" element={<Account />} />
-          <Route element={<AuthGate />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/socioeconomics" element={<SocioEconomics />} />
@@ -40,7 +39,6 @@ const App = () => (
           <Route path="/research" element={<ResearchChat />} />
           <Route path="/simulations/pilot" element={<Navigate to="/research" replace />} />
           <Route path="*" element={<NotFound />} />
-          </Route>
         </Routes></Suspense>
       </BrowserRouter>
     </TooltipProvider>

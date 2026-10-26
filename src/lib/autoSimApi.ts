@@ -1,3 +1,4 @@
+import { workspaceSession } from '@/lib/workspaceSession';
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import type { Dim, Agent, DimDistribution, StrategyAgg } from "../../supabase/functions/_shared/autosim_engine";
@@ -15,14 +16,14 @@ export interface JobRow { id: string; scenario: string; status: string; created_
 const Envelope = z.object({ ok: z.boolean(), error: z.object({ code: z.string(), message: z.string() }).optional() }).passthrough();
 
 const FRIENDLY: Record<string, string> = {
-  subscription_required: "An active subscription is required to run simulations.",
+  subscription_required: "Workspace access could not be verified. Please retry.",
   quota_exceeded: "You've reached today's simulation limit.",
   unauthorized: "Your session expired. Sign in again.",
   gemini_not_configured: "The AI key isn't configured on the server yet.",
 };
 
 export async function callAutoSim<T = Record<string, unknown>>(payload: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const session = await workspaceSession(supabase);
   if (!session) throw new ApiError("unauthorized", FRIENDLY.unauthorized, 401);
   let res: Response;
   try {

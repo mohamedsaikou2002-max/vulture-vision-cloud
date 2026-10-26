@@ -30,10 +30,6 @@ async def authenticate(request):
         async with httpx.AsyncClient(timeout=8) as client:
             res=await client.get(base.rstrip('/')+'/auth/v1/user',headers={'apikey':key,'Authorization':token})
         if res.status_code!=200 or not res.json().get('id'):raise HTTPException(401,'Voice session expired')
-        async with httpx.AsyncClient(timeout=12) as client:
-            access=await client.post(base.rstrip('/')+'/functions/v1/vv-billing',headers={'apikey':key,'Authorization':token},json={'action':'status'})
-        if access.status_code!=200:raise HTTPException(503,'Voice membership verification unavailable')
-        if access.json().get('workspace_access') is not True:raise HTTPException(402,'An active paid membership is required')
     except (httpx.HTTPError, ValueError):raise HTTPException(503,'Voice authentication is unavailable')
 
 @app.get('/health')

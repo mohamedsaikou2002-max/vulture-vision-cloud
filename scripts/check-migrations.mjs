@@ -63,14 +63,15 @@ try {
  await assert.rejects(db.query('SELECT * FROM billing_customers'));
  await assert.rejects(db.query('SELECT vv_claim_checkout($1,$2)',[userA,jobB]));
  await assert.rejects(db.query('SELECT vv_apply_billing_event($1,$2,$3,$4::jsonb)',['forged',200,userA,JSON.stringify(billingState)]));
- // Release enforcement is staged off, then tested on in this disposable database only.
+ // Free access must remain independent of historical paid release flags.
  await db.exec('RESET ROLE');
  assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[userB])).rows[0].access,true);
  await db.exec('UPDATE workspace_release_policy SET paid_access_required=true');
  assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[userA])).rows[0].access,true);
- assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[userB])).rows[0].access,false);
+ assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[userB])).rows[0].access,true);
+ assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[null])).rows[0].access,false);
  await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[userB]);await db.exec('SET ROLE authenticated');
- assert.equal((await db.query('SELECT count(*)::integer AS n FROM news_articles')).rows[0].n,0);
+ assert.equal((await db.query('SELECT count(*)::integer AS n FROM news_articles')).rows[0].n,1);
  assert.equal((await db.query('SELECT count(*)::integer AS n FROM autosim_jobs')).rows[0].n,0);
  await assert.rejects(db.query('UPDATE workspace_release_policy SET paid_access_required=false'));
  await assert.rejects(db.query('SELECT * FROM headline_translation_queue'));
@@ -82,5 +83,5 @@ try {
  assert.equal(translated.title,'New development');assert.equal(translated.translated_title_en,'English development');assert.equal(translated.translation_status,'translated');
  await db.exec("UPDATE news_articles SET title='Changed headline' WHERE id='a'");
  assert.equal((await scalar("SELECT translated_title_en FROM news_articles WHERE id='a'")).translated_title_en,null);
- console.log('Migration checks passed: billing duplicate/out-of-order events, customer binding, checkout claims;  existing permissions/context plus staged AutoSim ownership, claim replay, quotas and server-written membership.');
+ console.log('Migration checks passed: historical record integrity, free access independent of paid flags, private research ownership, context, job claims and quotas.');
 } finally {await db.close();}

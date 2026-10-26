@@ -1,4 +1,4 @@
-import {boundedBody} from '../_shared/stripe_billing.ts';
+import {boundedBody} from '../_shared/body.ts';
 import { authorize } from '../_shared/access.ts';
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 

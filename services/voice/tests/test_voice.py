@@ -39,12 +39,12 @@ class VoiceTests(unittest.TestCase):
         self.assertIsNone(result.json()['confidence'])
         self.assertEqual(infer.call_count,1)
 
-    def test_unpaid_session_is_denied_before_transcription(self):
+    def test_identity_verification_never_calls_billing(self):
         import httpx
-        identity=httpx.Response(200,json={'id':'member'})
-        membership=httpx.Response(200,json={'workspace_access':False})
-        with patch.dict('os.environ',{'SUPABASE_URL':'https://example.supabase.co','SUPABASE_ANON_KEY':'fixture'}),patch('httpx.AsyncClient.get',new=AsyncMock(return_value=identity)),patch('httpx.AsyncClient.post',new=AsyncMock(return_value=membership)) as post:
-            result=TestClient(app).post('/api/voice/transcribe',content=wav(),headers={'content-type':'audio/wav','authorization':'Bearer unpaid'})
-        self.assertEqual(result.status_code,402)
-        self.assertEqual(post.call_count,1)
-        self.assertTrue(post.call_args.args[0].endswith('/functions/v1/vv-billing'))
+        from starlette.requests import Request
+        import asyncio
+        identity=httpx.Response(200,json={'id':'guest'})
+        request=Request({'type':'http','headers':[(b'authorization',b'Bearer guest')]})
+        with patch.dict('os.environ',{'SUPABASE_URL':'https://example.supabase.co','SUPABASE_ANON_KEY':'fixture'}),patch('httpx.AsyncClient.get',new=AsyncMock(return_value=identity)),patch('httpx.AsyncClient.post',new=AsyncMock()) as post:
+            asyncio.run(authenticate(request))
+        post.assert_not_called()

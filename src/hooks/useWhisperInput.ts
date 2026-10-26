@@ -1,3 +1,4 @@
+import { workspaceSession } from '@/lib/workspaceSession';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { backendOrigin } from '@/lib/backendOrigin';
@@ -19,7 +20,7 @@ export function useWhisperInput({onFinal}:VoiceOptions){
     setProcessing(true);
     const controller=new AbortController();abort.current=controller;
     try{
-      const {data:{session}}=await supabase.auth.getSession();if(!session)throw new Error('Sign in to use voice input.');
+      const session=await workspaceSession(supabase);if(!session)throw new Error('Workspace session is unavailable.');
       const response=await fetch(`${origin}/api/voice/transcribe`,{method:'POST',headers:{'Content-Type':'audio/wav',Authorization:`Bearer ${session.access_token}`},body:pcmWav(r.chunks,r.context.sampleRate),signal:AbortSignal.any([controller.signal,AbortSignal.timeout(65000)])});
       if(!response.ok)throw new Error(response.status===429?'Speech server is busy. Try again shortly.':'Speech server unavailable. Your scenario has been retained.');
       const data=await response.json();if(typeof data.text!=='string'||data.text.length>2000)throw new Error('Invalid speech response');
