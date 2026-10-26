@@ -14,7 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      public_workspace_jobs: Database["public"]["Tables"]["autosim_jobs"]
       autosim_jobs: {
         Row: {
           completed_at: string | null
@@ -197,6 +196,33 @@ export type Database = {
           generated_at?: string
           source_revision?: number
           version?: never
+        }
+        Relationships: []
+      }
+      news_source_status: {
+        Row: {
+          articles: number
+          checked_at: string
+          error_kind: string | null
+          source: string
+          source_id: string
+          status: string
+        }
+        Insert: {
+          articles?: number
+          checked_at: string
+          error_kind?: string | null
+          source: string
+          source_id: string
+          status: string
+        }
+        Update: {
+          articles?: number
+          checked_at?: string
+          error_kind?: string | null
+          source?: string
+          source_id?: string
+          status?: string
         }
         Relationships: []
       }
