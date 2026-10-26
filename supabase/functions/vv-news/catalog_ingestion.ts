@@ -12,8 +12,8 @@ export async function collectCatalog(req: Request, signal: AbortSignal): Promise
   const url = Deno.env.get('SUPABASE_URL'), key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!url || !key) return [];
   const db = createClient(url,key);
-  const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i,'');
-  if (token !== key) {const {data:{user},error} = await db.auth.getUser(token); if (error || !user) return [];}
+  // Public requests can refresh only the registered, bounded publisher batch.
+  // The durable reservation below prevents duplicate collection within a minute.
   const {data: saved, error: readError} = await db.from('warm_state').select('value').eq('key','news_catalog_collection').maybeSingle();
   if (readError) return [{source:'Cloud publisher collection',status:'unavailable',count:0}];
   const state: State = saved?.value ?? {cursor: 0,last_attempt: 0,health: {}};

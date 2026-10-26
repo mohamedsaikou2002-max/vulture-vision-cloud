@@ -212,7 +212,7 @@ async function fetchTorFeed(health: SourceHealth[], signal: AbortSignal): Promis
   try {
     const supa = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
     );
     const { data, error } = await supa
       .from("tor_entries")
@@ -269,10 +269,9 @@ async function fetchJournalistTweets(health: SourceHealth[], signal: AbortSignal
 }
 
 async function fetchPublisherNews(req: Request, signal: AbortSignal, country?: string, page = 0, pageSize = 100) {
-  const authorization = req.headers.get("authorization") || "";
-  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authorization }, fetch: (input, init) => fetch(input, { ...init, signal }) } });
-  const { data: { user }, error: authError } = await db.auth.getUser();
-  if (authError || !user) return { items: [], status: "sign_in_required" };
+  // Public publisher metadata only; never pass a visitor's obsolete session to Cloud.
+  // Server credentials stay here and cannot expose unrelated private tables.
+  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { global: { fetch: (input, init) => fetch(input, { ...init, signal }) } });
   let query = db.from("news_articles").select("*")
     .gte("fetched_at", new Date(Date.now() - 48 * 3600_000).toISOString())
     .or("published_at.is.null,published_at.gte." + new Date(Date.now() - 72 * 3600_000).toISOString())
