@@ -1,11 +1,10 @@
-import {membershipAccess} from '../_shared/membership_access.ts';
 // vv-autosim — one input, everything else automatic.
 // The user supplies a scenario (typed or spoken). This function: interprets it with Gemini, searches the
 // indexed news network, estimates the 10-dimension economic state from live observables, runs the numerical
 // engine, picks fees/slippage/leverage automatically, tests the six strategies, and has Gemini explain the
 // numbers. Every response uses the same envelope: { ok:true, ... } or { ok:false, error:{code,message} }.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { parseAutoSimRequest, dailyLimit, boundedPaths } from "../_shared/autosim_request.ts";
+import { parseAutoSimRequest, boundedPaths } from "../_shared/autosim_request.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildWorldPulse } from "../_shared/world_pulse.ts";
 import { parseAnalysis, validateAutoSimResult } from "../_shared/autosim_contract.ts";
@@ -37,18 +36,14 @@ Deno.serve(async (req) => {
     body = parseAutoSimRequest(JSON.parse(raw || "{}"));
   } catch { return fail("invalid_json", "Request body must be valid JSON", 400); }
 
-  const url = Deno.env.get("SUPABASE_URL"), anon = Deno.env.get("SUPABASE_ANON_KEY"), service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !anon || !service) return fail("configuration_error", "Supabase environment is not configured", 503);
-  const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-  if (!token) return fail("unauthorized", "Sign in required", 401);
-  const { data: { user }, error: authErr } = await createClient(url, anon).auth.getUser(token);
-  if (authErr || !user) return fail("unauthorized", "Invalid or expired session", 401);
+  const url = Deno.env.get("SUPABASE_URL"), service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !service) return fail("configuration_error", "Supabase environment is not configured", 503);
+  // Public jobs are separate from existing private account research.
+  const user = { id: '00000000-0000-4000-8000-000000000000' };
   const sb = createClient(url, service);
   const action = typeof body.action === "string" ? body.action : "run";
 
   try {
-    const denied = await membershipAccess(sb,user.id);
-    if (denied) return denied;
     if (action === "world_state") return await worldState(sb);
     if (action === "interrogate") return await interrogate(sb, user.id, body);
     if (action === "run") return await run(sb, user.id, body);
@@ -120,7 +115,7 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
 
   let parentResult: AutoSimResult | null = null;
   if (parent) {
-    const { data: stored, error } = await sb.from('autosim_jobs').select('result,status').eq('id', parent).eq('user_id', userId).maybeSingle();
+    const { data: stored, error } = await sb.from('public_workspace_jobs').select('result,status').eq('id', parent).eq('user_id', userId).maybeSingle();
     if (error || !stored || stored.status !== 'completed') return fail('invalid_parent', 'Original simulation is unavailable', 400);
     try { parentResult = validateAutoSimResult(stored.result) as unknown as AutoSimResult; }
     catch { return fail('invalid_parent', 'Original simulation has invalid replay data', 400); }
@@ -131,16 +126,15 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
   const constraints=body.constraints as {horizon_days?:number;risk_profile?:RiskProfile}|undefined;
   if(parentResult&&constraints&&((constraints.horizon_days!==undefined&&constraints.horizon_days!==parentResult.horizon_days)||(constraints.risk_profile!==undefined&&constraints.risk_profile!==parentResult.interpretation.risk_profile)))return fail('invalid_parent','Controlled variants must preserve the original horizon and risk constraints',400);
 
-  const { data: claim, error: claimError } = await sb.rpc("vv_claim_autosim", {
+  const { data: claim, error: claimError } = await sb.rpc("vv_claim_public_autosim", {
     p_user_id: userId, p_job_id: jobId, p_scenario: scenario, p_parent_id: parent,
-    p_limit: dailyLimit(Deno.env.get("VV_DAILY_SIM_LIMIT")),
+    p_limit: 0,
   });
   if (claimError) return fail("history_unavailable", "Simulation history is unavailable; accept the prepared update first", 503);
   if (claim === "forbidden") return fail("forbidden", "Not your simulation", 403);
   if (claim === "invalid_parent") return fail("invalid_parent", "Original simulation is unavailable", 400);
-  if (claim === "quota_exceeded") return fail("quota_exceeded", "Daily simulation limit reached", 429);
   if (claim === "existing") {
-    const { data: existing } = await sb.from("autosim_jobs").select("status,result").eq("id", jobId).eq("user_id", userId).maybeSingle();
+    const { data: existing } = await sb.from("public_workspace_jobs").select("status,result").eq("id", jobId).eq("user_id", userId).maybeSingle();
     if (existing?.status === "completed") return json({ ok: true, job_id: jobId, result: existing.result, replayed: true });
     return fail("job_in_progress", "This request has already been submitted; use a new run to try again", 409);
   }
@@ -148,7 +142,7 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
   const log: { status: string; at: string; note?: string }[] = [];
   const stage = async (status: string, note?: string) => {
     log.push({ status, at: new Date().toISOString(), note });
-    const { error } = await sb.from("autosim_jobs").update({ status, stage_log: log, updated_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
+    const { error } = await sb.from("public_workspace_jobs").update({ status, stage_log: log, updated_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
     if (error) throw new Error("Could not save simulation stage");
   };
   const warnings: string[] = [];
@@ -277,12 +271,12 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
       replay_spec: { candles, dim_paths: dimPaths, strategy_paths: strategyPaths },
     };
     validateAutoSimResult(result);
-    const { error: saveError } = await sb.from("autosim_jobs").update({ status: "completed", result, stage_log: [...log, { status: "completed", at: new Date().toISOString() }], completed_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
+    const { error: saveError } = await sb.from("public_workspace_jobs").update({ status: "completed", result, stage_log: [...log, { status: "completed", at: new Date().toISOString() }], completed_at: new Date().toISOString() }).eq("id", jobId).eq("user_id", userId);
     if (saveError) throw new Error("Could not save simulation result");
     return json({ ok: true, job_id: jobId, status: "completed", result });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Simulation failed";
-    await sb.from("autosim_jobs").update({ status: "failed", error: msg.slice(0, 500), stage_log: log, updated_at: new Date().toISOString() }).eq("id", jobId);
+    await sb.from("public_workspace_jobs").update({ status: "failed", error: msg.slice(0, 500), stage_log: log, updated_at: new Date().toISOString() }).eq("id", jobId);
     throw e;
   }
 }
@@ -333,12 +327,9 @@ async function interrogate(sb: SupabaseClient, userId: string, body: Record<stri
   const agent = typeof body.agent === "string" ? body.agent : "";
   const question = typeof body.question === "string" ? body.question.trim().slice(0, 400) : "";
   if (!(AGENTS as readonly string[]).includes(agent) || question.length < 3) return fail("invalid_request", "Choose an agent group and ask a question", 400);
-  const { data: job } = await sb.from("autosim_jobs").select("user_id,status,result").eq("id", body.job_id).maybeSingle();
+  const { data: job } = await sb.from("public_workspace_jobs").select("user_id,status,result").eq("id", body.job_id).maybeSingle();
   if (!job || job.user_id !== userId) return fail("not_found", "Simulation not found", 404);
   if (job.status !== "completed") return fail("job_not_ready", "Run a simulation first", 409);
-  const { data: claimed, error: quotaError } = await sb.rpc("claim_scenario_synthesis", { p_user_id: userId });
-  if (quotaError) return fail("quota_unavailable", "Research quota is unavailable", 503);
-  if (claimed !== true) return fail("quota_exceeded", "Hourly research limit reached (6 calls)", 429);
   const r = job.result;
   const { text } = await generate({
     system: `You speak as the simulated "${agent}" group inside a numerical model. You are NOT a real person or institution. Answer only from the model data given: your modelled response weights, the dimension values, and the scenario. Mention that this is simulated. Maximum 110 words. Never invent numbers.`,

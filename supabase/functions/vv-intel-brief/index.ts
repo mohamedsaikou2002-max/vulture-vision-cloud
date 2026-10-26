@@ -16,12 +16,6 @@ Deno.serve(async req=>{
       return json({brief:data && Date.parse(data.expires_at)>Date.now()?data.value:null});
     }
     if(action!=='generate')return json({error:'Unknown action'},400);
-    const token=(req.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
-    const {data:{user},error}=await db.auth.getUser(token);
-    if(error||!user)return json({error:'Sign in required'},401);
-    const {data:claimed,error:quotaError}=await db.rpc('claim_scenario_synthesis',{p_user_id:user.id});
-    if(quotaError)return json({error:'Research quota unavailable'},503);
-    if(!claimed)return json({error:'Six research requests per hour are allowed.'},429);
     const {data: indexed}=await db.from('news_articles').select('id,title,translated_title_en,source,canonical_url,published_at').gte('fetched_at',new Date(Date.now()-48*3600000).toISOString()).gte('published_at',new Date(Date.now()-72*3600000).toISOString()).order('published_at',{ascending:false}).limit(30);
     const {data:live}=await db.from('warm_state').select('value,expires_at').eq('key','news_feed').maybeSingle();
     const rss=live && Date.parse(live.expires_at)>Date.now() && Array.isArray(live.value)?live.value:[];

@@ -1,4 +1,3 @@
-import { workspaceSession } from '@/lib/workspaceSession';
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import type { Dim, Agent, DimDistribution, StrategyAgg } from "../../supabase/functions/_shared/autosim_engine";
@@ -16,33 +15,30 @@ export interface JobRow { id: string; scenario: string; status: string; created_
 const Envelope = z.object({ ok: z.boolean(), error: z.object({ code: z.string(), message: z.string() }).optional() }).passthrough();
 
 const FRIENDLY: Record<string, string> = {
-  subscription_required: "Workspace access could not be verified. Please retry.",
-  quota_exceeded: "You've reached today's simulation limit.",
-  unauthorized: "Your session expired. Sign in again.",
+  quota_exceeded: "The upstream provider is rate-limited. Please retry shortly.",
+  unauthorized: "The public service is not deployed correctly. Please retry after the backend update.",
   gemini_not_configured: "The AI key isn't configured on the server yet.",
 };
 
 export async function callAutoSim<T = Record<string, unknown>>(payload: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
-  const session = await workspaceSession(supabase);
-  if (!session) throw new ApiError("unauthorized", FRIENDLY.unauthorized, 401);
   let res: Response;
   try {
     res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vv-autosim`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
       body: JSON.stringify(payload),
       signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(120000)]) : AbortSignal.timeout(payload.action === "world_state" ? 30000 : 120000),
     });
   } catch (e) { throw new ApiError(e instanceof Error && /timeout|abort/i.test(e.name) ? "timeout" : "network", "The response could not be confirmed. Check the pending run before starting another.", 0); }
   if (res.status === 401) throw new ApiError('unauthorized', FRIENDLY.unauthorized, 401);
-  if (res.status === 403) throw new ApiError('forbidden', 'This account does not have access to the requested workspace feature.', 403);
+  if (res.status === 403) throw new ApiError('forbidden', 'The public service configuration is unavailable.', 403);
   if (res.status === 404) throw new ApiError('not_deployed', 'The simulation service has not been deployed to this workspace yet.', 404);
   const text = await res.text();
   if (!text) throw new ApiError("empty_response", "The simulation service returned nothing. Try again.", res.status);
   let parsed: unknown;
   try { parsed = JSON.parse(text); } catch { throw new ApiError("invalid_json", "The simulation service returned an unreadable response.", res.status); }
   if(!res.ok && parsed && typeof parsed==='object' && typeof (parsed as {error?:unknown}).error==='string'){
-    const code=({402:'subscription_required',429:'quota_exceeded',502:'upstream_unavailable',503:'service_unavailable',504:'timeout'} as Record<number,string>)[res.status]||'request_failed';
+    const code=({402:'service_unavailable',429:'quota_exceeded',502:'upstream_unavailable',503:'service_unavailable',504:'timeout'} as Record<number,string>)[res.status]||'request_failed';
     throw new ApiError(code,String((parsed as {error:string}).error),res.status);
   }
   const env = Envelope.safeParse(parsed);
@@ -76,7 +72,7 @@ export async function fetchWorldState(): Promise<WorldStateResult> {
   return validated as unknown as WorldStateResult;
 }
 
-const jobs = () => supabase.from('autosim_jobs');
+const jobs = () => supabase.from('public_workspace_jobs');
 export async function listJobs(): Promise<JobRow[]> {
   const { data, error } = await jobs().select("id,scenario,status,created_at,parent_job_id,error").order("created_at", { ascending: false }).limit(30).abortSignal(AbortSignal.timeout(8000));
   if (error) throw new ApiError("history_unavailable", "Couldn't load your history.", 500);

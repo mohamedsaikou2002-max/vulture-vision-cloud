@@ -1,4 +1,4 @@
-"""Authenticated, bounded WAV gateway. Keep whisper-server bound to loopback."""
+"""Public, bounded WAV gateway. Keep the inference engine on loopback."""
 import asyncio
 import io
 import os
@@ -21,17 +21,6 @@ def validate_wav(data):
             return frames/16000
     except (wave.Error, EOFError, ValueError): raise HTTPException(422,'Expected 0.5–30 seconds of mono 16 kHz PCM WAV')
 
-async def authenticate(request):
-    token=request.headers.get('authorization','')
-    base=os.getenv('SUPABASE_URL','');key=os.getenv('SUPABASE_ANON_KEY','')
-    if not base.startswith('https://') or not key: raise HTTPException(503,'Voice authentication is not configured')
-    if not token.startswith('Bearer '):raise HTTPException(401,'Sign in to use voice input')
-    try:
-        async with httpx.AsyncClient(timeout=8) as client:
-            res=await client.get(base.rstrip('/')+'/auth/v1/user',headers={'apikey':key,'Authorization':token})
-        if res.status_code!=200 or not res.json().get('id'):raise HTTPException(401,'Voice session expired')
-    except (httpx.HTTPError, ValueError):raise HTTPException(503,'Voice authentication is unavailable')
-
 @app.get('/health')
 async def health():
     try:
@@ -39,11 +28,10 @@ async def health():
             r=await client.get(os.getenv('WHISPER_URL','http://127.0.0.1:8080')+'/health')
         ready=r.status_code==200
     except httpx.HTTPError:ready=False
-    return {'status':'ready' if ready and os.getenv('SUPABASE_ANON_KEY') and os.getenv('SUPABASE_URL') else 'unavailable','engine':'whisper.cpp'}
+    return {'status':'ready' if ready else 'unavailable','engine':'whisper.cpp'}
 
 @app.post('/api/voice/transcribe')
 async def transcribe(request:Request):
-    await authenticate(request)
     if request.headers.get('content-type','').split(';')[0]!='audio/wav':raise HTTPException(415,'Send audio/wav')
     data=bytearray()
     async for chunk in request.stream():

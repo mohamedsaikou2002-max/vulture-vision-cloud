@@ -1,5 +1,4 @@
-import {membershipAccess} from '../_shared/membership_access.ts';
-// vv-simulation-chat — user-authenticated Gemini research panel.
+// vv-simulation-chat — public Gemini research panel.
 // Unlike the separate operator-only MiroFish engine, this answers research questions
 // even when an engine is unavailable. Synthetic analyst roles are not live agents.
 import { hasConfiguredAI, generateConfigured } from "../_shared/gemini.ts";
@@ -26,21 +25,11 @@ Deno.serve(async (req: Request) => {
   catch (e) { return reply({ error: e instanceof Error ? e.message : "Invalid request" }, 400); }
 
   const url = Deno.env.get("SUPABASE_URL");
-  const anon = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !anon || !serviceKey) return reply({ error: "Chat service not configured" }, 503);
-  const bearer = (req.headers.get("Authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!bearer) return reply({ error: "Sign in required" }, 401);
-  const identity = createClient(url, anon, { auth: { persistSession: false } });
-  const { data: { user }, error: authError } = await identity.auth.getUser(bearer);
-  if (!user || authError) return reply({ error: "Invalid session" }, 401);
-
+  if (!url || !serviceKey) return reply({ error: "Chat service not configured" }, 503);
   if (!hasConfiguredAI()) return reply({ error: 'AI is not configured for simulation chat' }, 503);
 
-  // Existing service-role-only RPC atomically enforces 6 synthesis calls per user per hour.
-  // If migrations aren't deployed, fail closed rather than make unmetered provider calls.
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
-  const membership=await membershipAccess(admin,user.id);if(membership)return membership;
   // Resolve cited IDs from server-owned evidence; client titles never establish provenance.
   if(request.news.length){
     const cutoff=new Date(Date.now()-72*3600000).toISOString();
@@ -49,9 +38,6 @@ Deno.serve(async (req: Request) => {
     if(rows?.length!==request.news.length)return reply({error:'Some source evidence is unavailable or stale; refresh the research context'},400);
     request.news=rows.map(r=>({id:r.id,title:(r.translated_title_en||r.title).slice(0,240),source:r.source.slice(0,100)}));
   }
-  const { data: claimed, error: claimError } = await admin.rpc("claim_scenario_synthesis", { p_user_id: user.id });
-  if (claimError) return reply({ error: "Simulation chat quota is unavailable; deploy the quota migration" }, 503);
-  if (claimed !== true) return reply({ error: "Hourly simulation research limit reached (6 calls)" }, 429);
 
   const prompt = buildSimulationChatPrompt(request);
   const generationBody = {

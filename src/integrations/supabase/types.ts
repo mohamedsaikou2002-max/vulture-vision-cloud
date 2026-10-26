@@ -14,6 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
+      public_workspace_jobs: Database["public"]["Tables"]["autosim_jobs"]
       autosim_jobs: {
         Row: {
           completed_at: string | null

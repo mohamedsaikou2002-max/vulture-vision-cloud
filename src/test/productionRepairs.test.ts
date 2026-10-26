@@ -23,15 +23,10 @@ describe('Production repair boundaries',()=>{
   const r=classifyRegime(prices,dates);expect(r.current_state).toBe('risk_on');expect(r.transition_probs_next_session).toEqual({});expect(r.observations_count).toBe(50);
   expect(classifyRegime([100],dates).status).toBe('insufficient_observations');expect(classifyRegime(prices,prices.map(()=> '2000-01-01')).status).toBe('stale');
  });
- it.each(['vv-news','vv-market','vv-onion-search','vv-regime','vv-analytics','vv-chat','vv-intel-brief','vv-scenario-brief'])('blocks unverified identity access before provider requests: %s',async name=>{
-  const network=vi.fn(),rpc=vi.fn(async()=>({data:false,error:null}));
-  const client={auth:{getUser:async()=>({data:{user:{id:'member'}},error:null})},rpc};
-  const handler=loadEdgeHandler(name,network,{SUPABASE_URL:'https://fixture.supabase.co',SUPABASE_ANON_KEY:'fixture',SUPABASE_SERVICE_ROLE_KEY:'service'},()=>client);
-  const response=await handler(new Request('https://example.invalid',{method:'POST',headers:{authorization:'Bearer unpaid'},body:'{}'}));expect(response.status).toBe(403);expect(network).not.toHaveBeenCalled();
- });
- it('fails closed when the identity database cannot be verified',async()=>{
-  const network=vi.fn();const handler=loadEdgeHandler('vv-news',network,{SUPABASE_URL:'https://fixture.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'service'},()=>({auth:{getUser:async()=>({data:{user:{id:'member'}},error:null})},rpc:async()=>({data:null,error:{message:'schema missing'}})}));
-  expect((await handler(new Request('https://example.invalid',{headers:{authorization:'Bearer member'}}))).status).toBe(503);expect(network).not.toHaveBeenCalled();
+ it.each(['vv-trades','vv-killswitch','vv-mirofish','vv-tor-ingest','vv-synthesis'])('retains operator controls for %s',async name=>{
+  const network=vi.fn();const handler=loadEdgeHandler(name,network,{SUPABASE_SERVICE_ROLE_KEY:'service'},()=>({}));
+  const response=await handler(new Request('https://example.invalid',{method:'POST',body:'{}'}));
+  expect(response.status).toBe(401);expect(network).not.toHaveBeenCalled();
  });
  it('bounds authenticated discovery search before calling its provider',async()=>{
   const network=vi.fn();const client={auth:{getUser:async()=>({data:{user:{id:'member'}},error:null})},rpc:async()=>({data:true,error:null})};

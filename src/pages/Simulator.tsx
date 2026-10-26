@@ -161,7 +161,7 @@ export default function Simulator() {
   return (
     <VVLayout status={{ label: busy ? "SIMULATING" : "RESEARCH", tone: busy ? "cyan" : "gold" }}>
       <div className="scroll-inner autosim-workspace">
-      <div className="autosim-header"><div><span className="room-eyebrow">VULTURE VISION / RESEARCH</span><h1>Simulation Room</h1></div><Link to="/simulations/simple">Quick simulator ↗</Link><Link to="/research">RESEARCH CHAT ↗</Link></div>
+      <div className="autosim-header"><div><span className="room-eyebrow">VULTURE VISION / RESEARCH</span><h1>Simulation Room</h1><p className="sim-note">Public workspace: scenarios and results are shared. Do not enter confidential information.</p></div><Link to="/simulations/simple">Quick simulator ↗</Link><Link to="/research">RESEARCH CHAT ↗</Link></div>
       <p className="sim-note">NASDAQ COMPOSITE · ECONOMIC ACTOR SWARM · DATED WORLD STATE</p>
       <div className="sim-root">
         <aside className="sim-left">

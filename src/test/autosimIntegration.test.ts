@@ -4,7 +4,7 @@ import { loadEdgeHandler } from './helpers/edgeHarness';
 import type { AutoSimResult } from '../../supabase/functions/_shared/autosim_types';
 beforeAll(()=>vi.stubGlobal('AbortSignal',transferableAbortController().signal.constructor));
 afterAll(()=>vi.unstubAllGlobals());
-const user='00000000-0000-4000-8000-000000000001';
+const user='00000000-0000-4000-8000-000000000000';
 const job1='00000000-0000-4000-8000-000000000002',job2='00000000-0000-4000-8000-000000000003';
 function fixture(malformed=false){
   const jobs=new Map<string,Record<string,unknown>>();
@@ -17,14 +17,14 @@ function fixture(malformed=false){
     update(v:Record<string,unknown>){this.values=v;return this;}
     maybeSingle(){this.single=true;return this;}
     then(done:(value:{data:unknown;error:null})=>unknown){
-      let rows:Record<string,unknown>[]=this.table==='autosim_jobs'?[...jobs.values()]:this.table==='news_articles'?articles:[];
+      let rows:Record<string,unknown>[]=this.table==='public_workspace_jobs'?[...jobs.values()]:this.table==='news_articles'?articles:[];
       rows=rows.filter(row=>this.filters.every(([k,v])=>row[k]===v));
       if(this.values)for(const row of rows)Object.assign(row,this.values);
       return Promise.resolve({data:this.single?(rows[0]||null):rows,error:null}).then(done);
     }
   }
   const sb={auth:{getUser:async()=>({data:{user:{id:user}},error:null})},from:(table:string)=>new Query(table),rpc:async(name:string,args:Record<string,unknown>)=>{
-    if(name==='vv_claim_autosim'){
+    if(name==='vv_claim_public_autosim'){
       const id=String(args.p_job_id);if(jobs.has(id))return {data:'existing',error:null};
       jobs.set(id,{id,user_id:user,status:'queued',scenario:args.p_scenario});return {data:'claimed',error:null};
     }
@@ -47,7 +47,7 @@ function fixture(malformed=false){
   });
   const handler=loadEdgeHandler('vv-autosim',fetcher,env,()=>sb);
   const call=async(payload:Record<string,unknown>)=>{
-    const response=await handler(new Request('https://fixture.invalid',{method:'POST',headers:{authorization:'Bearer fixture'},body:JSON.stringify(payload)}));
+    const response=await handler(new Request('https://fixture.invalid',{method:'POST',body:JSON.stringify(payload)}));
     const data=await response.json();return {status:response.status,data};
   };
   return {call,fetcher,jobs,env,changePrice:()=>{priceOffset=500;}};

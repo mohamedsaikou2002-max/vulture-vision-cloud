@@ -1,3 +1,27 @@
 project_id = "wfxjufhqdgzajidciwxb"
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.vv-news]
+verify_jwt = false
+
+[functions.vv-analytics]
+verify_jwt = false
+
+[functions.vv-market]
+verify_jwt = false
+
+[functions.vv-regime]
+verify_jwt = false
+
+[functions.vv-chat]
+verify_jwt = false
+
+[functions.vv-intel-brief]
+verify_jwt = false
+
+[functions.vv-autosim]
+verify_jwt = false
+
+[functions.vv-simulation-chat]
+verify_jwt = false

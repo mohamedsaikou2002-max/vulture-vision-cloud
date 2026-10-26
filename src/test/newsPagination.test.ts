@@ -10,13 +10,7 @@ describe('Publisher archive paging',()=>{
   const query={select:()=>query,gte:()=>query,or:()=>query,order:()=>query,abortSignal:()=>query,eq:()=>query,range:(a:number,b:number)=>{bounds.push([a,b]);return query;},then:(done:(r:unknown)=>unknown)=>Promise.resolve({data:rows,error:null}).then(done)};
   const client={auth:{getUser:async()=>({data:{user:{id:'member'}},error:null})},from:()=>query,rpc:async()=>({data:true,error:null})};
   const network=vi.fn();const handler=loadEdgeHandler('vv-news',network,{SUPABASE_URL:'https://example.supabase.co',SUPABASE_ANON_KEY:'fixture'},()=>client);
-  const r=await handler(new Request('https://fixture.invalid',{method:'POST',headers:{authorization:'Bearer member-fixture'},body:JSON.stringify({country:'GB',page:2,publisher_only:true})}));
+  const r=await handler(new Request('https://fixture.invalid',{method:'POST',body:JSON.stringify({country:'GB',page:2,publisher_only:true})}));
   expect(r.status).toBe(200);const data=await r.json();expect(data.publisher_news).toHaveLength(100);expect(data.has_more).toBe(true);expect(bounds).toEqual([[200,300]]);expect(network).not.toHaveBeenCalled();
- });
- it('does not return publisher records to an expired session',async()=>{
-  const client={auth:{getUser:async()=>({data:{user:null},error:{message:'expired'}})},from:vi.fn()};
-  const handler=loadEdgeHandler('vv-news',vi.fn(),{SUPABASE_URL:'https://example.supabase.co',SUPABASE_ANON_KEY:'fixture'},()=>client);
-  const response=await handler(new Request('https://fixture.invalid',{method:'POST',headers:{authorization:'Bearer expired'},body:JSON.stringify({publisher_only:true})}));
-  expect(response.status).toBe(401);expect(client.from).not.toHaveBeenCalled();
  });
 });

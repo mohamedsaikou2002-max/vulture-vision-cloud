@@ -83,5 +83,21 @@ try {
  assert.equal(translated.title,'New development');assert.equal(translated.translated_title_en,'English development');assert.equal(translated.translation_status,'translated');
  await db.exec("UPDATE news_articles SET title='Changed headline' WHERE id='a'");
  assert.equal((await scalar("SELECT translated_title_en FROM news_articles WHERE id='a'")).translated_title_en,null);
- console.log('Migration checks passed: historical record integrity, free access independent of paid flags, private research ownership, context, job claims and quotas.');
+ // No Auth account is needed for new public research; old private records stay private.
+ await db.exec('RESET ROLE');
+ const publicActor='00000000-0000-4000-8000-000000000000';
+ const publicClaim=async(id)=>(await db.query('SELECT vv_claim_public_autosim($1,$2,$3,NULL,1) AS result',[publicActor,id,'Public Nasdaq scenario'])).rows[0].result;
+ const publicJob='10000000-0000-4000-8000-000000000001';
+ assert.equal(await publicClaim(publicJob),'claimed');
+ assert.equal(await publicClaim(publicJob),'existing');
+ for(let i=2;i<=42;i++)assert.equal(await publicClaim(`10000000-0000-4000-8000-${String(i).padStart(12,'0')}`),'claimed');
+ await db.exec('SET ROLE anon');
+ assert.equal((await scalar('SELECT count(*)::integer AS n FROM public_workspace_jobs')).n,42);
+ assert.equal((await scalar('SELECT count(*)::integer AS n FROM news_articles')).n,1);
+ await assert.rejects(db.query('SELECT * FROM autosim_jobs'));
+ await assert.rejects(db.query('SELECT * FROM billing_customers'));
+ await assert.rejects(db.query("UPDATE public_workspace_jobs SET scenario='Forged scenario'"));
+ await assert.rejects(db.query('SELECT vv_claim_public_autosim($1,$2,$3,NULL,1)',[publicActor,publicJob,'Browser direct write']));
+ await db.exec('RESET ROLE');
+ console.log('Migration checks passed: public news/history without Auth, no public daily quota, atomic replay, protected private research and server-only writes.');
 } finally {await db.close();}

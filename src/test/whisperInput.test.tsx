@@ -20,7 +20,7 @@ beforeEach(()=>{
  vi.stubGlobal('fetch',vi.fn(async()=>Response.json({text:'Nasdaq liquidity shock',confidence:null})));
 });
 afterEach(()=>vi.unstubAllGlobals());
-it('records only after activation and stops the microphone before authenticated transcription',async()=>{
+it('records only after activation and stops the microphone before public transcription',async()=>{
  const onFinal=vi.fn();const {result,unmount}=renderHook(()=>useWhisperInput({onFinal}));
  expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
  await act(async()=>result.current.start());
@@ -28,7 +28,7 @@ it('records only after activation and stops the microphone before authenticated 
  act(()=>process?.({inputBuffer:{getChannelData:()=>new Float32Array(48000).fill(.2)}}));
  await act(async()=>result.current.stop());
  await waitFor(()=>expect(onFinal).toHaveBeenCalledWith('Nasdaq liquidity shock',0));
- expect(stop).toHaveBeenCalled();expect(fetch).toHaveBeenCalledWith('https://voice.example.com/api/voice/transcribe',expect.objectContaining({headers:expect.objectContaining({Authorization:'Bearer fixture'})}));
+ expect(stop).toHaveBeenCalled();expect(fetch).toHaveBeenCalledWith('https://voice.example.com/api/voice/transcribe',expect.objectContaining({headers:{'Content-Type':'audio/wav'}}));
  unmount();
 });
 it('releases recording resources on navigation without submitting audio',async()=>{
