@@ -11,6 +11,7 @@ type PublicJobs = Omit<PrivateJobs, 'Relationships'> & {
     referencedRelation: 'public_workspace_jobs';
     referencedColumns: ['id'];
   }];
+};
 export type PublicWorkspaceDatabase = Omit<Database, 'public'> & {
   public: Omit<Database['public'], 'Tables'> & {
     Tables: Database['public']['Tables'] & { public_workspace_jobs: PublicJobs };
