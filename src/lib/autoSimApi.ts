@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import { createClient } from '@supabase/supabase-js';
+import type { PublicWorkspaceDatabase } from './publicWorkspaceSchema';
 import { withRequestDeadline } from './requestDeadline';
 import type { Dim, Agent, DimDistribution, StrategyAgg } from "../../supabase/functions/_shared/autosim_engine";
 
@@ -80,7 +81,12 @@ export async function fetchWorldState(): Promise<WorldStateResult> {
   return validated as unknown as WorldStateResult;
 }
 
-const jobs = () => supabase.from('public_workspace_jobs');
+const publicHistory = createClient<PublicWorkspaceDatabase>(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } },
+);
+const jobs = () => publicHistory.from('public_workspace_jobs');
 export async function listJobs(): Promise<JobRow[]> {
   const { data, error } = await jobs().select("id,scenario,status,created_at,parent_job_id,error").order("created_at", { ascending: false }).limit(30).abortSignal(AbortSignal.timeout(8000));
   if (error) throw new ApiError("history_unavailable", "Couldn't load your history.", 500);
