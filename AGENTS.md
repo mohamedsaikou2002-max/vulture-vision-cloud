@@ -18,3 +18,5 @@
 - Render workspace routes without Auth; new scenarios/results are shared in public_workspace_jobs. Retain separate operator checks.
 
 - Owner explicitly removed billing and all entry gates. No guest sign-up/session is required. Never restore checkout, payment quotas or login flows.
+
+- Bound public requests through network and response consumption with the shared request-deadline helper; do not restore session acquisition to public clients.

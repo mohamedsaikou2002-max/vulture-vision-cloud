@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 import { indexedBrief } from './workspaceData';
 import { functionError } from './functionError';
+import { withRequestDeadline } from './requestDeadline';
 // Customer traffic always uses the authenticated Supabase service boundary.
 const BASE_URL: string | undefined = undefined;
 const WS_URL = BASE_URL?.replace(/^http/, 'ws');
@@ -88,8 +89,10 @@ export interface IntelBrief {
 
 export async function fetchLatestBrief(): Promise<IntelBrief | null> {
   if (!BASE_URL) {
-    const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'latest'},signal:AbortSignal.timeout(12000)});
-    return !error && data?.brief ? data.brief : indexedBrief().catch(()=>null);
+    return withRequestDeadline(async signal=>{
+     const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'latest'},signal});
+     return !error && data?.brief ? data.brief : indexedBrief().catch(()=>null);
+    },12000);
   }
   try {
     const res = await fetch(`${BASE_URL}/brief/latest`, { signal: AbortSignal.timeout(8000) });
@@ -100,10 +103,12 @@ export async function fetchLatestBrief(): Promise<IntelBrief | null> {
 
 export async function fetchRegime(): Promise<RegimeState | null> {
   if (!BASE_URL) {
-    const {data,error}=await supabase.functions.invoke("vv-regime",{body:{},signal:AbortSignal.timeout(15000)});
+   return withRequestDeadline(async signal=>{
+    const {data,error}=await supabase.functions.invoke("vv-regime",{body:{},signal});
     if(error)throw new Error(await functionError(error,"Market regime provider unavailable"));
     if(data?.status!=="available"||!["risk_on","risk_off","neutral","volatile","trending"].includes(data?.current_state))throw new Error(data?.regime_summary||"Insufficient regime observations");
     return data as RegimeState;
+   },15000);
   }
   try {
     const res = await fetch(`${BASE_URL}/regime`, { signal: AbortSignal.timeout(6000) });
@@ -123,10 +128,12 @@ export async function fetchHealth(): Promise<{ status: string; queue_depth: numb
 
 export async function triggerSynthesis(): Promise<{ message: string } | null> {
   if (!BASE_URL) {
-    const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'generate'},signal:AbortSignal.timeout(50000)});
+   return withRequestDeadline(async signal=>{
+    const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'generate'},signal});
     if(error)throw new Error(await functionError(error,'Synthesis unavailable'));
     if(data?.error)throw new Error(data.error);
     return data;
+   },50000);
   }
   try {
     const res = await fetch(`${BASE_URL}/synthesize/now`, { method: "POST", signal: AbortSignal.timeout(90000) });
@@ -142,8 +149,8 @@ export function subscribeToIntelBriefs(
   onRegime?: (regime: RegimeState) => void,
 ): () => void {
   if (!WS_URL) {
-    let active=true;
-    const refresh=()=>{void fetchLatestBrief().then(b=>{if(active&&b)onBrief(b);}).catch(()=>{});};
+    let active=true;let pending=false;
+    const refresh=()=>{if(!active||pending)return;pending=true;void fetchLatestBrief().then(b=>{if(active&&b)onBrief(b);}).catch(()=>{}).finally(()=>{pending=false;});};
     const channel=supabase.channel('intel-indexed-news').on('postgres_changes',{event:'INSERT',schema:'public',table:'news_articles'},refresh).subscribe();
     const timer=setInterval(refresh,60000);
     return ()=>{active=false;clearInterval(timer);void supabase.removeChannel(channel);};
