@@ -199,6 +199,33 @@ export type Database = {
         }
         Relationships: []
       }
+      news_source_status: {
+        Row: {
+          articles: number
+          checked_at: string
+          error_kind: string | null
+          source: string
+          source_id: string
+          status: string
+        }
+        Insert: {
+          articles?: number
+          checked_at: string
+          error_kind?: string | null
+          source: string
+          source_id: string
+          status: string
+        }
+        Update: {
+          articles?: number
+          checked_at?: string
+          error_kind?: string | null
+          source?: string
+          source_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       quantum_billing_config: {
         Row: {
           currency: string
