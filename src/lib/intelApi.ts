@@ -54,6 +54,8 @@ export interface AlphaAlert {
 }
 
 export interface IntelBrief {
+  report_kind?: "source_digest" | "ai_synthesis";
+  notice?: string;
   brief_id: string;
   generated_at: string;
   cycle_type: "scheduled" | "urgent_journalist";
@@ -89,10 +91,15 @@ export interface IntelBrief {
 
 export async function fetchLatestBrief(): Promise<IntelBrief | null> {
   if (!BASE_URL) {
-    return withRequestDeadline(async signal=>{
-     const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'latest'},signal});
-     return !error && data?.brief ? data.brief : indexedBrief().catch(()=>null);
-    },12000);
+    try {
+      const result=await withRequestDeadline(async signal=>{
+        const {data,error}=await supabase.functions.invoke('vv-intel-brief',{body:{action:'latest'},signal});
+        if(error || !data?.brief) return null;
+        return data.brief as IntelBrief;
+      },8000);
+      if(result)return result;
+    } catch { /* A timed-out cache request must not prevent reading sourced news. */ }
+    return indexedBrief().catch(()=>null);
   }
   try {
     const res = await fetch(`${BASE_URL}/brief/latest`, { signal: AbortSignal.timeout(8000) });

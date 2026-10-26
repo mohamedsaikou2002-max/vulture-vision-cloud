@@ -21,7 +21,7 @@ const cors = { ...corsHeaders, "Access-Control-Allow-Methods": "POST, OPTIONS" }
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
 const fail = (code: string, message: string, status: number) => json({ ok: false, error: { code, message } }, status);
 // Fast structured generation for simulation stages; operators may override each provider.
-const simulationAI=()=>({model:Deno.env.get('GEMINI_AUTOSIM_MODEL')||Deno.env.get('GEMINI_MODEL')||'gemini-3.5-flash-lite',gatewayModel:Deno.env.get('LOVABLE_AUTOSIM_MODEL')||Deno.env.get('LOVABLE_AI_MODEL')||'google/gemini-2.5-flash-lite'});
+const simulationAI=()=>({model:Deno.env.get('GEMINI_AUTOSIM_MODEL')||Deno.env.get('GEMINI_MODEL')||'gemini-2.5-flash-lite',gatewayModel:Deno.env.get('LOVABLE_AUTOSIM_MODEL')||Deno.env.get('LOVABLE_AI_MODEL')||'google/gemini-2.5-flash-lite'});
 const DISCLAIMER = "Scenario-conditional simulation using uncalibrated coefficients. Not a forecast, not investment advice. Trading, especially with leverage, can lose more than you intend to risk.";
 
 const DIM_HELP = "fear↑=more fear; trust↑=more trust; liquidity↑=easier funding; volatility↑=larger swings; credit↑=easier credit; consumer_activity↑=stronger demand; inflation↑=more price pressure; employment↑=stronger labor market; growth↑=stronger output; default_risk↑=more borrower stress";
@@ -126,11 +126,19 @@ async function run(sb: SupabaseClient, userId: string, body: Record<string, unkn
   const constraints=body.constraints as {horizon_days?:number;risk_profile?:RiskProfile}|undefined;
   if(parentResult&&constraints&&((constraints.horizon_days!==undefined&&constraints.horizon_days!==parentResult.horizon_days)||(constraints.risk_profile!==undefined&&constraints.risk_profile!==parentResult.interpretation.risk_profile)))return fail('invalid_parent','Controlled variants must preserve the original horizon and risk constraints',400);
 
-  const { data: claim, error: claimError } = await sb.rpc("vv_claim_public_autosim", {
+  let { data: claim, error: claimError } = await sb.rpc("vv_claim_public_autosim", {
     p_user_id: userId, p_job_id: jobId, p_scenario: scenario, p_parent_id: parent,
     p_limit: 0,
   });
-  if (claimError) return fail("history_unavailable", "Simulation history is unavailable; accept the prepared update first", 503);
+  if (claimError && ['PGRST202','42883'].includes(claimError.code)) {
+    const inserted=await sb.from('public_workspace_jobs').insert({id:jobId,user_id:userId,scenario,parent_job_id:parent}).select('id').single();
+    if(!inserted.error){claim='claimed';claimError=null;}
+    else if(inserted.error.code==='23505'){claim='existing';claimError=null;}
+    else claimError=inserted.error;
+  }
+  if (claimError) return fail('history_unavailable', ['PGRST205','42P01','PGRST202','42883'].includes(claimError.code)
+    ? 'Simulation storage is not installed in this project. Deploy the public workspace database repair, then retry.'
+    : 'Simulation storage could not be reached. Please retry; no run was started.', 503);
   if (claim === "forbidden") return fail("forbidden", "Not your simulation", 403);
   if (claim === "invalid_parent") return fail("invalid_parent", "Original simulation is unavailable", 400);
   if (claim === "existing") {

@@ -1,3 +1,4 @@
+import {getEnglishHeadline} from '../../supabase/functions/_shared/english_headline';
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { functionError } from "@/lib/functionError";
@@ -30,22 +31,6 @@ interface NewsData { irl: Item[]; dark: Item[]; tech: Item[]; }
 // The feed is English-only. Prefer a verified translation; accept an untranslated title
 // only when the source explicitly identifies it as English. For legacy RSS items without
 // language metadata, conservatively suppress common non-Latin scripts rather than leaking CJK.
-function getEnglishHeadline(item: Item): string | null {
-  const translated = item.translated_title_en?.trim();
-  if (translated) return translated;
-  const language = (item.language || "").trim().toLowerCase().replace("_", "-");
-  if (item.translation_status === "original_english" || language === "en" || language.startsWith("en-")) {
-    return item.title?.trim() || null;
-  }
-  if (!language) {
-    const title = item.title || "";
-    // RSS providers often omit language metadata. Permit Latin-script headlines,
-    // but fail closed for common non-Latin scripts until an English translation exists.
-    if (/[\u0400-\u052F\u0590-\u08FF\u0900-\u0DFF\u0E00-\u0E7F\u0E80-\u0EFF\u1000-\u109F\u1780-\u17FF\u2E80-\u2EFF\u3000-\u30FF\u3100-\u312F\u3130-\u318F\u31A0-\u31BF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF]/u.test(title)) return null;
-    return title.trim() || null;
-  }
-  return null;
-}
 
 function timeAgo(iso?: string) {
   if (!iso) return "";
@@ -112,7 +97,7 @@ export default function News() {
       if (!result) { setSynthesisNotice("The intelligence service is unavailable. Synthesis was not confirmed."); return; }
       const updated = await fetchLatestBrief();
       if (updated) setBrief(updated);
-      setSynthesisNotice("Synthesis requested. Only verified brief updates are displayed.");
+      setSynthesisNotice(result.message || "Only verified brief updates are displayed.");
     } catch(e) { setSynthesisNotice(e instanceof Error ? e.message : "Synthesis unavailable"); } finally { setSynthBusy(false); }
   }
 
@@ -154,6 +139,7 @@ function Column({ title, tone, items, badge, badgeText, unavailable }: {
   title: string; tone: "red" | "gold" | "cyan"; items: Item[]; badge: string; badgeText: string; unavailable: boolean;
 }) {
   const [visible,setVisible]=useState(20);
+  const englishItems=items.filter(it=>getEnglishHeadline(it));
   return (
     <div className="news-col">
       <div className="col-header">
@@ -161,8 +147,9 @@ function Column({ title, tone, items, badge, badgeText, unavailable }: {
         {title}
       </div>
       <div className="col-body">
-        {items.length === 0 && <div className="news-item"><div className="news-title dim-text">{unavailable ? "Source connection unavailable. Headlines could not be refreshed." : "No feed items available."}</div></div>}
-        {items.slice(0, visible).map((it, i) => {
+        {items.some(it=>!getEnglishHeadline(it))&&<p className="news-item dim-text" role="status">Some headlines are awaiting English translation. Available English reports are shown.</p>}
+        {englishItems.length === 0 && <div className="news-item"><div className="news-title dim-text">{unavailable ? "Source connection unavailable. Headlines could not be refreshed." : "No feed items available."}</div></div>}
+        {englishItems.slice(0, visible).map((it, i) => {
           let sourceHref = it.source_url;
           if (!sourceHref && it.link) {
             try { sourceHref = new URL(it.link).origin; } catch { sourceHref = undefined; }
@@ -178,7 +165,7 @@ function Column({ title, tone, items, badge, badgeText, unavailable }: {
                     </a>
                   ) : decodeEntities(getEnglishHeadline(it)!)
                 ) : (
-                  <span className="dim-text" role="status">English translation pending — original headline hidden.</span>
+                  <span className="dim-text" role="status">Translation unavailable.</span>
                 )}
               </div>
               <div className="news-meta" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -203,7 +190,7 @@ function Column({ title, tone, items, badge, badgeText, unavailable }: {
             </div>
           );
         })}
-        {visible<items.length && <Button className="synthesize-btn" onClick={()=>setVisible(n=>n+20)}>Show more headlines ({items.length-visible} remaining)</Button>}
+        {visible<englishItems.length && <Button className="synthesize-btn" onClick={()=>setVisible(n=>n+20)}>Show more headlines ({englishItems.length-visible} remaining)</Button>}
       </div>
     </div>
   );
@@ -217,7 +204,7 @@ function IntelSynthesisColumn({ brief, synthBusy, onSynthesize }: {
       <div className="col-header" style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <div className="status-dot gold" />
         <span>// VULTURE VISION INTEL</span>
-        <span className="badge badge-gold" style={{ marginLeft: 4 }}>SYNTHESIZED</span>
+        <span className="badge badge-gold" style={{ marginLeft: 4 }}>{brief?.report_kind==='source_digest'?'SOURCED DIGEST':'SYNTHESIZED'}</span>
         <Button
           className="synthesize-btn"
           style={{ marginLeft: "auto" }}

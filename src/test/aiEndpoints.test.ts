@@ -14,7 +14,7 @@ for(const name of ['vv-chat','vv-simulation-chat'])describe(name+' real AI route
   const handler=loadEdgeHandler(name,fetcher,{...base,GEMINI_API_KEY:'fixture-native',GEMINI_MODEL:'gemini-fixture-unavailable'},client);
   const response=await handler(request(name));const body=await response.json();
   expect(response.status).toBe(200);expect(body.reply||body.answer).toBe(panel.answer);expect(fetcher).toHaveBeenCalledTimes(2);
-  expect(String(fetcher.mock.calls[0][0])).toContain('/gemini-fixture-unavailable:generateContent');expect(String(fetcher.mock.calls[1][0])).toContain('/gemini-3.8-flash:generateContent');
+  expect(String(fetcher.mock.calls[0][0])).toContain('/gemini-fixture-unavailable:generateContent');expect(String(fetcher.mock.calls[1][0])).toContain('/gemini-2.5-flash-lite:generateContent');
  });
  it('uses the configured Lovable gateway when no native credential is supplied',async()=>{
   const text=name==='vv-chat'?panel.answer:JSON.stringify(panel);

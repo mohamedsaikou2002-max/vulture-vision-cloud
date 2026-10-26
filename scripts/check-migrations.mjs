@@ -99,5 +99,9 @@ try {
  await assert.rejects(db.query("UPDATE public_workspace_jobs SET scenario='Forged scenario'"));
  await assert.rejects(db.query('SELECT vv_claim_public_autosim($1,$2,$3,NULL,1)',[publicActor,publicJob,'Browser direct write']));
  await db.exec('RESET ROLE');
+ await db.query("UPDATE news_articles SET translated_title_en='Preserved English headline',translation_status='translated' WHERE id='a'");
+ const repairSql=await readFile('supabase/migrations/20261026020000_repair_history_translation.sql','utf8');
+ await db.exec(repairSql);await db.exec(repairSql);
+ assert.equal((await scalar("SELECT translated_title_en FROM news_articles WHERE id='a'")).translated_title_en,'Preserved English headline');
  console.log('Migration checks passed: public news/history without Auth, no public daily quota, atomic replay, protected private research and server-only writes.');
 } finally {await db.close();}

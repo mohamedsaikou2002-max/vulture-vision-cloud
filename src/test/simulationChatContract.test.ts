@@ -29,13 +29,13 @@ const output = {
 };
 describe("Podroom-inspired Vulture simulation chat contract", () => {
   it("defaults to approved current candidates", () => {
-    expect(availableGeminiModels()).toEqual(["gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+    expect(availableGeminiModels()).toEqual(["gemini-2.5-flash-lite", "gemini-2.5-flash"]);
   });
   it("keeps a configured legacy model before bounded fallbacks", () => {
-    expect(availableGeminiModels(" gemini-2.5-flash ")).toEqual(["gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+    expect(availableGeminiModels(" gemini-2.5-flash ")).toEqual(["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
   });
   it("deduplicates configured current models", () => {
-    expect(availableGeminiModels("gemini-3.8-flash")).toEqual(["gemini-3.8-flash", "gemini-3.5-flash-lite"]);
+    expect(availableGeminiModels("gemini-2.5-flash-lite")).toEqual(["gemini-2.5-flash-lite", "gemini-2.5-flash"]);
   });
   it("rejects invalid model configuration", () => {
     expect(() => availableGeminiModels("../not-a-model")).toThrow("Invalid Gemini model");

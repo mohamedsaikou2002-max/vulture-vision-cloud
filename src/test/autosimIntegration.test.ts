@@ -6,25 +6,29 @@ beforeAll(()=>vi.stubGlobal('AbortSignal',transferableAbortController().signal.c
 afterAll(()=>vi.unstubAllGlobals());
 const user='00000000-0000-4000-8000-000000000000';
 const job1='00000000-0000-4000-8000-000000000002',job2='00000000-0000-4000-8000-000000000003';
-function fixture(malformed=false){
+function fixture(malformed=false,missingClaim=false){
   const jobs=new Map<string,Record<string,unknown>>();
   const articles=[{id:'a'.repeat(64),title:'Related funding news',source:'Publisher',source_id:'p',source_country:'GB',canonical_url:'https://example.com/new',published_at:new Date().toISOString(),fetched_at:new Date().toISOString()}, {id:'b'.repeat(64),title:'Old funding news',source:'Old publisher',source_id:'old',source_country:'US',canonical_url:'https://example.com/old',published_at:'2000-01-01T00:00:00Z',fetched_at:new Date().toISOString()}];
   class Query {
-    filters:[string,unknown][]=[];values:Record<string,unknown>|null=null;single=false;
+    filters:[string,unknown][]=[];values:Record<string,unknown>|null=null;isSingle=false;inserting=false;
     constructor(public table:string){}
     select(){return this;}order(){return this;}limit(){return this;}gte(){return this;}or(){return this;}abortSignal(){return this;}in(){return this;}
     eq(k:string,v:unknown){this.filters.push([k,v]);return this;}
+    insert(v:Record<string,unknown>){this.values=v;this.inserting=true;return this;}
+    single(){this.isSingle=true;return this;}
     update(v:Record<string,unknown>){this.values=v;return this;}
-    maybeSingle(){this.single=true;return this;}
-    then(done:(value:{data:unknown;error:null})=>unknown){
+    maybeSingle(){this.isSingle=true;return this;}
+    then(done:(value:{data:unknown;error:null|{code:string}})=>unknown){
+      if(this.inserting){const id=String(this.values!.id);if(jobs.has(id))return Promise.resolve({data:null,error:{code:'23505'}}).then(done);jobs.set(id,{...this.values,status:'queued'});}
       let rows:Record<string,unknown>[]=this.table==='public_workspace_jobs'?[...jobs.values()]:this.table==='news_articles'?articles:[];
       rows=rows.filter(row=>this.filters.every(([k,v])=>row[k]===v));
       if(this.values)for(const row of rows)Object.assign(row,this.values);
-      return Promise.resolve({data:this.single?(rows[0]||null):rows,error:null}).then(done);
+      return Promise.resolve({data:this.isSingle?(rows[0]||null):rows,error:null}).then(done);
     }
   }
   const sb={auth:{getUser:async()=>({data:{user:{id:user}},error:null})},from:(table:string)=>new Query(table),rpc:async(name:string,args:Record<string,unknown>)=>{
     if(name==='vv_claim_public_autosim'){
+      if(missingClaim)return {data:null,error:{code:'PGRST202'}};
       const id=String(args.p_job_id);if(jobs.has(id))return {data:'existing',error:null};
       jobs.set(id,{id,user_id:user,status:'queued',scenario:args.p_scenario});return {data:'claimed',error:null};
     }
@@ -53,6 +57,14 @@ function fixture(malformed=false){
   return {call,fetcher,jobs,env,changePrice:()=>{priceOffset=500;}};
 }
 describe('AutoSim real handler and shared engine',()=>{
+  it('falls back to an atomic insert when the claim RPC is absent without replaying provider work',async()=>{
+    const f=fixture(false,true);
+    expect((await f.call({action:'run',job_id:job1,scenario:'A public funding shock scenario'})).status).toBe(200);
+    f.fetcher.mockClear();
+    const replay=await f.call({action:'run',job_id:job1,scenario:'A public funding shock scenario'});
+    expect(replay.status).toBe(200);expect(replay.data.replayed).toBe(true);expect(f.fetcher).not.toHaveBeenCalled();
+  });
+
   it('freezes parent inputs and seed across controlled zero-shock variants',async()=>{
     const f=fixture();const initial=await f.call({action:'run',job_id:job1,scenario:'A funding liquidity crunch'});
     expect(initial.status).toBe(200);

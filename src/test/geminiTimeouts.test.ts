@@ -6,8 +6,8 @@ afterEach(()=>vi.unstubAllGlobals());
 it('uses the current default without legacy thinking settings',async()=>{
  const send=vi.fn(async(_input:unknown,_init?:RequestInit)=>Response.json({candidates:[{content:{parts:[{text:'{"summary":"Fixture"}'}]}}]}));
  await generateGemini('fixture',undefined,{contents:[],generationConfig:{responseMimeType:'application/json'}},send);
- expect(String(send.mock.calls[0][0])).toContain('/gemini-3.8-flash:generateContent');
- expect(JSON.parse(String(send.mock.calls[0][1].body)).generationConfig.thinkingConfig).toBeUndefined();
+ expect(String(send.mock.calls[0][0])).toContain('/gemini-2.5-flash-lite:generateContent');
+ expect(JSON.parse(String(send.mock.calls[0][1].body)).generationConfig.thinkingConfig).toEqual({thinkingBudget:0});
 });
 it('honors the simulation-specific fast gateway model',async()=>{
  const send=vi.fn(async(_input:unknown,_init?:RequestInit)=>Response.json({choices:[{message:{content:'{"summary":"Fixture"}'}}]}));vi.stubGlobal('fetch',send);

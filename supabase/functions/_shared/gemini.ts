@@ -55,7 +55,7 @@ export async function generateGemini(key: string, configuredModel: string | unde
       const requestBody = body && typeof body === 'object' ? {...body as Record<string,unknown>} : body;
       if(/^gemini-2\.5-flash(?:-lite)?$/.test(model) && requestBody && typeof requestBody === 'object'){
         const config=(requestBody as Record<string,unknown>).generationConfig;
-        if(config && typeof config==='object' && 'responseMimeType' in config && config.responseMimeType==='application/json')
+        if(config && typeof config==='object')
           (requestBody as Record<string,unknown>).generationConfig={...config,thinkingConfig:{thinkingBudget:0}};
       }
       response = await send(model, JSON.stringify(requestBody), remaining);
@@ -104,7 +104,7 @@ export async function generateConfigured(body: GenerationBody, timeoutMs = 18000
   if (hasGeminiKeys()) return generateGemini('configured-slots', configuredModel || Deno.env.get('GEMINI_MODEL'), body, fetch, timeoutMs, geminiFetch);
   const gateway = Deno.env.get('LOVABLE_API_KEY');
   if (!gateway) throw new GeminiError('not_configured', 'AI service is not configured', 503);
-  const model = gatewayModel || Deno.env.get('LOVABLE_AI_MODEL') || 'google/gemini-2.5-flash';
+  const model = gatewayModel || Deno.env.get('LOVABLE_AI_MODEL') || 'google/gemini-2.5-flash-lite';
   if (!/^[A-Za-z0-9_./-]{3,80}$/.test(model)) throw new GeminiError('model_unavailable', 'Invalid AI gateway model configuration', 503);
   const messages: {role: string; content: string}[] = [];
   const system = body.systemInstruction?.parts?.map(p=>p.text || '').join('');
