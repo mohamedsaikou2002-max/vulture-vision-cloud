@@ -28,7 +28,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Suspense fallback={<p role="status" className="p-8">Loading workspace…</p>}><Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={investorDemo ? <Navigate to="/dashboard" replace /> : <Index />} />
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/pricing" element={<Welcome />} />
           <Route path="/account" element={<Account />} />
