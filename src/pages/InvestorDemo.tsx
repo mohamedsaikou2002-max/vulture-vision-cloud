@@ -65,11 +65,8 @@ export default function InvestorDemo({ mode }: { mode: DemoMode }) {
             {intel && <>
               <h2 style={{ marginTop:20 }}>02 / Research prompt</h2>
               <label htmlFor="vv-demo-question">Preconfigured question</label>
-              <select id="vv-demo-question" value={question} onChange={e => setQuestion(e.target.value)}>
-                <option value={question}>{question}</option>
-                <option value="What evidence would invalidate this scenario?">What evidence would invalidate this scenario?</option>
-                <option value="Which market indicators should be monitored?">Which market indicators should be monitored?</option>
-              </select>
+              <textarea id="vv-demo-question" value={question} readOnly rows={3}
+                style={{ width:"100%", borderRadius:12, border:"1px solid #555", background:"#232326", color:"white", padding:12, resize:"none" }} />
             </>}
             <button style={{ marginTop:20 }} onClick={() => setShow(true)}>
               {intel ? "Show recorded intelligence brief" : "Run example scenario"}
