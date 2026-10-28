@@ -15,6 +15,8 @@ const ResearchChat=lazy(()=>import("./pages/ResearchChat"));
 const SimpleSimulator=lazy(()=>import("./pages/SimpleSimulator"));
 const Simulator=lazy(()=>import("./pages/Simulator"));
 import NotFound from "./pages/NotFound";
+import InvestorDemo from "./pages/InvestorDemo";
+const investorDemo = import.meta.env.VITE_INVESTOR_DEMO_MODE === "true";
 
 
 const queryClient = new QueryClient();
@@ -30,13 +32,13 @@ const App = () => (
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/pricing" element={<Welcome />} />
           <Route path="/account" element={<Account />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={investorDemo ? <InvestorDemo mode="intel" /> : <Dashboard />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/socioeconomics" element={<SocioEconomics />} />
           <Route path="/news" element={<News />} />
           <Route path="/simulations/simple" element={<SimpleSimulator />} />
-          <Route path="/simulations" element={<Simulator />} />
-          <Route path="/research" element={<ResearchChat />} />
+          <Route path="/simulations" element={investorDemo ? <InvestorDemo mode="simulation" /> : <Simulator />} />
+          <Route path="/research" element={investorDemo ? <InvestorDemo mode="intel" /> : <ResearchChat />} />
           <Route path="/simulations/pilot" element={<Navigate to="/research" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes></Suspense>
