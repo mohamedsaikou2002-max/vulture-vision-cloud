@@ -60,7 +60,7 @@ public final class MainActivity extends Activity {
             }
         });
         setContentView(web);
-        web.loadUrl("https://" + APP_HOST + "/index.html");
+        web.loadUrl("https://" + APP_HOST + "/");
     }
     @Override public void onBackPressed() {
         if (web != null && web.canGoBack()) web.goBack();
