@@ -16,6 +16,13 @@ describe("DARPA research envelope",()=>{
   expect(()=>parseResearchEnvelope(JSON.stringify({...specimen,source:"armory",aggregates:{clean_accuracy:2}}))).toThrow();
   expect(()=>parseResearchEnvelope(JSON.stringify({...specimen,imported_status:"VERIFIED"}))).toThrow();
  });
+ it("rejects fractional counts but permits signed radio and timing metrics",()=>{
+  expect(()=>parseResearchEnvelope(JSON.stringify({...specimen,aggregates:{events:1.5}}))).toThrow(/whole numbers/);
+  const rf=parseResearchEnvelope(JSON.stringify({...specimen,source:"dragonradio",aggregates:{rssi_dbm:-65.5,packet_loss_pct:0.5}}));
+  expect(rf.aggregates.rssi_dbm).toBe(-65.5);
+  const timing=parseResearchEnvelope(JSON.stringify({...specimen,source:"openroad",aggregates:{setup_wns_ns:-0.2}}));
+  expect(timing.aggregates.setup_wns_ns).toBe(-0.2);
+ });
  it("rejects unknown source, oversized payload and missing scope",()=>{
   expect(()=>parseResearchEnvelope(JSON.stringify({...specimen,source:"unknown"}))).toThrow();
   expect(()=>parseResearchEnvelope(" ".repeat(41000))).toThrow();
