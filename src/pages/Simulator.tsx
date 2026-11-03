@@ -12,6 +12,7 @@ import corpus from "@/data/historicalCorpus.json";
 import { AGENTS, DIMENSIONS, AGENT_RESPONSES, type Dim } from "../../supabase/functions/_shared/autosim_engine";
 import { ApiError, interrogateAgent, jobStatus, listJobs, loadJob, runSimulation, type AutoSimResult, type JobRow } from "@/lib/autoSimApi";
 import { pct, signedPct } from "@/lib/autosimFormat";
+import { ResearchCascadePanel } from "@/components/research/ResearchCascadePanel";
 import { speak, stopSpeaking, useVoiceInput } from "@/hooks/useVoiceInput";
 import "@/styles/simulator.css";
 
@@ -163,6 +164,7 @@ export default function Simulator() {
       <div className="scroll-inner autosim-workspace">
       <div className="autosim-header"><div><span className="room-eyebrow">VULTURE VISION / RESEARCH</span><h1>Simulation Room</h1><p className="sim-note">Public workspace: scenarios and results are shared. Do not enter confidential information.</p></div><Link to="/simulations/simple">Quick simulator ↗</Link><Link to="/research">RESEARCH CHAT ↗</Link></div>
       <p className="sim-note">NASDAQ COMPOSITE · ECONOMIC ACTOR SWARM · DATED WORLD STATE</p>
+      <ResearchCascadePanel context="Research-only information diffusion" />
       <div className="sim-root">
         <aside className="sim-left">
           <RecentNews />
