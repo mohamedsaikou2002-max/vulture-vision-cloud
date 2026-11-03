@@ -42,7 +42,7 @@ export function parseResearchEnvelope(value:string):ResearchEnvelope {
  if(data.schema_version!=="gc-research-exchange/1")throw new Error("Unsupported exchange schema");
  if(typeof data.source!=="string"||!own(METRIC_KEYS,data.source))throw new Error("Unknown source");
  const source=data.source as ResearchSource;
- if(typeof data.upstream_version!=="string" || !/^[a-zA-Z0-9._+\-]{1,80}$/.test(data.upstream_version)) throw new Error("Invalid upstream version");
+ if(typeof data.upstream_version!=="string" || !/^[a-zA-Z0-9._+-]{1,80}$/.test(data.upstream_version)) throw new Error("Invalid upstream version");
  if(data.scope!=="synthetic"&&data.scope!=="authorized_lab")throw new Error("Explicit synthetic or authorized scope is required");
  if(data.imported_status!=="UNVERIFIED_EXTERNAL_RESULT")throw new Error("External results must be labeled unverified");
  if(!isRecord(data.aggregates))throw new Error("Aggregates missing");
