@@ -16,5 +16,7 @@
 | DARPA Quantum Benchmarking BenchQ | https://github.com/zapatacomputing/benchq | Compute-intensive resource-estimate worker; separate Python environment |
 | DARPA QB pyLIQTR | https://github.com/isi-usc-edu/pyLIQTR | Optional circuit resource estimator; separate Python environment |
 | DARPA IDEA OpenROAD | https://github.com/The-OpenROAD-Project/OpenROAD | Hardware design workflow only, not a web-app package |
+| DARPA CGC angr | https://github.com/angr/angr | Optional authorized defensive binary-analysis worker; not installed |
+| DARPA Firefox | https://www.darpa.mil/research/programs/firefox | Research solicitation only, **not** a public open-source implementation |
 
 **Integrations are not equivalent to installing every upstream project in all products.** Use project-specific isolated workers after checking upstream commit SHA, license, dependencies, privacy, threat model, hardware, and performance. The old GARD Armory repository is deprecated; use armory-library.
