@@ -30,6 +30,7 @@ const METRIC_KEYS: Record<ResearchSource,readonly string[]> = {
  angr:["blocks","functions","imports"],
  openroad:["cells","die_area_um2","setup_wns_ns"],
 };
+const CONTINUOUS_METRICS = new Set(["clean_accuracy", "perturbed_accuracy", "packet_loss_pct", "rssi_dbm", "duration_seconds", "die_area_um2", "setup_wns_ns"]);
 const isRecord=(x:unknown):x is Record<string,unknown>=>Boolean(x)&&typeof x==="object"&&!Array.isArray(x);
 const own=(x:Record<string,unknown>,k:string)=>Object.prototype.hasOwnProperty.call(x,k);
 export function parseResearchEnvelope(value:string):ResearchEnvelope {
@@ -51,6 +52,7 @@ export function parseResearchEnvelope(value:string):ResearchEnvelope {
  for(const [key,val] of Object.entries(data.aggregates)){
    if(!METRIC_KEYS[source].includes(key))throw new Error("Unsupported metric: "+key);
    if(typeof val!=="number"||!Number.isFinite(val)||Math.abs(val)>1e12)throw new Error("Nonfinite or unbounded metric: "+key);
+   if(!CONTINUOUS_METRICS.has(key)&&!Number.isSafeInteger(val))throw new Error("Count metrics must be whole numbers: "+key);
    if(key.includes("accuracy")||key.endsWith("_pct")){if(val<0||val>(key.endsWith("_pct")?100:1))throw new Error("Invalid rate: "+key)}
    else if(key!=="rssi_dbm"&&!key.endsWith("_ns")&&val<0)throw new Error("Negative count: "+key);
    metrics[key]=val;
