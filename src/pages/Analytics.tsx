@@ -176,6 +176,52 @@ export default function Analytics() {
           <div><div className="panel-title">MODEL LIMITS</div><p>Uncalibrated historical rule. Predictive transition probabilities and stationary equilibrium are unavailable.</p></div>
         </section>}
 
+        <section className="panel" style={{ padding: 16, marginTop: 14 }} aria-label="Nasdaq Composite market analytics">
+          <div className="panel-title">NASDAQ COMPOSITE · ^IXIC · COMPLETED DAILY CLOSES</div>
+          {nasdaq ? (
+            <>
+              <p style={{ color: "var(--dim)", fontSize: 12, marginBottom: 14 }}>
+                Yahoo Finance · Session date {nasdaq.as_of} · Index points, not USD · No live or intraday quote.
+              </p>
+              <div className="grid gap-3 md:grid-cols-3" style={{ marginBottom: 16 }}>
+                <div className="stat-card panel">
+                  <div className="stat-label">LATEST SESSION CHANGE</div>
+                  <div className={`stat-value ${dir(nasdaq.change_1d_pct)}`}>{fPct(nasdaq.change_1d_pct)}</div>
+                  <div className="stat-delta">{nasdaq.change_points >= 0 ? "+" : ""}{fIndex(nasdaq.change_points)} index points</div>
+                </div>
+                <div className="stat-card panel">
+                  <div className="stat-label">20-SESSION RETURN · OBSERVED</div>
+                  <div className={`stat-value ${dir(nasdaq.change_20_session_pct)}`}>{fPct(nasdaq.change_20_session_pct)}</div>
+                  <div className="stat-delta">Close-to-close; historical return</div>
+                </div>
+                <div className="stat-card panel">
+                  <div className="stat-label">20-SESSION REALIZED VOL · ANNUALIZED</div>
+                  <div className="stat-value">{f2(nasdaq.realized_vol_20_session_annual_pct)}%</div>
+                  <div className="stat-delta">Historical volatility, not an outlook</div>
+                </div>
+              </div>
+              <div style={{ width: "100%", height: 270 }} role="img" aria-label="Nasdaq Composite index closing prices over the last 60 completed sessions">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={nasdaq.history} margin={{ top: 12, right: 20, left: 6, bottom: 6 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.35} />
+                    <XAxis dataKey="date" tickFormatter={(date: string) => date.slice(5)} minTickGap={22} tick={{ fontSize: 11 }} />
+                    <YAxis dataKey="close" domain={["dataMin", "dataMax"]} tickFormatter={(value: number) => Math.round(value).toLocaleString("en-US")} width={72} tick={{ fontSize: 11 }} />
+                    <Tooltip formatter={(value) => [fIndex(Number(value)) + " pts", "Nasdaq Composite close"]} />
+                    <Line dataKey="close" stroke="var(--cyan)" strokeWidth={2} type="monotone" dot={false} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <p style={{ color: "var(--dim)", fontSize: 12, marginTop: 10 }}>
+                Source: {nasdaq.source}. The chart shows up to 60 completed trading sessions. Returns and volatility are descriptive observations; not calibrated forecasts.
+              </p>
+            </>
+          ) : (
+            <p role="status" style={{ padding: 12, color: "var(--dim)" }}>
+              Nasdaq Composite daily history is unavailable or stale. No index price, return, or volatility has been inferred. Other available analytics remain visible.
+            </p>
+          )}
+        </section>
+
         <div className="analytics-wrap">
           <div className="panel" style={{ padding: 14, marginTop: 14 }}>
             <div className="panel-title">ASSET OVERVIEW — {data?.assets.length || 0} ASSETS</div>
