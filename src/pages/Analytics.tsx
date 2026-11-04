@@ -176,7 +176,7 @@ export default function Analytics() {
           <div><div className="panel-title">MODEL LIMITS</div><p>Uncalibrated historical rule. Predictive transition probabilities and stationary equilibrium are unavailable.</p></div>
         </section>}
 
-        <section className="panel" style={{ padding: 16, marginTop: 14 }} aria-label="Nasdaq Composite market analytics">
+        <section className="panel" style={{ padding: 16, margin: "14px 24px 0" }} aria-label="Nasdaq Composite market analytics">
           <div className="panel-title">NASDAQ COMPOSITE · ^IXIC · COMPLETED DAILY CLOSES</div>
           {nasdaq ? (
             <>
