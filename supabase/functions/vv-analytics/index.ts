@@ -2,6 +2,7 @@ import {WarmState} from '../_shared/warm_state.ts';
 import { authorize } from '../_shared/access.ts';
 import { hasConfiguredAI, generateConfigured } from '../_shared/gemini.ts';
 import { summarizeMarketStatus, type MarketSource } from '../_shared/market_status.ts';
+import { loadNasdaqAnalytics } from '../_shared/nasdaq_analytics.ts';
 const fetchMarket: typeof fetch = (input, init = {}) => fetch(input, { ...init, signal: ('signal' in init ? init.signal : undefined) ?? AbortSignal.timeout(8000) });
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
@@ -258,6 +259,8 @@ Deno.serve(async (req) => {
         return [];
       }
     }
+    // Shared with socioeconomic AutoSim: validated completed-session Nasdaq closes, not an intraday quote.
+    const nasdaqPromise = loadNasdaqAnalytics();
     const crypto = await collect("Crypto prices (CoinGecko / Yahoo)", fetchCrypto);
     const assets: Asset[] = [];
     await Promise.all([
@@ -273,8 +276,11 @@ Deno.serve(async (req) => {
       }),
     ]);
     assets.sort((a, b) => a.symbol.localeCompare(b.symbol));
-    const status = summarizeMarketStatus(crypto.length, assets.length, sources);
-    if (status === "unavailable") return new Response(JSON.stringify({ status, error: "Market data is unavailable. No portfolio signal was calculated.", crypto: [], assets: [], portfolio: null, source_health: sources, ts: new Date().toISOString() }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { nasdaq, status: nasdaqHealth } = await nasdaqPromise;
+    sources.push({ source: "Nasdaq Composite (^IXIC) · Yahoo Finance daily closes", status: nasdaqHealth.ok ? "available" : "unavailable", count: nasdaq?.history.length ?? 0 });
+    const baseStatus = summarizeMarketStatus(crypto.length, assets.length, sources);
+    const status = baseStatus === "unavailable" ? (nasdaq ? "degraded" : "unavailable") : (!nasdaq ? "degraded" : baseStatus);
+    if (status === "unavailable") return new Response(JSON.stringify({ status, error: "Market data is unavailable. No portfolio signal was calculated.", crypto: [], assets: [], nasdaq: null, portfolio: null, source_health: sources, ts: new Date().toISOString() }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     // Portfolio aggregates
     const counts: Record<string, number> = {};
@@ -293,7 +299,7 @@ Deno.serve(async (req) => {
     const narrative = portfolio ? await aiNarrative(crypto, assets, portfolio) : "Insufficient history for a portfolio narrative.";
     const onchain = await fetchOnchain();
 
-    const snapshotValue={status,source_health:sources,crypto,assets,portfolio,narrative,onchain,ts:new Date().toISOString()};
+    const snapshotValue={status,source_health:sources,crypto,assets,nasdaq,portfolio,narrative,onchain,ts:new Date().toISOString()};
     await store.set('analytics_snapshot_v1',snapshotValue,120);
     return new Response(JSON.stringify(snapshotValue), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
