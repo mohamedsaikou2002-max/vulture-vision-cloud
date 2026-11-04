@@ -1,4 +1,5 @@
 import {getEnglishHeadline} from '../../supabase/functions/_shared/english_headline';
+import { osirisLiveNewsChannels } from '@/data/osirisLiveNewsChannels';
 import type { WarWatchSnapshot } from '../../supabase/functions/_shared/warwatch';
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -128,6 +129,21 @@ export default function News() {
         <Column title="Tech Intelligence" tone="cyan" items={data.tech} badge="badge-tech" badgeText="NEW" unavailable={feedStatus === "unavailable"} />
         <IntelSynthesisColumn brief={brief} synthBusy={synthBusy} onSynthesize={onSynthesize} />
       </div>
+      <details className="mx-5 my-5 rounded-xl border border-border bg-background/80 p-5">
+        <summary className="cursor-pointer font-semibold">OSIRIS news broadcasters · {osirisLiveNewsChannels.length} external channel links</summary>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Links to broadcaster video channels discovered from the open-source OSIRIS project. Streams may be offline or unavailable by region; no videos are embedded, scraped, transcribed, or used as evidence in swarm simulations.
+        </p>
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {osirisLiveNewsChannels.map(channel => <li key={channel.id} className="rounded-lg border border-border p-3 text-sm">
+            <a href={channel.url} target="_blank" rel="noopener noreferrer" className="underline">{channel.name}</a>
+            <span className="ml-2 text-xs text-muted-foreground">{channel.category} · {channel.language}</span>
+          </li>)}
+        </ul>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Directory attribution: <a href="https://github.com/simplifaisoul/osiris" target="_blank" rel="noopener noreferrer" className="underline">OSIRIS open-source repository</a>. Original broadcasters remain the source.
+        </p>
+      </details>
       <section className="mx-5 my-5 rounded-xl border border-border bg-background/80 p-5" aria-label="Geopolitical conflict watch">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold">Geopolitical watch · WarWatch.World</h2>
