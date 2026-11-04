@@ -346,7 +346,7 @@ Deno.serve(async (req) => {
       .sort(newestFirst)
 ;
 
-    source_health.push({ source: 'WarWatch.World · secondary conflict context', status: warwatch.status === 'stale' ? 'empty' : warwatch.status, count: warwatch.signals.length });
+    source_health.push({ source: 'WarWatch.World · secondary conflict context', status: warwatch.status === 'stale' ? 'empty' : warwatch.status === 'disabled' ? 'not_configured' : warwatch.status, count: warwatch.signals.length });
     source_health.push({ source: "Publisher database", status: publisher.status === "available" ? "available" : publisher.status === "no_recent_articles" ? "empty" : "unavailable", count: publisher.items.length });
     const usable = source_health.some(source => source.status === "available" || source.status === "empty") || publisher.status === "available" || publisher.status === "no_recent_articles";
     const status = !usable ? "unavailable" : source_health.some(source => source.status === "unavailable") ? "degraded" : "available";
