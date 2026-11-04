@@ -1,4 +1,5 @@
 import {WarmState} from '../_shared/warm_state.ts';
+import { fetchWarWatch } from '../_shared/warwatch.ts';
 import { authorize } from '../_shared/access.ts';
 import { parseRss, newestFirst, publicationTime, safeNewsUrl, type SourceHealth } from "../_shared/news_feed.ts";
 import { additionalTechFeeds } from "./additional_sources.ts";
@@ -312,7 +313,7 @@ Deno.serve(async (req) => {
     const store=new WarmState();
     if(!country){const snapshot=await store.get('news_snapshot_v1');if(snapshot)return new Response(JSON.stringify(snapshot),{headers:{...corsHeaders,'Content-Type':'application/json'}});}
     const source_health: SourceHealth[] = [];
-    const [irlRss, dark, tech, newsApi, tor, journalists, catalog_health] = await Promise.all([
+    const [irlRss, dark, tech, newsApi, tor, journalists, catalog_health, warwatch] = await Promise.all([
       fetchFeeds(FEEDS.irl, source_health, signal),
       fetchFeeds(FEEDS.dark, source_health, signal),
       fetchFeeds(FEEDS.tech, source_health, signal),
@@ -320,6 +321,7 @@ Deno.serve(async (req) => {
       fetchTorFeed(source_health, signal),
       fetchJournalistTweets(source_health, signal),
       collectCatalog(req, signal).catch(() => []),
+      fetchWarWatch(signal),
     ]);
     const publisher = await fetchPublisherNews(req, AbortSignal.timeout(5000), country, 0, 1000).catch(() => ({items:[],status:'ingestion_not_available'}));
     const categorized = {irl: [] as Item[], dark: [] as Item[], tech: [] as Item[]};
@@ -344,6 +346,7 @@ Deno.serve(async (req) => {
       .sort(newestFirst)
 ;
 
+    source_health.push({ source: 'WarWatch.World · secondary conflict context', status: warwatch.status === 'stale' ? 'empty' : warwatch.status, count: warwatch.signals.length });
     source_health.push({ source: "Publisher database", status: publisher.status === "available" ? "available" : publisher.status === "no_recent_articles" ? "empty" : "unavailable", count: publisher.items.length });
     const usable = source_health.some(source => source.status === "available" || source.status === "empty") || publisher.status === "available" || publisher.status === "no_recent_articles";
     const status = !usable ? "unavailable" : source_health.some(source => source.status === "unavailable") ? "degraded" : "available";
@@ -351,7 +354,7 @@ Deno.serve(async (req) => {
     if (all.length && service && backend) {
       await createClient(backend,service).from('warm_state').upsert({key:'news_feed',value:all,expires_at:new Date(Date.now()+1800000).toISOString()},{onConflict:'key'});
     }
-    const snapshotValue={ status, source_health, catalog_health, catalog_total: sourceCatalog.length, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more };
+    const snapshotValue={ status, source_health, warwatch, catalog_health, catalog_total: sourceCatalog.length, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more };
     if(usable&&!country)await store.set('news_snapshot_v1',snapshotValue,45);
     return new Response(JSON.stringify(snapshotValue), {
       status: usable ? 200 : 503,
