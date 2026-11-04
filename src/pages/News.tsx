@@ -20,6 +20,7 @@ interface Item {
   translated_title_en?: string;
   translation_status?: string;
   source?: string;
+  source_id?: string;
   time?: string;
   link?: string;
   journalist?: string;
@@ -55,6 +56,7 @@ export default function News() {
   const [synthesisNotice, setSynthesisNotice] = useState<string | null>(null);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [sourceHealth, setSourceHealth] = useState<{source: string; status: string; count: number}[]>([]);
+  const [osirisCount, setOsirisCount] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -74,6 +76,7 @@ export default function News() {
         }
         if (alive && res) {
           setFeedStatus(res.status || "degraded"); setFeedError(res.error || null); setSourceHealth([...(res.source_health || []),...(res.catalog_health || [])]);
+          setOsirisCount(typeof res.osiris_news_sources_total === "number" ? res.osiris_news_sources_total : 0);
           setData({ irl: res.irl || [], dark: res.dark || [], tech: res.tech || [] });
           setWarwatch(res.warwatch || null);
 
@@ -116,6 +119,7 @@ export default function News() {
         {feedError || (feedStatus === 'loading' ? 'Checking news sources…' : feedStatus === 'degraded' ? 'Some news sources are unavailable. Coverage is incomplete.' : feedStatus === 'available' ? 'News source checks completed.' : 'News is unavailable.')}
         <Button className="synthesize-btn" onClick={() => setRefresh(n => n + 1)}>Refresh news</Button>
         {synthesisNotice && <p>{synthesisNotice}</p>}
+        {osirisCount > 0 && <p className="text-xs text-muted-foreground">OSIRIS news-only source pack: {osirisCount} additional publisher feeds configured. Original publishers retain attribution; availability varies.</p>}
         {sourceHealth.length > 0 && <details className="source-health"><summary>{sourceHealth.filter(s => s.status === 'available' || s.status === 'empty').length} of {sourceHealth.length} sources responded — view source status</summary><ul>{sourceHealth.map((s, i) => <li key={i}>{s.source}: {s.status.replace(/_/g, ' ')} ({s.count} items)</li>)}</ul></details>}
       </div>
       <div className="news-grid">
@@ -193,6 +197,7 @@ function Column({ title, tone, items, badge, badgeText, unavailable }: {
                 ) : (
                   <span className="news-source">{it.source || "Web"}</span>
                 )}
+                {it.source_id?.startsWith("osiris-news-") && <span className="news-source" title="Publisher feed discovered through the open-source OSIRIS newsroom catalog">OSIRIS news pack</span>}
                 {it.journalist && (
                   it.journalist_url ? (
                     <a href={it.journalist_url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--cyan)", textDecoration: "underline" }}>
