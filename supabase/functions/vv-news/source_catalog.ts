@@ -1,4 +1,6 @@
-export const sourceCatalog = [
+import { osirisNewsSources } from './osiris_news_sources.ts';
+
+const baseSourceCatalog = [
   {
     "id": "us-1",
     "name": "NPR",
@@ -2897,4 +2899,7 @@ export const sourceCatalog = [
     "feed_urls": [],
     "allowed_hosts": []
   }
-] as const;
+ ] as const;
+
+// OSIRIS discovers the additional publisher feeds; original outlets remain evidence owners.
+export const sourceCatalog = [...baseSourceCatalog, ...osirisNewsSources] as const;
