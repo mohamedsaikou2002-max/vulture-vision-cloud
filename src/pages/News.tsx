@@ -1,4 +1,5 @@
 import {getEnglishHeadline} from '../../supabase/functions/_shared/english_headline';
+import { osirisLiveNewsChannels } from '@/data/osirisLiveNewsChannels';
 import type { WarWatchSnapshot } from '../../supabase/functions/_shared/warwatch';
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ interface Item {
   translated_title_en?: string;
   translation_status?: string;
   source?: string;
+  source_id?: string;
   time?: string;
   link?: string;
   journalist?: string;
@@ -55,6 +57,7 @@ export default function News() {
   const [synthesisNotice, setSynthesisNotice] = useState<string | null>(null);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [sourceHealth, setSourceHealth] = useState<{source: string; status: string; count: number}[]>([]);
+  const [osirisCount, setOsirisCount] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -74,6 +77,7 @@ export default function News() {
         }
         if (alive && res) {
           setFeedStatus(res.status || "degraded"); setFeedError(res.error || null); setSourceHealth([...(res.source_health || []),...(res.catalog_health || [])]);
+          setOsirisCount(typeof res.osiris_news_sources_total === "number" ? res.osiris_news_sources_total : 0);
           setData({ irl: res.irl || [], dark: res.dark || [], tech: res.tech || [] });
           setWarwatch(res.warwatch || null);
 
@@ -116,6 +120,7 @@ export default function News() {
         {feedError || (feedStatus === 'loading' ? 'Checking news sources…' : feedStatus === 'degraded' ? 'Some news sources are unavailable. Coverage is incomplete.' : feedStatus === 'available' ? 'News source checks completed.' : 'News is unavailable.')}
         <Button className="synthesize-btn" onClick={() => setRefresh(n => n + 1)}>Refresh news</Button>
         {synthesisNotice && <p>{synthesisNotice}</p>}
+        {osirisCount > 0 && <p className="text-xs text-muted-foreground">OSIRIS news-only source pack: {osirisCount} additional publisher feeds configured. Original publishers retain attribution; availability varies.</p>}
         {sourceHealth.length > 0 && <details className="source-health"><summary>{sourceHealth.filter(s => s.status === 'available' || s.status === 'empty').length} of {sourceHealth.length} sources responded — view source status</summary><ul>{sourceHealth.map((s, i) => <li key={i}>{s.source}: {s.status.replace(/_/g, ' ')} ({s.count} items)</li>)}</ul></details>}
       </div>
       <div className="news-grid">
@@ -124,6 +129,21 @@ export default function News() {
         <Column title="Tech Intelligence" tone="cyan" items={data.tech} badge="badge-tech" badgeText="NEW" unavailable={feedStatus === "unavailable"} />
         <IntelSynthesisColumn brief={brief} synthBusy={synthBusy} onSynthesize={onSynthesize} />
       </div>
+      <details className="mx-5 my-5 rounded-xl border border-border bg-background/80 p-5">
+        <summary className="cursor-pointer font-semibold">OSIRIS news broadcasters · {osirisLiveNewsChannels.length} external channel links</summary>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Links to broadcaster video channels discovered from the open-source OSIRIS project. Streams may be offline or unavailable by region; no videos are embedded, scraped, transcribed, or used as evidence in swarm simulations.
+        </p>
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {osirisLiveNewsChannels.map(channel => <li key={channel.id} className="rounded-lg border border-border p-3 text-sm">
+            <a href={channel.url} target="_blank" rel="noopener noreferrer" className="underline">{channel.name}</a>
+            <span className="ml-2 text-xs text-muted-foreground">{channel.category} · {channel.language}</span>
+          </li>)}
+        </ul>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Directory attribution: <a href="https://github.com/simplifaisoul/osiris" target="_blank" rel="noopener noreferrer" className="underline">OSIRIS open-source repository</a>. Original broadcasters remain the source.
+        </p>
+      </details>
       <section className="mx-5 my-5 rounded-xl border border-border bg-background/80 p-5" aria-label="Geopolitical conflict watch">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold">Geopolitical watch · WarWatch.World</h2>
@@ -193,6 +213,7 @@ function Column({ title, tone, items, badge, badgeText, unavailable }: {
                 ) : (
                   <span className="news-source">{it.source || "Web"}</span>
                 )}
+                {it.source_id?.startsWith("osiris-news-") && <span className="news-source" title="Publisher feed discovered through the open-source OSIRIS newsroom catalog">OSIRIS news pack</span>}
                 {it.journalist && (
                   it.journalist_url ? (
                     <a href={it.journalist_url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--cyan)", textDecoration: "underline" }}>
