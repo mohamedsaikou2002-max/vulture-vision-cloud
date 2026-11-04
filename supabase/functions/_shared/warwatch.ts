@@ -45,7 +45,7 @@ export type WarWatchSnapshot = {
 const asRecord = (v: unknown): Record<string, unknown> | null =>
   v !== null && typeof v === "object" && !Array.isArray(v) ? v as Record<string, unknown> : null;
 const clean = (v: unknown, limit: number): string =>
-  typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, limit) : "";
+  typeof v === "string" ? [...v].map(ch => ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127 ? " " : ch).join("").trim().slice(0, limit) : "";
 const distinct = (v: unknown, max: number, length: number): string[] =>
   Array.isArray(v) ? [...new Set(v.map(x => clean(x, length)).filter(Boolean))].slice(0, max) : [];
 const exactDay = (v: unknown): string | null => {
