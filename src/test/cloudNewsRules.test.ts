@@ -5,7 +5,7 @@ describe('Cloud publisher rules',()=>{
   it('includes all 207 added sources beside every original source',()=>{
     expect(sourceCatalog.filter(s=>s.id.startsWith('global-extra-'))).toHaveLength(207);
     expect(sourceCatalog).toHaveLength(327);
-    expect(new Set(sourceCatalog.map(s=>s.id)).size).toBe(287);
+    expect(new Set(sourceCatalog.map(s=>s.id)).size).toBe(327);
   });
   it('does not retrieve disallowed pages or sources requiring crawl delay',()=>{
     expect(robotsAllowed('User-agent: *\nDisallow: /private', '/private/story')).toBe(false);
