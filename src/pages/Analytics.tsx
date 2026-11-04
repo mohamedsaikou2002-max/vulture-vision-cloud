@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import type { NasdaqAnalytics } from "../../supabase/functions/_shared/nasdaq_analytics";
 import { parseAnalyticsData } from "@/lib/analyticsData";
 import { functionError } from "@/lib/functionError";
 import VVLayout from "@/components/VVLayout";
@@ -35,6 +37,7 @@ interface Portfolio {
 interface Full {
   crypto: Crypto[];
   assets: Asset[];
+  nasdaq?: NasdaqAnalytics | null;
   portfolio: Portfolio | null;
   status?: string;
   source_health?: { source: string; status: string; count: number }[];
@@ -47,6 +50,7 @@ const fPct = (n?: number | null) => (n == null || isNaN(n) ? "—" : (n >= 0 ? "
 const fBig = (n?: number | null) => (!n ? "—" : n >= 1e12 ? "$" + (n / 1e12).toFixed(2) + "T" : n >= 1e9 ? "$" + (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? "$" + (n / 1e6).toFixed(2) + "M" : "$" + n.toLocaleString());
 const f2 = (n?: number | null) => (n == null || isNaN(n) ? "—" : n.toFixed(2));
 const f4 = (n?: number | null) => (n == null || isNaN(n) ? "—" : n.toFixed(4));
+const fIndex = (n?: number | null) => (n == null || !Number.isFinite(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const dir = (n?: number | null) => (n != null && n >= 0 ? "up" : "down");
 
 const regimeBadge = (r?: string) => {
@@ -113,6 +117,7 @@ export default function Analytics() {
   const btc = data?.crypto.find(c => c.symbol === "BTC");
   const eth = data?.crypto.find(c => c.symbol === "ETH");
   const spy = data?.assets.find(a => a.symbol === "SPY");
+  const nasdaq = data?.nasdaq;
   const port = data?.portfolio;
   const reg = regimeBadge(port?.dominant_regime);
 
@@ -125,6 +130,13 @@ export default function Analytics() {
           <button className="synthesize-btn" onClick={() => setRefresh(n => n + 1)}>Refresh market data</button>
         </div>
         <div className="stat-row">
+          <div className="stat-card panel">
+            <div className="stat-label">NASDAQ COMPOSITE · ^IXIC</div>
+            <div className="stat-value">{fIndex(nasdaq?.last_close)}</div>
+            <div className={`stat-delta ${dir(nasdaq?.change_1d_pct)}`}>
+              {nasdaq ? `${fPct(nasdaq.change_1d_pct)} last completed session · ${nasdaq.as_of}` : (online === null ? "Loading…" : "Daily close unavailable")}
+            </div>
+          </div>
           <div className="stat-card panel">
             <div className="stat-label">SPY · 30D median estimate</div>
             <div className="stat-value">{spy ? fP(spy.mc_30d.p50) : "—"}</div>
