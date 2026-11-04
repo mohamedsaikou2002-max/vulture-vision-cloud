@@ -5,6 +5,7 @@ import { parseRss, newestFirst, publicationTime, safeNewsUrl, type SourceHealth 
 import { additionalTechFeeds } from "./additional_sources.ts";
 import { collectCatalog } from './catalog_ingestion.ts';
 import { sourceCatalog } from './source_catalog.ts';
+import { osirisNewsSources } from './osiris_news_sources.ts';
 import { newsColumn } from './catalog_rules.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -354,7 +355,7 @@ Deno.serve(async (req) => {
     if (all.length && service && backend) {
       await createClient(backend,service).from('warm_state').upsert({key:'news_feed',value:all,expires_at:new Date(Date.now()+1800000).toISOString()},{onConflict:'key'});
     }
-    const snapshotValue={ status, source_health, warwatch, catalog_health, catalog_total: sourceCatalog.length, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more };
+    const snapshotValue={ status, source_health, warwatch, catalog_health, catalog_total: sourceCatalog.length, osiris_news_sources_total: osirisNewsSources.length, checked_at: new Date().toISOString(), irl, dark: darkOut, tech: techOut, news_feed: all, publisher_news: publisher.items, publisher_status: publisher.status, has_more: "has_more" in publisher && publisher.has_more };
     if(usable&&!country)await store.set('news_snapshot_v1',snapshotValue,45);
     return new Response(JSON.stringify(snapshotValue), {
       status: usable ? 200 : 503,
