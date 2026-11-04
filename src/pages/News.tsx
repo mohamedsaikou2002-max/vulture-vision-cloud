@@ -1,4 +1,5 @@
 import {getEnglishHeadline} from '../../supabase/functions/_shared/english_headline';
+import type { WarWatchSnapshot } from '../../supabase/functions/_shared/warwatch';
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { functionError } from "@/lib/functionError";
@@ -46,6 +47,7 @@ function timeAgo(iso?: string) {
 export default function News() {
   const lastLiveRefresh=useRef(0);
   const [data, setData] = useState<NewsData>({ irl: [], dark: [], tech: [] });
+  const [warwatch, setWarwatch] = useState<WarWatchSnapshot | null>(null);
   const [brief, setBrief] = useState<IntelBrief | null>(null);
   const [synthBusy, setSynthBusy] = useState(false);
   const [feedStatus, setFeedStatus] = useState('loading');
@@ -65,7 +67,7 @@ export default function News() {
           const explanation = await functionError(error, "News sources are unavailable. Please try again shortly.");
           const failure = await error.context?.clone?.().json().catch(() => null);
           if (alive) {
-            setFeedStatus('unavailable'); setFeedError(explanation);
+            setFeedStatus('unavailable'); setFeedError(explanation); setWarwatch(null);
             setSourceHealth(Array.isArray(failure?.source_health) ? failure.source_health.filter((s: {source?:unknown;status?:unknown;count?:unknown}) => typeof s.source === 'string' && typeof s.status === 'string' && typeof s.count === 'number') : []);
           }
           return;
@@ -73,6 +75,7 @@ export default function News() {
         if (alive && res) {
           setFeedStatus(res.status || "degraded"); setFeedError(res.error || null); setSourceHealth([...(res.source_health || []),...(res.catalog_health || [])]);
           setData({ irl: res.irl || [], dark: res.dark || [], tech: res.tech || [] });
+          setWarwatch(res.warwatch || null);
 
         }
       } catch { if (alive) { setFeedStatus("unavailable"); setFeedError("News sources are unavailable."); } }
@@ -121,6 +124,20 @@ export default function News() {
         <Column title="Tech Intelligence" tone="cyan" items={data.tech} badge="badge-tech" badgeText="NEW" unavailable={feedStatus === "unavailable"} />
         <IntelSynthesisColumn brief={brief} synthBusy={synthBusy} onSynthesize={onSynthesize} />
       </div>
+      <section className="mx-5 my-5 rounded-xl border border-border bg-background/80 p-5" aria-label="Geopolitical conflict watch">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-semibold">Geopolitical watch · WarWatch.World</h2>
+          <a href="https://github.com/nitinchhabria89/WarWatch.World" target="_blank" rel="noopener noreferrer" className="text-xs underline">Open-source upstream</a>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">Secondary conflict annotations, not independently verified articles. Dates have day precision. Possible economic transmission channels are hypotheses; none imply measured or predictive market effects.</p>
+        <p className="mt-2 text-xs text-primary" role="status">Source: {warwatch?.status === 'available' ? 'Recent date-only event annotations' : warwatch?.status === 'stale' ? 'No event dates within the recent window' : warwatch?.status === 'disabled' ? 'Disabled by operator' : 'Not currently available'}</p>
+        {warwatch?.signals.length ? <ul className="mt-3 grid gap-3 md:grid-cols-2">{warwatch.signals.map((s) => <li key={s.id} className="rounded-lg border border-border p-3 text-sm">
+          <div className="font-semibold">{s.conflict} <span className="text-xs font-normal text-muted-foreground">· {s.event_date} UTC date</span></div>
+          <p className="mt-2">{s.event}</p>
+          <p className="mt-2 text-xs text-muted-foreground">Potential channels: {s.economic_channels.length ? s.economic_channels.join(', ').replaceAll('_', ' ') : 'Unclassified'} · {s.countries.join(', ') || 'Region unspecified'}</p>
+          <a href={s.source_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs underline">View aggregator · cross-check original reporting</a>
+        </li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">No qualifying recent WarWatch events available for simulation context.</p>}
+      </section>
       <div className="ticker-bar">
         <div className="ticker-label">// SIGNALS</div>
         <div className="ticker-track">
