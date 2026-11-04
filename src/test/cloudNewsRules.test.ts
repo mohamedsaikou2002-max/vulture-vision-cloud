@@ -4,7 +4,7 @@ import {robotsAllowed,structuredHeadlines,newsColumn,publicAddress} from '../../
 describe('Cloud publisher rules',()=>{
   it('includes all 207 added sources beside every original source',()=>{
     expect(sourceCatalog.filter(s=>s.id.startsWith('global-extra-'))).toHaveLength(207);
-    expect(sourceCatalog).toHaveLength(287);
+    expect(sourceCatalog).toHaveLength(327);
     expect(new Set(sourceCatalog.map(s=>s.id)).size).toBe(287);
   });
   it('does not retrieve disallowed pages or sources requiring crawl delay',()=>{
