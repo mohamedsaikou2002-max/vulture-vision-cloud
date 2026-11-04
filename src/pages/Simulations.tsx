@@ -16,7 +16,7 @@ function summarizeSwarmContext(brief: ScenarioBrief | null): string {
   if (!brief) return '';
   const signals = (brief.geopolitical_signals || []).slice(0, 4);
   const context = signals.map(s => [s.conflict, s.event_date, s.event, s.economic_channels.join('/')].join(' · ')).join('; ');
-  return [(context ? 'WarWatch.World secondary, unverified conflict annotations; channels are hypotheses: ' + context : ''), brief.summary].filter(Boolean).join('\\n').slice(0, 3000);
+  return [(context ? 'WarWatch.World secondary, unverified conflict annotations; channels are hypotheses: ' + context : ''), brief.summary].filter(Boolean).join('\n').slice(0, 3000);
 }
 
 export default function Simulations() {
