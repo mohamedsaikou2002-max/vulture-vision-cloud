@@ -9,6 +9,8 @@
  * Upstream: https://github.com/nitinchhabria89/WarWatch.World (MIT)
  * No upstream code or source data is copied into this module.
  */
+declare const Deno: { env: { get(name: string): string | undefined } };
+
 export const WARWATCH_URL = "https://warwatch.world/api/conflicts";
 export const WARWATCH_HOME = "https://warwatch.world/";
 export const WARWATCH_MAX_SIGNALS = 12;
