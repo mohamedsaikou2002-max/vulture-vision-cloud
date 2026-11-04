@@ -8,11 +8,11 @@ const asset = z.object({
 });
 const nasdaq = z.object({
   symbol: z.literal('^IXIC'), name: z.literal('Nasdaq Composite'), source: z.string().min(1),
-  as_of: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/),
+  as_of: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   last_close: finite.positive(), previous_close: finite.positive(), change_points: finite,
   change_1d_pct: finite, change_20_session_pct: finite,
   realized_vol_20_session_annual_pct: finite.min(0),
-  history: z.array(z.object({ date: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/), close: finite.positive() })).min(20).max(60),
+  history: z.array(z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), close: finite.positive() })).min(20).max(60),
 }).superRefine((index, ctx) => {
   const tail = index.history.at(-1);
   if (!tail || tail.date !== index.as_of || Math.abs(tail.close - index.last_close) > 1e-5)
