@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import type { NasdaqAnalytics } from "../../supabase/functions/_shared/nasdaq_analytics";
 import { parseAnalyticsData } from "@/lib/analyticsData";
 import { functionError } from "@/lib/functionError";
 import VVLayout from "@/components/VVLayout";
@@ -35,6 +37,7 @@ interface Portfolio {
 interface Full {
   crypto: Crypto[];
   assets: Asset[];
+  nasdaq?: NasdaqAnalytics | null;
   portfolio: Portfolio | null;
   status?: string;
   source_health?: { source: string; status: string; count: number }[];
@@ -47,6 +50,7 @@ const fPct = (n?: number | null) => (n == null || isNaN(n) ? "—" : (n >= 0 ? "
 const fBig = (n?: number | null) => (!n ? "—" : n >= 1e12 ? "$" + (n / 1e12).toFixed(2) + "T" : n >= 1e9 ? "$" + (n / 1e9).toFixed(2) + "B" : n >= 1e6 ? "$" + (n / 1e6).toFixed(2) + "M" : "$" + n.toLocaleString());
 const f2 = (n?: number | null) => (n == null || isNaN(n) ? "—" : n.toFixed(2));
 const f4 = (n?: number | null) => (n == null || isNaN(n) ? "—" : n.toFixed(4));
+const fIndex = (n?: number | null) => (n == null || !Number.isFinite(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const dir = (n?: number | null) => (n != null && n >= 0 ? "up" : "down");
 
 const regimeBadge = (r?: string) => {
@@ -113,6 +117,7 @@ export default function Analytics() {
   const btc = data?.crypto.find(c => c.symbol === "BTC");
   const eth = data?.crypto.find(c => c.symbol === "ETH");
   const spy = data?.assets.find(a => a.symbol === "SPY");
+  const nasdaq = data?.nasdaq;
   const port = data?.portfolio;
   const reg = regimeBadge(port?.dominant_regime);
 
@@ -125,6 +130,13 @@ export default function Analytics() {
           <button className="synthesize-btn" onClick={() => setRefresh(n => n + 1)}>Refresh market data</button>
         </div>
         <div className="stat-row">
+          <div className="stat-card panel">
+            <div className="stat-label">NASDAQ COMPOSITE · ^IXIC</div>
+            <div className="stat-value">{fIndex(nasdaq?.last_close)}</div>
+            <div className={`stat-delta ${dir(nasdaq?.change_1d_pct)}`}>
+              {nasdaq ? `${fPct(nasdaq.change_1d_pct)} last completed session · ${nasdaq.as_of}` : (online === null ? "Loading…" : "Daily close unavailable")}
+            </div>
+          </div>
           <div className="stat-card panel">
             <div className="stat-label">SPY · 30D median estimate</div>
             <div className="stat-value">{spy ? fP(spy.mc_30d.p50) : "—"}</div>
@@ -163,6 +175,52 @@ export default function Analytics() {
           <div><div className="panel-title">OBSERVATION PROVENANCE</div><p>{regime.source} · {regime.observations_count} observations</p><p>{regime.last_verified_at} · {regime.freshness}</p><small>{regime.model_version}: {regime.method}</small></div>
           <div><div className="panel-title">MODEL LIMITS</div><p>Uncalibrated historical rule. Predictive transition probabilities and stationary equilibrium are unavailable.</p></div>
         </section>}
+
+        <section className="panel" style={{ padding: 16, margin: "14px 24px 0" }} aria-label="Nasdaq Composite market analytics">
+          <div className="panel-title">NASDAQ COMPOSITE · ^IXIC · COMPLETED DAILY CLOSES</div>
+          {nasdaq ? (
+            <>
+              <p style={{ color: "var(--dim)", fontSize: 12, marginBottom: 14 }}>
+                Yahoo Finance · Session date {nasdaq.as_of} · Index points, not USD · No live or intraday quote.
+              </p>
+              <div className="grid gap-3 md:grid-cols-3" style={{ marginBottom: 16 }}>
+                <div className="stat-card panel">
+                  <div className="stat-label">LATEST SESSION CHANGE</div>
+                  <div className={`stat-value ${dir(nasdaq.change_1d_pct)}`}>{fPct(nasdaq.change_1d_pct)}</div>
+                  <div className="stat-delta">{nasdaq.change_points >= 0 ? "+" : ""}{fIndex(nasdaq.change_points)} index points</div>
+                </div>
+                <div className="stat-card panel">
+                  <div className="stat-label">20-SESSION RETURN · OBSERVED</div>
+                  <div className={`stat-value ${dir(nasdaq.change_20_session_pct)}`}>{fPct(nasdaq.change_20_session_pct)}</div>
+                  <div className="stat-delta">Close-to-close; historical return</div>
+                </div>
+                <div className="stat-card panel">
+                  <div className="stat-label">20-SESSION REALIZED VOL · ANNUALIZED</div>
+                  <div className="stat-value">{f2(nasdaq.realized_vol_20_session_annual_pct)}%</div>
+                  <div className="stat-delta">Historical volatility, not an outlook</div>
+                </div>
+              </div>
+              <div style={{ width: "100%", height: 270 }} role="img" aria-label="Nasdaq Composite index closing prices over the last 60 completed sessions">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={nasdaq.history} margin={{ top: 12, right: 20, left: 6, bottom: 6 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.35} />
+                    <XAxis dataKey="date" tickFormatter={(date: string) => date.slice(5)} minTickGap={22} tick={{ fontSize: 11 }} />
+                    <YAxis dataKey="close" domain={["dataMin", "dataMax"]} tickFormatter={(value: number) => Math.round(value).toLocaleString("en-US")} width={72} tick={{ fontSize: 11 }} />
+                    <Tooltip formatter={(value) => [fIndex(Number(value)) + " pts", "Nasdaq Composite close"]} />
+                    <Line dataKey="close" stroke="var(--cyan)" strokeWidth={2} type="monotone" dot={false} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <p style={{ color: "var(--dim)", fontSize: 12, marginTop: 10 }}>
+                Source: {nasdaq.source}. The chart shows up to 60 completed trading sessions. Returns and volatility are descriptive observations; not calibrated forecasts.
+              </p>
+            </>
+          ) : (
+            <p role="status" style={{ padding: 12, color: "var(--dim)" }}>
+              Nasdaq Composite daily history is unavailable or stale. No index price, return, or volatility has been inferred. Other available analytics remain visible.
+            </p>
+          )}
+        </section>
 
         <div className="analytics-wrap">
           <div className="panel" style={{ padding: 14, marginTop: 14 }}>
