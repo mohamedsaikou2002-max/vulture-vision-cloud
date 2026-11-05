@@ -1,0 +1,49 @@
+name: Vulture Vision Investor Android APK
+on:
+  push:
+    branches: [demo-prep-2026-10-29]
+    paths:
+      - 'android/**'
+      - 'src/**'
+      - 'index.html'
+      - '.github/workflows/vulture-investor-android.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Build investor demo web bundle
+        env:
+          VITE_INVESTOR_DEMO_MODE: 'true'
+        run: npm run build
+      - name: Copy the compiled website into Android assets
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp -a dist/. android/app/src/main/assets/
+          test -s android/app/src/main/assets/index.html
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Assemble installable debug APK
+        run: gradle -p android :app:assembleDebug --no-daemon
+      - name: Verify generated APK
+        run: test -s android/app/build/outputs/apk/debug/app-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vulture-Vision-Investor-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
