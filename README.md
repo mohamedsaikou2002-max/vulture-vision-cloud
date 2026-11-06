@@ -1,3 +1,19 @@
-# Welcome to your Lovable project
+# Vulture Vision
 
-TODO: Document your project here
+Public market intelligence, Nasdaq analytics, news and socioeconomic scenario research. React/Vite frontend hosted on Netlify; Supabase database and Edge functions provide backend services. No workspace sign-in or Stripe payment is required.
+
+## Develop
+
+Use Node 22.12+ and npm. Run `npm ci`, copy `.env.example` to `.env.local`, set the two public Supabase variables, then run `npm run dev`. Server/provider credentials belong only in backend secret storage.
+
+## Publish on Netlify
+
+Follow [the Netlify release guide](docs/NETLIFY_RELEASE.md). Connect this repository's main branch; `netlify.toml` sets the build command, dist output, direct-route rewrites and asset headers. Configure public environment values in Netlify before the first build.
+
+`npm run build:netlify` validates frontend configuration and builds. `npm run check:backend` checks the connected backend; add `-- --ai` for one real AI request. After deployment run `npm run check:site -- https://YOUR-SITE.netlify.app`.
+
+Read [the live schema/error repair steps](docs/LIVE_ERROR_REPAIR.md) if simulation history or translation columns are missing. A frontend deploy does not deploy Supabase or host the separate Python/Whisper services.
+
+## Checks
+
+`npm test`, `npm run test:deployment`, `npm run test:migrations`, `npm run lint`, and `npx tsc --noEmit -p tsconfig.app.json`. CI builds the Netlify target with public test configuration. Live provider and ingestion checks remain separate from fixture tests.

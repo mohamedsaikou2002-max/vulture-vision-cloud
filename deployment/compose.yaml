@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     volumes:
       - ${WHISPER_MODEL_DIR:?Set model directory}:/models:ro
-    # Only the authenticated gateway reaches this private service.
+    # Only the bounded voice gateway reaches this private service.
   voice:
     build:
       context: ..
@@ -14,8 +14,6 @@ services:
     restart: unless-stopped
     environment:
       WHISPER_URL: http://whisper:8081
-      SUPABASE_URL: ${SUPABASE_URL:?Set Supabase URL}
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:?Set public project key}
       VOICE_ALLOWED_ORIGINS: ${VOICE_ALLOWED_ORIGINS:?Set exact frontend HTTPS origin}
     ports:
       - "127.0.0.1:8090:8090"

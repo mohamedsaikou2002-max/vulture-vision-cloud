@@ -7,5 +7,6 @@
   "original_filename": "vulture-original-video.mp4",
   "size": 1691931,
   "content_type": "video/mp4",
-  "created_at": "2026-10-19T16:58:58Z"
+  "created_at": "2026-10-19T16:58:58Z",
+  "public_url": "/video.mp4"
 }

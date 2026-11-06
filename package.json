@@ -11,11 +11,15 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:migrations": "node scripts/check-migrations.mjs"
+    "test:migrations": "node scripts/check-migrations.mjs",
+    "build:netlify": "node scripts/check-public-env.mjs && vite build",
+    "check:public-env": "node scripts/check-public-env.mjs",
+    "test:deployment": "node --test scripts/public-env.test.mjs",
+    "check:backend": "node scripts/check-backend.mjs",
+    "check:site": "node scripts/check-site.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
-    "@lovable.dev/cloud-auth-js": "^1.1.2",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-aspect-ratio": "^1.1.7",

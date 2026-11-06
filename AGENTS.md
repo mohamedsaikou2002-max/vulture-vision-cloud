@@ -21,3 +21,5 @@
 
 - Bound public requests through network and response consumption with the shared request-deadline helper; do not restore session acquisition to public clients.
 - Keep additive public-history schema types outside managed generated files so the frontend can compile before hosted migrations; a typed client never substitutes for deploying the table or its RLS.
+
+- Netlify is the frontend publishing target. Keep netlify.toml SPA routing and missing-asset 404 rules, npm's single lockfile, portable public video, and build-time public-env validation. Never commit local .env or frontend server secrets. Supabase and Python/Whisper deployments remain separate from static frontend deployment.

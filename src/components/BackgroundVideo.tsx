@@ -2,7 +2,7 @@ import { useEffect, useState, type Ref } from 'react';
 import asset from '@/assets/vulture-video.asset.json';
 export default function BackgroundVideo({ videoRef }: { videoRef?: Ref<HTMLVideoElement> }) {
   const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
-  const [source, setSource] = useState(asset.url);
+  const [source, setSource] = useState(import.meta.env.VITE_BACKGROUND_VIDEO_URL || asset.public_url || asset.url);
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     if (!media) return;

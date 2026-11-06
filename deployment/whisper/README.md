@@ -15,11 +15,11 @@ For local smoke testing start the engine on a separate port from Vite:
 WHISPER_URL=http://127.0.0.1:8081 news-crawler/.venv/bin/uvicorn services.voice.app:app --host 127.0.0.1 --port 8090
 ```
 
-Set the gateway's `SUPABASE_URL`, `SUPABASE_ANON_KEY` and exact
-`VOICE_ALLOWED_ORIGINS`. The gateway verifies each bearer session with Supabase,
+Set the gateway's exact `VOICE_ALLOWED_ORIGINS` to the Netlify production origin
+(and any specifically allowed preview origins). The public gateway requires no Supabase login,
 accepts only mono 16 kHz PCM WAV of 0.5–30 seconds, limits parallel inference,
 and never persists recordings. Place it behind HTTPS with ingress request/body
-limits and per-member rate limits. Never expose whisper.cpp's inference/load
+limits and host-level traffic controls. Never expose whisper.cpp's inference/load
 server directly to the public Internet.
 
 Set frontend `VITE_VOICE_HOST` to the HTTPS gateway origin before building.

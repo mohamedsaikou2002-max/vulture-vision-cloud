@@ -40,3 +40,7 @@ services/voice/tests/__pycache__/
 !.env.example
 *.pem
 *.key
+
+# Local project configuration and hosting state
+.env
+.netlify/

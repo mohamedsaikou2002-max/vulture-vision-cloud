@@ -1,0 +1,63 @@
+[build]
+  command = "npm run build:netlify"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NPM_VERSION = "11"
+  # These are deliberately public browser configuration, not server secrets.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_PUBLISHABLE_KEY,VITE_SUPABASE_PROJECT_ID"
+
+[dev]
+  command = "npm run dev -- --host 0.0.0.0 --port 5173"
+  targetPort = 5173
+  port = 8888
+  framework = "#custom"
+
+# Existing files shadow these rules. Missing assets must never return index.html.
+[[redirects]]
+  from = "/assets/*"
+  to = "/404.html"
+  status = 404
+
+[[redirects]]
+  from = "/images/*"
+  to = "/404.html"
+  status = 404
+
+[[redirects]]
+  from = "/__l5e/*"
+  to = "/404.html"
+  status = 404
+
+[[redirects]]
+  from = "/video.mp4"
+  to = "/404.html"
+  status = 404
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), geolocation=(), microphone=(self)"
+    X-Frame-Options = "SAMEORIGIN"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[template.environment]
+  VITE_SUPABASE_URL = "HTTPS URL of the existing Supabase project"
+  VITE_SUPABASE_PUBLISHABLE_KEY = "Public Supabase publishable key (never the service-role key)"
