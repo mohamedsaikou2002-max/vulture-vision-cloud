@@ -4,17 +4,17 @@
 
 ## Hosting layout
 
-Netlify builds and serves the React/Vite frontend. The existing Supabase project serves Postgres, public data APIs and Edge functions. **Update 2026-11-07:** This statement was true only for the superseded free-workspace revision. The paid member version now requires Supabase Auth and Stripe configuration; see [Auth + Stripe launch](AUTH_STRIPE_LAUNCH.md). AI/provider keys and the service-role key remain only in Supabase secrets. New simulation history is intentionally public; historical private records remain protected.
+Netlify builds and serves the React/Vite frontend. A **new, independent** Supabase project must serve Postgres, restricted data APIs and Edge Functions before the new Netlify frontend is activated. The member version requires Supabase Auth and server-confirmed Stripe subscriptions; see [Auth + Stripe launch](AUTH_STRIPE_LAUNCH.md). AI/provider keys and the service-role key remain only in Supabase secrets. Simulation history is **member-owned and accessible only to its entitled owner**; historical private records must remain protected.
 
 The Python crawler and Whisper gateway are separate long-running services. Netlify static hosting cannot run them. Cloud RSS collection is already part of vv-news; broader crawler ingestion, background context/translation and Whisper must each be deployed and checked separately. Browser speech remains the available fallback when VITE_VOICE_HOST is unset.
 
-## 1. Prepare the existing backend
+## 1. Prepare the new independent backend
 
 Read `docs/LIVE_ERROR_REPAIR.md`. Inspect the remote migration ledger and actual schema before applying changes. Deploy outstanding ordered Supabase migrations once; use the tested targeted repair `20261026020000_repair_history_translation.sql` when those objects are missing. Never replay old billing/schema migrations blindly.
 
-Deploy Edge functions with shared modules and `supabase/config.toml` JWT settings. Public workspace functions must not request a user login. Translation/context workers and administrative operations keep their server-side authorization.
+Deploy Edge functions with shared modules and `supabase/config.toml` JWT settings. Premium workspace functions must validate a real member JWT and paid entitlement. Translation/context workers and administrative operations keep separate server-side authorization. Public pages do not grant premium data access.
 
-The repository includes a manual **Deploy Supabase functions** GitHub Actions workflow. Configure the repository secret `SUPABASE_ACCESS_TOKEN` and variable `SUPABASE_PROJECT_REF`, then run that workflow on main. This deploys functions only; it deliberately does not blindly run database migrations or change provider secrets. A service-role API key is not a substitute for the management access token.
+The repository includes a manual **Deploy Supabase functions** GitHub Actions workflow. Configure the repository secret `SUPABASE_ACCESS_TOKEN` and variables `SUPABASE_PROJECT_REF` and matching `SUPABASE_PROJECT_REF_CONFIRM` for the **new project**, then run that workflow on main. This deploys functions only; it deliberately does not blindly run database migrations or change provider secrets. A service-role API key is not a substitute for the management access token.
 
 Configure existing AI credentials, supported models, FRED where required, and worker tokens/source permissions in Supabase. Schedule the trusted translation/context workers on your backend host. Run:
 
@@ -28,7 +28,7 @@ The second command performs read-only live checks; the `--ai` command additional
 
 ## 2. Connect GitHub to Netlify
 
-In Netlify choose **Add new project → Import an existing project → GitHub** and select `mohamedsaikou2002-max/vulture-vision-cloud`, production branch `main`, base directory repository root.
+In Netlify choose **Add new project → Import an existing project → GitHub** and select `mohamedsaikou2002-max/vulture-vision-cloud`, production branch `main` **only after merging the reviewed release PR and creating/configuring the independent backend**, base directory repository root.
 
 The committed `netlify.toml` provides:
 
@@ -43,7 +43,7 @@ Set these build environment variables in Netlify, for production and any preview
 
 | Name | Required | Value |
 |---|---|---|
-| VITE_SUPABASE_URL | Yes | Existing project's HTTPS origin |
+| VITE_SUPABASE_URL | Yes | **New independent** project's HTTPS origin |
 | VITE_SUPABASE_PUBLISHABLE_KEY | Yes | Public publishable key or legacy anon key |
 | VITE_SUPABASE_PROJECT_ID | No | Matching project reference; optional consistency check |
 | VITE_VOICE_HOST | No | Exact HTTPS voice gateway origin; omit for browser speech |
@@ -51,7 +51,7 @@ Set these build environment variables in Netlify, for production and any preview
 
 Vite embeds these values at build time: rebuild after changing them. Do not add Gemini, Stripe, worker tokens, database passwords or service-role secrets to VITE_ variables or Netlify's frontend build environment. Netlify scanning exempts only the explicitly public Supabase variable names; secret scanning remains enabled.
 
-The tracked local `.env` and redundant Bun lock have been removed from version control. Keep local configuration in ignored `.env.local`. The original video is shipped inside public/; no Lovable-only asset endpoint is needed. The landing design is preserved and obsolete paid-membership metadata is removed.
+The tracked local `.env` and redundant Bun lock have been removed from version control. Keep local configuration in ignored `.env.local`. The original video is shipped inside public/; no Lovable-only asset endpoint is needed. The landing design and the new login, account, membership and billing routes are preserved.
 
 Use Git-based deployment, not a raw drag-and-drop of dist: the headers and routing configuration live in netlify.toml. Existing static files are served normally; missing JS/images return 404 instead of HTML; application routes rewrite to index.html. Backend calls remain absolute Supabase HTTPS calls and do not require a Netlify API proxy.
 
