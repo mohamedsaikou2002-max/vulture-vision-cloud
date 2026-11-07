@@ -1,7 +1,8 @@
-// vv-simulation-chat — public Gemini research panel.
+// vv-simulation-chat — paid member Gemini research panel.
 // Unlike the separate operator-only MiroFish engine, this answers research questions
 // even when an engine is unavailable. Synthetic analyst roles are not live agents.
 import { hasConfiguredAI, generateConfigured } from "../_shared/gemini.ts";
+import { authorize } from "../_shared/access.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   parseSimulationChatRequest, buildSimulationChatPrompt, parseSimulationChatAnswer
@@ -17,6 +18,8 @@ const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body)
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  const denied = await authorize(req);
+  if (denied) return denied;
   if (req.method !== "POST") return reply({ error: "Method not allowed" }, 405);
   const raw = await req.text().catch(() => "");
   if (new TextEncoder().encode(raw).byteLength > 30000) return reply({ error: "Chat request too large" }, 413);
