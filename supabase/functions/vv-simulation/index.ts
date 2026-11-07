@@ -12,7 +12,7 @@ Deno.serve(async req => {
   if (req.method !== "POST") return reply({ error: "Method not allowed" }, 405);
   const auth = req.headers.get("authorization") ?? "";
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
-  const { data: { user }, error } = await sb.auth.getUser(auth.replace(/^Bearer\\s+/i, ""));
+  const { data: { user }, error } = await sb.auth.getUser(auth.replace(/^Bearer\s+/i, ""));
   if (error || !user) return reply({ error: "Sign in required" }, 401);
   const operators = (Deno.env.get("MIROFISH_ALLOWED_USER_IDS") ?? "").split(",").map(s => s.trim());
   if (!operators.includes(user.id)) {
