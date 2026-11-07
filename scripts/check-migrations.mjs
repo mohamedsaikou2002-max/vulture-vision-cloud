@@ -63,18 +63,22 @@ try {
  await assert.rejects(db.query('SELECT * FROM billing_customers'));
  await assert.rejects(db.query('SELECT vv_claim_checkout($1,$2)',[userA,jobB]));
  await assert.rejects(db.query('SELECT vv_apply_billing_event($1,$2,$3,$4::jsonb)',['forged',200,userA,JSON.stringify(billingState)]));
- // Free access must remain independent of historical paid release flags.
+ // Subscriptions are now required regardless of the legacy free-access setting.
  await db.exec('RESET ROLE');
- assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[userB])).rows[0].access,true);
- await db.exec('UPDATE workspace_release_policy SET paid_access_required=true');
+ assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[userB])).rows[0].access,false);
  assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[userA])).rows[0].access,true);
- assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[userB])).rows[0].access,true);
+ await db.exec('UPDATE workspace_release_policy SET paid_access_required=false');
+ assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[userA])).rows[0].access,true);
+ assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[userB])).rows[0].access,false);
  assert.equal((await db.query('SELECT vv_workspace_access($1) AS access',[null])).rows[0].access,false);
  await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[userB]);await db.exec('SET ROLE authenticated');
- assert.equal((await db.query('SELECT count(*)::integer AS n FROM news_articles')).rows[0].n,1);
+ assert.equal((await db.query('SELECT count(*)::integer AS n FROM news_articles')).rows[0].n,0);
  assert.equal((await db.query('SELECT count(*)::integer AS n FROM autosim_jobs')).rows[0].n,0);
- await assert.rejects(db.query('UPDATE workspace_release_policy SET paid_access_required=false'));
+ await assert.rejects(db.query('UPDATE workspace_release_policy SET paid_access_required=true'));
  await assert.rejects(db.query('SELECT * FROM headline_translation_queue'));
+ await db.exec('RESET ROLE');
+ await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[userA]);await db.exec('SET ROLE authenticated');
+ assert.equal((await db.query('SELECT count(*)::integer AS n FROM news_articles')).rows[0].n,1);
  await db.exec('RESET ROLE');
  const translation=(await db.query('SELECT * FROM vv_claim_translations()')).rows[0];assert.ok(translation.lease_token);
  assert.equal((await db.query('SELECT * FROM vv_claim_translations()')).rows.length,0);
@@ -83,25 +87,33 @@ try {
  assert.equal(translated.title,'New development');assert.equal(translated.translated_title_en,'English development');assert.equal(translated.translation_status,'translated');
  await db.exec("UPDATE news_articles SET title='Changed headline' WHERE id='a'");
  assert.equal((await scalar("SELECT translated_title_en FROM news_articles WHERE id='a'")).translated_title_en,null);
- // No Auth account is needed for new public research; old private records stay private.
- await db.exec('RESET ROLE');
+ // Existing public research records are preserved, but public visitors cannot read them.
  const publicActor='00000000-0000-4000-8000-000000000000';
- const publicClaim=async(id)=>(await db.query('SELECT vv_claim_public_autosim($1,$2,$3,NULL,1) AS result',[publicActor,id,'Public Nasdaq scenario'])).rows[0].result;
+ const publicClaim=async(user,id)=>(await db.query('SELECT vv_claim_public_autosim($1,$2,$3,NULL,1) AS result',[user,id,'Private member Nasdaq scenario'])).rows[0].result;
  const publicJob='10000000-0000-4000-8000-000000000001';
- assert.equal(await publicClaim(publicJob),'claimed');
- assert.equal(await publicClaim(publicJob),'existing');
- for(let i=2;i<=42;i++)assert.equal(await publicClaim(`10000000-0000-4000-8000-${String(i).padStart(12,'0')}`),'claimed');
+ assert.equal(await publicClaim(userA,publicJob),'claimed');
+ assert.equal(await publicClaim(userA,publicJob),'existing');
+ assert.equal(await publicClaim(userB,'10000000-0000-4000-8000-000000000002'),'claimed');
  await db.exec('SET ROLE anon');
- assert.equal((await scalar('SELECT count(*)::integer AS n FROM public_workspace_jobs')).n,42);
- assert.equal((await scalar('SELECT count(*)::integer AS n FROM news_articles')).n,1);
- await assert.rejects(db.query('SELECT * FROM autosim_jobs'));
- await assert.rejects(db.query('SELECT * FROM billing_customers'));
- await assert.rejects(db.query("UPDATE public_workspace_jobs SET scenario='Forged scenario'"));
+ await assert.rejects(db.query('SELECT * FROM public_workspace_jobs'));
+ await assert.rejects(db.query('SELECT * FROM news_articles'));
  await assert.rejects(db.query('SELECT vv_claim_public_autosim($1,$2,$3,NULL,1)',[publicActor,publicJob,'Browser direct write']));
+ await db.exec('RESET ROLE');
+ await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[userA]);await db.exec('SET ROLE authenticated');
+ assert.equal((await scalar('SELECT count(*)::integer AS n FROM public_workspace_jobs')).n,1);
+ await assert.rejects(db.query("UPDATE public_workspace_jobs SET scenario='Forged scenario'"));
+ await db.exec('RESET ROLE');
+ await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[userB]);await db.exec('SET ROLE authenticated');
+ assert.equal((await scalar('SELECT count(*)::integer AS n FROM public_workspace_jobs')).n,0);
  await db.exec('RESET ROLE');
  await db.query("UPDATE news_articles SET translated_title_en='Preserved English headline',translation_status='translated' WHERE id='a'");
  const repairSql=await readFile('supabase/migrations/20261026020000_repair_history_translation.sql','utf8');
  await db.exec(repairSql);await db.exec(repairSql);
  assert.equal((await scalar("SELECT translated_title_en FROM news_articles WHERE id='a'")).translated_title_en,'Preserved English headline');
- console.log('Migration checks passed: public news/history without Auth, no public daily quota, atomic replay, protected private research and server-only writes.');
+ // Idempotent repair may re-add legacy public grants when run out of order; the latest membership migration reasserts privacy.
+ await db.exec(await readFile('supabase/migrations/20261107210000_restore_member_access.sql','utf8'));
+ await db.exec('SET ROLE anon');
+ await assert.rejects(db.query('SELECT * FROM public_workspace_jobs'));
+ await db.exec('RESET ROLE');
+ console.log('Migration checks passed: paid entitlement enforcement, private user history, secure billing events and server-only writes.');
 } finally {await db.close();}
