@@ -13,11 +13,11 @@ it('refuses an unauthenticated simulation before accessing the provider',async()
  expect(fetcher).not.toHaveBeenCalled();
 });
 it('sends the signed-in user token, never the publishable key, to the simulation endpoint',async()=>{
- const fetcher=vi.fn(async()=>Response.json({ok:true}));
+ const fetcher=vi.fn(async(_url: string, _options?: RequestInit)=>Response.json({ok:true}));
  vi.stubGlobal('fetch',fetcher);
  await expect(callAutoSim({action:'world_state'})).resolves.toEqual({ok:true});
  expect(mocks.getSession).toHaveBeenCalled();
- expect(fetcher.mock.calls[0][1]?.headers?.Authorization).toBe('Bearer fixture');
+ expect(fetcher.mock.calls[0][1]?.headers).toMatchObject({Authorization:'Bearer fixture'});
 });
 it('includes stalled response consumption in the world-state deadline',async()=>{
  vi.useFakeTimers();vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,status:200,text:()=>new Promise(()=>{})})));
