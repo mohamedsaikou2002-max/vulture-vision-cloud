@@ -37,7 +37,7 @@ Review the SQL and proposed migration order before making changes. When the new 
 npx supabase db push --remote
 ```
 
-The canonical SQL stream is `supabase/migrations/`. Do **not** indiscriminately replay an old project's migration ledger or use `supabase db reset --remote` to fix errors. The targeted October 26 repair exists for databases missing specific schema; check whether it is appropriate for a fresh project before applying it. Confirm the migration list and inspect the resulting tables/functions, RLS policies, public grants, and service-role-only RPC permissions. Preserve existing private tables' protection. Follow `docs/FREE_WORKSPACE_RELEASE.md` and `docs/LIVE_ERROR_REPAIR.md`.
+The canonical SQL stream is `supabase/migrations/`. Do **not** indiscriminately replay an old project's migration ledger or use `supabase db reset --remote` to fix errors. The targeted October 26 repair exists for databases missing specific schema; check whether it is appropriate for a fresh project before applying it. Confirm the migration list and inspect the resulting tables/functions, RLS policies, public grants, and service-role-only RPC permissions. Preserve existing private tables' protection. The free/public workspace release guide is superseded. Review `docs/AUTH_STRIPE_LAUNCH.md` and `docs/LIVE_ERROR_REPAIR.md` for paid authorization and schema checks.
 
 If preserving existing **authorized** public history or articles, export and migrate data from the previous database after schema validation, with primary keys, dependencies, ownership, copyright/retention requirements and row-level access checked. An initial empty database is not a copy of the old data.
 
@@ -99,7 +99,7 @@ Disconnect GitHub sync/archive or delete the old Lovable project **only after** 
 
 - [Netlify release](NETLIFY_RELEASE.md)
 - [Netlify verification](NETLIFY_VERIFICATION.md)
-- [Public workspace/security notes](FREE_WORKSPACE_RELEASE.md)
+- [Paid membership, authentication, RLS and Stripe launch](AUTH_STRIPE_LAUNCH.md)
 - [Known hosted errors](LIVE_ERROR_REPAIR.md)
 - [Supabase CLI migrations](https://supabase.com/docs/guides/deployment/database-migrations)
 - [Supabase environment management](https://supabase.com/docs/guides/deployment/managing-environments)
