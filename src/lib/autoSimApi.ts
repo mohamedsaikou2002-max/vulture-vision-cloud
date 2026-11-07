@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import type { PublicWorkspaceDatabase } from './publicWorkspaceSchema';
 import { withRequestDeadline } from './requestDeadline';
 import type { Dim, Agent, DimDistribution, StrategyAgg } from "../../supabase/functions/_shared/autosim_engine";
@@ -24,12 +25,14 @@ const FRIENDLY: Record<string, string> = {
 const wasAborted = (value: unknown) => value !== null && typeof value === 'object' && 'name' in value && /timeout|abort/i.test(String(value.name));
 
 export async function callAutoSim<T = Record<string, unknown>>(payload: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
+  const {data:{session}} = await supabase.auth.getSession();
+  if (!session?.access_token) throw new ApiError("unauthorized", "Sign in to run simulations.", 401);
   try {return await withRequestDeadline(async deadline => {
   let res: Response;
   try {
     res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/vv-autosim`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
       body: JSON.stringify(payload),
       signal: deadline,
     });
@@ -81,12 +84,7 @@ export async function fetchWorldState(): Promise<WorldStateResult> {
   return validated as unknown as WorldStateResult;
 }
 
-const publicHistory = createClient<PublicWorkspaceDatabase>(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } },
-);
-const jobs = () => publicHistory.from('public_workspace_jobs');
+const jobs = () => (supabase as unknown as SupabaseClient<PublicWorkspaceDatabase>).from("public_workspace_jobs");
 export async function listJobs(): Promise<JobRow[]> {
   const { data, error } = await jobs().select("id,scenario,status,created_at,parent_job_id,error").order("created_at", { ascending: false }).limit(30).abortSignal(AbortSignal.timeout(8000));
   if (error) throw new ApiError("history_unavailable", "Couldn't load your history.", 500);
