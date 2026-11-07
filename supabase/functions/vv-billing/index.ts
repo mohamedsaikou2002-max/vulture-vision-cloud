@@ -9,7 +9,7 @@ Deno.serve(async req=>{
   const body=JSON.parse(await boundedBody(req,2048));
   const enabled=Deno.env.get('BILLING_ENABLED')==='true'&&!!key&&!!monthly&&!!intro&&!!origin;
   if(body.action==='config')return reply({enabled,offer:BILLING_OFFER});
-  const token=(req.headers.get('authorization')||'').replace(/^Bearer\\s+/i,'').trim();
+  const token=(req.headers.get('authorization')||'').replace(/^Bearer\s+/i,'').trim();
   if(!token)return reply({error:'Sign in to manage billing'},401);
   const client=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_ANON_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:{user},error}=await client.auth.getUser(token);if(error||!user||user.is_anonymous)return reply({error:'Sign in to manage billing'},401);
