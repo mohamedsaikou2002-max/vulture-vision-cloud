@@ -18,6 +18,9 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit -p tsconfig.app.json
       - run: npm test
+        env:
+          VITE_SUPABASE_URL: https://ci-project.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_build_only
       - run: npm run test:deployment
       - run: npm run build:netlify
         env:
