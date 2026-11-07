@@ -8,7 +8,7 @@ Use Node 22.12+ and npm. Run `npm ci`, copy `.env.example` to `.env.local`, set 
 
 ## Publish on Netlify
 
-Follow [the Netlify release guide](docs/NETLIFY_RELEASE.md). Connect this repository's main branch; `netlify.toml` sets the build command, dist output, direct-route rewrites and asset headers. Configure public environment values in Netlify before the first build.
+For a new independent backend, start with [the standalone cutover guide](docs/STANDALONE_NETLIFY_SUPABASE_CUTOVER.md), then [the Netlify release guide](docs/NETLIFY_RELEASE.md). The older Lovable-managed backend must not be reused accidentally. Connect this repository's main branch; `netlify.toml` sets the build command, dist output, direct-route rewrites and asset headers. Configure public environment values in Netlify before the first build.
 
 `npm run build:netlify` validates frontend configuration and builds. `npm run check:backend` checks the connected backend; add `-- --ai` for one real AI request. After deployment run `npm run check:site -- https://YOUR-SITE.netlify.app`.
 
