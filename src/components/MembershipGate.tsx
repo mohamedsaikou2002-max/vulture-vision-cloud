@@ -15,7 +15,7 @@ export default function MembershipGate() {
       }).catch(() => { if (active) setState({ loading: false, entitled: false, error: "Membership verification is temporarily unavailable." }); });
     };
     refresh();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => refresh());
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => { window.setTimeout(refresh, 0); });
     window.addEventListener("focus", refresh);
     return () => { active = false; subscription.unsubscribe(); window.removeEventListener("focus", refresh); };
   }, []);
