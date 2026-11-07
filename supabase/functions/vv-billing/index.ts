@@ -9,9 +9,10 @@ Deno.serve(async req=>{
   const body=JSON.parse(await boundedBody(req,2048));
   const enabled=Deno.env.get('BILLING_ENABLED')==='true'&&!!key&&!!monthly&&!!intro&&!!origin;
   if(body.action==='config')return reply({enabled,offer:BILLING_OFFER});
-  const authorization=req.headers.get('authorization')||'';
-  const client=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:authorization}}});
-  const {data:{user},error}=await client.auth.getUser();if(error||!user)return reply({error:'Sign in to manage billing'},401);
+  const token=(req.headers.get('authorization')||'').replace(/^Bearer\\s+/i,'').trim();
+  if(!token)return reply({error:'Sign in to manage billing'},401);
+  const client=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_ANON_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data:{user},error}=await client.auth.getUser(token);if(error||!user||user.is_anonymous)return reply({error:'Sign in to manage billing'},401);
   const sb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   if(body.action==='status'){
    const [{data,error},{data:entitled,error:accessError}]=await Promise.all([
