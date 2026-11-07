@@ -5,11 +5,19 @@ vi.mock('@/integrations/supabase/client',()=>({supabase:{auth:{getSession:mocks.
 import {callAutoSim} from '@/lib/autoSimApi';
 beforeEach(()=>{mocks.getSession.mockReset();mocks.getSession.mockResolvedValue({data:{session:{access_token:'fixture'}}});vi.stubGlobal('AbortSignal',transferableAbortController().signal.constructor);vi.stubEnv('VITE_SUPABASE_URL','https://fixture.supabase.co');});
 afterEach(()=>{vi.useRealTimers();vi.unstubAllGlobals();vi.unstubAllEnvs();});
-it('does not consult Auth even when session acquisition would stall',async()=>{
- mocks.getSession.mockImplementationOnce(()=>new Promise(()=>{}));
- vi.stubGlobal('fetch',vi.fn(async()=>Response.json({ok:true})));
+it('refuses an unauthenticated simulation before accessing the provider',async()=>{
+ mocks.getSession.mockResolvedValueOnce({data:{session:null}});
+ const fetcher=vi.fn(async()=>Response.json({ok:true}));
+ vi.stubGlobal('fetch',fetcher);
+ await expect(callAutoSim({action:'world_state'})).rejects.toMatchObject({code:'unauthorized',status:401});
+ expect(fetcher).not.toHaveBeenCalled();
+});
+it('sends the signed-in user token, never the publishable key, to the simulation endpoint',async()=>{
+ const fetcher=vi.fn(async()=>Response.json({ok:true}));
+ vi.stubGlobal('fetch',fetcher);
  await expect(callAutoSim({action:'world_state'})).resolves.toEqual({ok:true});
- expect(mocks.getSession).not.toHaveBeenCalled();
+ expect(mocks.getSession).toHaveBeenCalled();
+ expect(fetcher.mock.calls[0][1]?.headers?.Authorization).toBe('Bearer fixture');
 });
 it('includes stalled response consumption in the world-state deadline',async()=>{
  vi.useFakeTimers();vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,status:200,text:()=>new Promise(()=>{})})));
