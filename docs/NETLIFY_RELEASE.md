@@ -4,7 +4,7 @@
 
 ## Hosting layout
 
-Netlify builds and serves the React/Vite frontend. The existing Supabase project serves Postgres, public data APIs and Edge functions. No Supabase Auth provider or Stripe configuration is needed by the workspace. AI/provider keys and the service-role key remain only in Supabase secrets. New simulation history is intentionally public; historical private records remain protected.
+Netlify builds and serves the React/Vite frontend. The existing Supabase project serves Postgres, public data APIs and Edge functions. **Update 2026-11-07:** This statement was true only for the superseded free-workspace revision. The paid member version now requires Supabase Auth and Stripe configuration; see [Auth + Stripe launch](AUTH_STRIPE_LAUNCH.md). AI/provider keys and the service-role key remain only in Supabase secrets. New simulation history is intentionally public; historical private records remain protected.
 
 The Python crawler and Whisper gateway are separate long-running services. Netlify static hosting cannot run them. Cloud RSS collection is already part of vv-news; broader crawler ingestion, background context/translation and Whisper must each be deployed and checked separately. Browser speech remains the available fallback when VITE_VOICE_HOST is unset.
 
@@ -66,7 +66,7 @@ npm run check:site -- https://YOUR-PREVIEW.netlify.app
 npm run check:backend -- --ai
 ```
 
-Check real browser flows on mobile, tablet and desktop: public landing/video, Intel, Nasdaq analytics/chart, Socio-Economics, News/English translations and broadcast links, full/Quick Nasdaq simulation, history/replay/questions, Research Chat and optional research panels. Refresh deep links directly. Verify there are no sign-in, anonymous signup or billing requests. Confirm errors recover, timestamps are real and public data is labeled appropriately. Never treat fixture browser tests as successful live provider verification.
+Check real browser flows on mobile, tablet and desktop: public landing/video, Intel, Nasdaq analytics/chart, Socio-Economics, News/English translations and broadcast links, full/Quick Nasdaq simulation, history/replay/questions, Research Chat and optional research panels. Refresh deep links directly. Verify sign-in, email confirmation/password recovery, membership entitlements, and Stripe Checkout/Portal against a test account. Public routes must not invoke private research without a paid member token. Confirm errors recover, timestamps are real and public data is labeled appropriately. Never treat fixture browser tests as successful live provider verification.
 
 Netlify's own offline build can be checked locally with `npx netlify-cli build --offline --context production`. Local `netlify dev` may require downloading Netlify's Edge runtime even when the application has no Netlify Edge functions; restricted-network failures there are separate from successful static build/config validation.
 
