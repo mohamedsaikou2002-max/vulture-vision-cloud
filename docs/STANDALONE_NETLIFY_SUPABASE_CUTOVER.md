@@ -12,9 +12,9 @@ The old Lovable-managed database was reported enabled but a read-only metadata i
 
 - Keep the old Lovable project, database, and environment available for rollback until the new site passes real end-to-end tests.
 - Inspect and export the original schema, applied migration ledger, table counts and **authorized** data backups before moving or deleting anything. Inspect storage buckets, cron schedules, external worker configuration, function secrets, and any OAuth/provider callback URLs separately.
-- The current app is intentionally public: no sign-in or Stripe checkout; `public_workspace_jobs` and new simulation history are public. Existing private and billing history must not become public accidentally. Do not restore private rows into public tables.
+- The earlier free-workspace revision was public. The 2026-11-07 paid migration restores Supabase Auth + Stripe membership: `public_workspace_jobs` is now member-owned and readable only by its owner with an active subscription. Existing private and billing history must not become public accidentally. Do not restore private rows into public tables.
 - If the original database cannot be accessed, migration of **existing data** is blocked. A new Supabase project can still be initialized from migration SQL, but it starts without the old records.
-- Retired billing endpoints exist in source for backward compatibility. Do not reactivate charging or re-register old Stripe webhooks as part of hosting migration.
+- The old billing endpoints have been restored in this branch, but checkout must remain disabled until a new signed Stripe test-mode webhook is verified. Do not reuse old webhook secrets or payment settings blindly.
 
 ## 1. Create the replacement backend (separate Supabase project)
 
