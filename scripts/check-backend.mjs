@@ -4,6 +4,8 @@ const env=loadEnv('production',process.cwd(),'VITE_');
 const problems=publicEnvironmentErrors(env);
 if(problems.length){console.error(problems.join('\n'));process.exit(1);}
 const base=env.VITE_SUPABASE_URL.replace(/\/$/,'');
+const memberToken=process.env.VV_TEST_MEMBER_JWT?.trim();
+if(!memberToken){console.error('Set VV_TEST_MEMBER_JWT locally to a real signed-in paid test user access token for backend smoke checks; never commit it.');process.exit(1);}
 const key=env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const checks=[
  {name:'Public simulation history',path:'/rest/v1/public_workspace_jobs?select=id&limit=0'},
@@ -16,7 +18,7 @@ if(process.argv.includes('--ai'))checks.push({name:'Live Intel AI reply',path:'/
 const results=await Promise.all(checks.map(async check=>{
  const start=performance.now();
  try{
-  const response=await fetch(base+check.path,{method:check.body?'POST':'GET',headers:{apikey:key,'Content-Type':'application/json'},body:check.body?JSON.stringify(check.body):undefined,signal:AbortSignal.timeout(check.timeout||15000)});
+  const response=await fetch(base+check.path,{method:check.body?'POST':'GET',headers:{apikey:key,'Content-Type':'application/json',Authorization:'Bearer '+memberToken},body:check.body?JSON.stringify(check.body):undefined,signal:AbortSignal.timeout(check.timeout||15000)});
   const data=await response.json();
   const pass=response.ok&&(!check.verify||check.verify(data));
   const code=typeof data?.code==='string'?data.code:typeof data?.error?.code==='string'?data.error.code:undefined;
@@ -24,5 +26,5 @@ const results=await Promise.all(checks.map(async check=>{
  }catch{return {check:check.name,result:'BLOCKED',detail:'Request timed out or the service could not be reached.'};}
 }));
 for(const result of results)console.log(JSON.stringify(result));
-console.log('Public checks do not prove publisher coverage, translation scheduling, external Whisper inference or all AI features. Use --ai for one actual inference request.');
+console.log('Authenticated member checks do not prove publisher coverage, translation scheduling, external Whisper inference or all AI features. Use --ai for one actual inference request.');
 if(results.some(result=>result.result!=='PASS'))process.exitCode=1;
