@@ -1,3 +1,5 @@
+> **Historical release notes.** Authentication and Stripe were subsequently removed and have now been restored in the new Netlify migration branch. Current deployment instructions are in [AUTH_STRIPE_LAUNCH.md](AUTH_STRIPE_LAUNCH.md); do not use old Lovable-only OAuth paths.
+
 # Finalization and publishing
 
 The app has two Nasdaq research views: `/simulations` is the Belicia-style
