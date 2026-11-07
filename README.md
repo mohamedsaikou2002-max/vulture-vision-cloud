@@ -1,10 +1,10 @@
 # Vulture Vision
 
-Public market intelligence, Nasdaq analytics, news and socioeconomic scenario research. React/Vite frontend hosted on Netlify; Supabase database and Edge functions provide backend services. No workspace sign-in or Stripe payment is required.
+Public market intelligence, Nasdaq analytics, news and socioeconomic scenario research. React/Vite frontend hosted on Netlify; Supabase database and Edge functions provide backend services. Customer workspace requires Supabase Auth and a server-confirmed Stripe subscription. Checkout is kept disabled until live staging verification; the public landing and account pages remain accessible.
 
 ## Develop
 
-Use Node 22.12+ and npm. Run `npm ci`, copy `.env.example` to `.env.local`, set the two public Supabase variables, then run `npm run dev`. Server/provider credentials belong only in backend secret storage.
+Use Node 22.12+ and npm. Run `npm ci`, copy `.env.example` to `.env.local`, set the two public Supabase variables, then run `npm run dev`. Supabase Auth must be configured with email/password or Google OAuth, and the Stripe test-mode backend needs signed webhook validation before enabling checkout. Server/provider credentials belong only in backend secret storage.
 
 ## Publish on Netlify
 
