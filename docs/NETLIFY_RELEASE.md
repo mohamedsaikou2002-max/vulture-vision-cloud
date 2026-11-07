@@ -1,5 +1,7 @@
 # Publish Vulture Vision on Netlify
 
+> **Independent Supabase migration:** This older guide refers to the existing backend. For a new Supabase project not managed by Lovable, first follow [Standalone Netlify + new Supabase cutover](STANDALONE_NETLIFY_SUPABASE_CUTOVER.md). Do not deploy against the old project reference or assume its data/functions were copied.
+
 ## Hosting layout
 
 Netlify builds and serves the React/Vite frontend. The existing Supabase project serves Postgres, public data APIs and Edge functions. No Supabase Auth provider or Stripe configuration is needed by the workspace. AI/provider keys and the service-role key remain only in Supabase secrets. New simulation history is intentionally public; historical private records remain protected.
