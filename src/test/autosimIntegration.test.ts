@@ -34,7 +34,7 @@ function fixture(malformed=false,missingClaim=false){
     }
     return {data:true,error:null};
   }};
-  const env:Record<string,string>={SUPABASE_URL:'https://example.supabase.co',SUPABASE_ANON_KEY:'fixture',SUPABASE_SERVICE_ROLE_KEY:'fixture',GEMINI_API_KEY:'fixture',GEMINI_MODEL:'gemini-configured',VV_DIM_PATHS:'3',VV_STRAT_PATHS:'3'};
+  const env:Record<string,string>={SUPABASE_URL:'https://example.supabase.co',SUPABASE_ANON_KEY:'fixture',SUPABASE_SERVICE_ROLE_KEY:'fixture',GEMINI_API_KEY:'fixture',GEMINI_MODEL:'gemini-configured',VV_DIM_PATHS:'3',VV_STRAT_PATHS:'3',__TEST_MEMBER_ID:user};
   let priceOffset=0;
   const fetcher=vi.fn().mockImplementation(async(input:string|URL,init:RequestInit)=>{
     const url=String(input);
@@ -51,7 +51,7 @@ function fixture(malformed=false,missingClaim=false){
   });
   const handler=loadEdgeHandler('vv-autosim',fetcher,env,()=>sb);
   const call=async(payload:Record<string,unknown>)=>{
-    const response=await handler(new Request('https://fixture.invalid',{method:'POST',body:JSON.stringify(payload)}));
+    const response=await handler(new Request('https://fixture.invalid',{method:'POST',headers:{authorization:'Bearer fixture-member'},body:JSON.stringify(payload)}));
     const data=await response.json();return {status:response.status,data};
   };
   return {call,fetcher,jobs,env,changePrice:()=>{priceOffset=500;}};
