@@ -15,9 +15,7 @@ export default function AuthGate() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
       if (!session) setState({ ready: true, user: null });
-      else void supabase.auth.getUser().then(({ data, error }) => {
-        if (active) setState({ ready: true, user: error ? null : data.user });
-      }).catch(() => { if (active) setState({ ready: true, user: null }); });
+      else setState({ ready: true, user: session.user });
     });
     return () => { active = false; subscription.unsubscribe(); };
   }, []);
