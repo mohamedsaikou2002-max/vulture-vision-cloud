@@ -24,6 +24,19 @@ jobs:
           VITE_SUPABASE_URL: https://ci-project.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_build_only
           VITE_SUPABASE_PROJECT_ID: ci-project
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vulture-vision-netlify-preview
+          path: |
+            dist/
+            netlify.toml
+          retention-days: 7
+          if-no-files-found: error
+      - run: npm run doctor:local -- --offline
+        env:
+          VITE_SUPABASE_URL: https://ci-project.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_build_only
+          VITE_SUPABASE_PROJECT_ID: ci-project
       - run: npm run test:migrations
       - uses: denoland/setup-deno@v2
         with:
