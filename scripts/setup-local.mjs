@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, readFileSync } from 'node:fs';
+import { COPYFILE_EXCL, copyFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
@@ -14,7 +14,7 @@ if (version[0] < 22 || (version[0] === 22 && version[1] < 12)) {
   process.exit(1);
 }
 if (!existsSync(target)) {
-  copyFileSync(template, target, 0x80);
+  copyFileSync(template, target, COPYFILE_EXCL);
   console.log('Created .env.local from .env.example. This local file is ignored by Git.');
 } else {
   console.log('.env.local already exists; no values were overwritten.');
