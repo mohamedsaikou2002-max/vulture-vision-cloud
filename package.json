@@ -16,7 +16,10 @@
     "check:public-env": "node scripts/check-public-env.mjs",
     "test:deployment": "node --test scripts/public-env.test.mjs",
     "check:backend": "node scripts/check-backend.mjs",
-    "check:site": "node scripts/check-site.mjs"
+    "check:site": "node scripts/check-site.mjs",
+    "setup:local": "node scripts/setup-local.mjs",
+    "doctor:local": "node scripts/local-doctor.mjs",
+    "verify:local": "npm run lint && npx tsc --noEmit -p tsconfig.app.json && npm test && npm run test:deployment && npm run test:migrations && npm run build:netlify"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

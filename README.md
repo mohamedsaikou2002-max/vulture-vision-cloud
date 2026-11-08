@@ -17,3 +17,20 @@ Read [the live schema/error repair steps](docs/LIVE_ERROR_REPAIR.md) if simulati
 ## Checks
 
 `npm test`, `npm run test:deployment`, `npm run test:migrations`, `npm run lint`, and `npx tsc --noEmit -p tsconfig.app.json`. CI builds the Netlify target with public test configuration. Live provider and ingestion checks remain separate from fixture tests.
+
+
+## Run in VS Code (Windows)
+
+Download the complete `vscode-local-test-2026-11-07` branch ZIP, extract it, and open the repository folder in VS Code. With Node.js **22.12+** installed, use the integrated terminal:
+
+```powershell
+npm run setup:local
+# Edit .env.local with the active Supabase project's PUBLIC URL and publishable key.
+npm ci
+npm run doctor:local
+npm run dev
+```
+
+Open the local address printed by Vite (normally `http://localhost:5173`). Windows users can also run `.\start-vulture-vision.ps1` after editing their public configuration. Run `npm run verify:local` for source/build tests and `npm run check:backend -- --ai` to test actual backend/AI requests.
+
+**Important:** A static build is not a live deployment. The current codebase still exposes the public workspace and has retired Stripe billing stubs. See [VS Code setup, testing and deployment](docs/VS_CODE_TEST_AND_DEPLOY.md) for Supabase project ownership checks, Netlify publishing, and limitations.

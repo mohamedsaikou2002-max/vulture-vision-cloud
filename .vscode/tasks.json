@@ -1,0 +1,10 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Vulture Vision: Install dependencies", "type": "shell", "command": "npm ci", "problemMatcher": [] },
+    { "label": "Vulture Vision: Prepare local env", "type": "shell", "command": "npm run setup:local", "problemMatcher": [] },
+    { "label": "Vulture Vision: Check local backend", "type": "shell", "command": "npm run doctor:local", "problemMatcher": [] },
+    { "label": "Vulture Vision: Start app", "type": "shell", "command": "npm run dev -- --host 127.0.0.1 --strictPort", "isBackground": true, "problemMatcher": [] },
+    { "label": "Vulture Vision: Run release checks", "type": "shell", "command": "npm run verify:local", "problemMatcher": [] }
+  ]
+}
