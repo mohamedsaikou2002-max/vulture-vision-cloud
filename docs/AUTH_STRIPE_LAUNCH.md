@@ -1,10 +1,10 @@
-# Vulture Vision — Supabase Auth + Stripe billing launch (Netlify)
+# Vulture Vision — Supabase Auth + Stripe billing launch (Vercel)
 
-**Status:** Source implementation is prepared for staging. It is **not** a live subscription service until the new Supabase project, Stripe test environment, functions, migrations, and Netlify preview have all been deployed and tested.
+**Status:** Source implementation is prepared for staging. It is **not** a live subscription service until the new Supabase project, Stripe test environment, functions, migrations, and Vercel preview have all been deployed and tested.
 
 ## Preserved architecture
 
-- Netlify: existing React/Vite frontend and responsive dashboard/research routes.
+- Vercel: existing React/Vite frontend and responsive dashboard/research routes.
 - New independently managed Supabase: Auth, PostgreSQL, restricted RLS, functions, simulation history, news and translation.
 - Stripe: hosted Checkout, Billing Portal and **signed** subscription webhooks. No payment key is shipped in the browser.
 - Separate hosts: Python news crawler, background context/translation and optional Whisper inference remain separate services.
@@ -22,8 +22,8 @@ In the **new standalone Supabase project**:
 
 1. Enable Email/Password with email confirmation, recovery mail and appropriate SMTP delivery. Consider rate limits, CAPTCHA and breached-password protection before public signups.
 2. If using Google, configure the OAuth client in Google Cloud and Supabase Auth's Google provider. Allow `https://NEW_PROJECT_REF.supabase.co/auth/v1/callback` in Google OAuth.
-3. Set the Supabase Auth **Site URL** to the exact Netlify/custom-domain HTTPS origin and allow redirects to `/account` and `/reset-password` (and suitable staging origins). Avoid broad wildcard production redirect patterns.
-4. Netlify frontend env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, optional `VITE_SUPABASE_PROJECT_ID`. These values are public; never use service-role or Stripe keys with `VITE_`.
+3. Set the Supabase Auth **Site URL** to the exact Vercel/custom-domain HTTPS origin and allow redirects to `/account` and `/reset-password` (and suitable staging origins). Avoid broad wildcard production redirect patterns.
+4. Vercel frontend env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, optional `VITE_SUPABASE_PROJECT_ID`. These values are public; never use service-role or Stripe keys with `VITE_`.
 5. The browser client persists and refreshes sessions; backend checks tokens with Supabase Auth `getUser(token)`. Auth is not based on editable user metadata.
 
 Verify signup/verification, login, Google OAuth (if enabled), logout, password recovery, refresh and direct deep links. A signed-in customer without a subscription must have `/account` access but no premium data or functions.
@@ -55,13 +55,13 @@ STRIPE_SECRET_KEY=YOUR_STRIPE_TEST_SECRET_KEY
 STRIPE_TRIAL_SETUP_PRICE_ID=YOUR_TEST_ONE_TIME_PRICE_ID
 STRIPE_MONTHLY_PRICE_ID=YOUR_TEST_RECURRING_PRICE_ID
 STRIPE_WEBHOOK_SECRET=YOUR_TEST_ENDPOINT_SIGNING_SECRET
-FRONTEND_URL=https://YOUR-NETLIFY-SITE.netlify.app
+FRONTEND_URL=https://YOUR-NETLIFY-SITE.vercel.app
 BILLING_ENABLED=false
 ```
 
 These go into **Supabase Edge Function secrets**, never GitHub source or a browser build. The existing server-owned service-role binding must remain private. The function pins Stripe API version `2025-02-24.acacia` to preserve its webhook subscription shape; configure the webhook endpoint for a compatible version and test event payloads against that version before upgrading.
 
-Deploy `vv-billing` and `stripe-webhook`. The webhook is **public only for receiving events** (`verify_jwt=false`) and verifies the raw-body Stripe HMAC and five-minute timestamp window. Do not route checkout through unauthenticated Netlify functions. The billing API validates the **actual Supabase user JWT** before checkout, portal or status; the `config` action reveals only the configured offer and whether checkout is enabled.
+Deploy `vv-billing` and `stripe-webhook`. The webhook is **public only for receiving events** (`verify_jwt=false`) and verifies the raw-body Stripe HMAC and five-minute timestamp window. Do not route checkout through unauthenticated Vercel functions. The billing API validates the **actual Supabase user JWT** before checkout, portal or status; the `config` action reveals only the configured offer and whether checkout is enabled.
 
 Stripe webhook destination: `https://NEW_PROJECT_REF.supabase.co/functions/v1/stripe-webhook`.
 
@@ -73,7 +73,7 @@ Only after schema/RLS, webhook, price verification and portal configuration work
 
 1. Configure a production Stripe account with the exact approved prices, separate **live-mode** key and new webhook signing secret; do not copy test customers or tokens. Confirm receipts, taxes, business/return policies and customer support details.
 2. Deploy all customer Edge Functions and the latest migration to the **new Supabase project**. The `authorize` helper requires real user JWTs and server-confirmed membership. Review CORS/ingress, rate limits and provider quotas, and check that sensitive operator endpoints are not exposed.
-3. Put correct public Supabase URL/publishable key in Netlify; rebuild the Vite frontend. Configure HTTPS and the authorized Auth redirect destinations.
+3. Put correct public Supabase URL/publishable key in Vercel; rebuild the Vite frontend. Configure HTTPS and the authorized Auth redirect destinations.
 4. Verify real mobile/desktop login, news, charts, simulations, private replay, AI, translations, saved history and sign-out. Check actual backend health, data timestamps and worker scheduling.
 5. Run GitHub CI, `npm run check:backend -- --ai` (will need a member-aware check for paid endpoints), and a real staging browser checkout/webhook test. Existing fixture suites do **not** prove live Stripe processing.
 6. Change DNS only after the new release passes. Preserve the old Lovable project and backups until data retention and rollback are accepted.
