@@ -4,7 +4,7 @@ const reply=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status
 Deno.serve(async req=>{
  if(req.method!=='POST')return reply({error:'Method not allowed'},405);
  const secret=Deno.env.get('STRIPE_WEBHOOK_SECRET'),key=Deno.env.get('STRIPE_SECRET_KEY'),price=Deno.env.get('STRIPE_MONTHLY_PRICE_ID');
- if(!secret||!key||!price)return reply({error:'Webhook configuration unavailable'},503);
+ if(!secret||!key||!price||!key.startsWith('sk_test_'))return reply({error:'Stripe TEST-mode webhook configuration unavailable'},503);
  let event;
  try{event=await signedStripeEvent(await boundedBody(req),req.headers.get('stripe-signature')||'',secret);}catch{return reply({error:'Invalid webhook signature or payload'},400);}
  const supported=['checkout.session.completed','checkout.session.async_payment_succeeded','customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','invoice.paid','invoice.payment_failed'];
