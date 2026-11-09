@@ -16,12 +16,15 @@ for(const name of ['vv-chat','vv-simulation-chat'])describe(name+' real AI route
   expect(response.status).toBe(200);expect(body.reply||body.answer).toBe(panel.answer);expect(fetcher).toHaveBeenCalledTimes(2);
   expect(String(fetcher.mock.calls[0][0])).toContain('/gemini-fixture-unavailable:generateContent');expect(String(fetcher.mock.calls[1][0])).toContain('/gemini-2.5-flash-lite:generateContent');
  });
- it('uses the configured Lovable gateway when no native credential is supplied',async()=>{
-  const text=name==='vv-chat'?panel.answer:JSON.stringify(panel);
-  const fetcher=vi.fn(async(_input:unknown,_init?:RequestInit)=>Response.json({choices:[{message:{content:text}}]}));
-  const response=await loadEdgeHandler(name,fetcher,{...base,LOVABLE_API_KEY:'fixture-gateway'},client)(request(name));
-  const body=await response.json();expect(response.status).toBe(200);expect(body.reply||body.answer).toBe(panel.answer);expect(fetcher).toHaveBeenCalledTimes(1);
-  expect(String(fetcher.mock.calls[0][0])).toBe('https://ai.gateway.lovable.dev/v1/chat/completions');
+ it('rejects legacy-only Lovable credentials instead of sending any request to its gateway',async()=>{
+  const fetcher=vi.fn();
+  const response=await loadEdgeHandler(name,fetcher,{...base,LOVABLE_API_KEY:'legacy-ignored'},client)(request(name));
+  const body=await response.json();
+  expect(response.status).toBe(503);
+  expect(body.error).toBeTruthy();
+  expect(body.reply).toBeUndefined();
+  expect(body.answer).toBeUndefined();
+  expect(fetcher).not.toHaveBeenCalled();
  });
  it('returns an error without inventing a reply or retrying an ambiguous provider failure',async()=>{
   const fetcher=vi.fn(async()=>new Response('private upstream details',{status:500}));
