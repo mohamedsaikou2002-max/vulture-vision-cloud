@@ -5,6 +5,7 @@
 This ZIP exports actual backend source from the paid release branch of `mohamedsaikou2002-max/vulture-vision-cloud`, not generated placeholder code. It includes:
 
 - `supabase/functions/`: all existing Edge Function source, with shared AI, authorization, billing, WarWatch, Nasdaq, simulation and source-ingestion modules;
+- `supabase/research/`: internal-only aggregate research exchange, synthetic cascade model, historical-event corpus and unit tests; these are no longer bundled into or rendered by the frontend.
 - `supabase/migrations/`: **all ordered SQL migrations** including paid-user access and the Nov 9 security permissions fix;
 - `supabase/config.toml`: portable local CLI project alias (actual remote link supplied explicitly);
 - `news-crawler/`: Python news collection, source catalogs, related tests, Dockerfile;
