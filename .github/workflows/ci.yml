@@ -22,7 +22,7 @@ jobs:
           VITE_SUPABASE_URL: https://ci-project.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_build_only
       - run: npm run test:deployment
-      - run: npm run build:netlify
+      - run: npm run build:vercel
         env:
           VITE_SUPABASE_URL: https://ci-project.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_build_only
