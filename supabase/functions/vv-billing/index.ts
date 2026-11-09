@@ -7,7 +7,7 @@ Deno.serve(async req=>{
  const key=Deno.env.get('STRIPE_SECRET_KEY'),monthly=Deno.env.get('STRIPE_MONTHLY_PRICE_ID'),intro=Deno.env.get('STRIPE_TRIAL_SETUP_PRICE_ID'),origin=Deno.env.get('FRONTEND_URL');
  try{
   const body=JSON.parse(await boundedBody(req,2048));
-  const enabled=Deno.env.get('BILLING_ENABLED')==='true'&&!!key&&!!monthly&&!!intro&&!!origin;
+  const enabled=Deno.env.get('BILLING_ENABLED')==='true'&&!!key?.startsWith('sk_test_')&&!!monthly&&!!intro&&!!origin;
   if(body.action==='config')return reply({enabled,offer:BILLING_OFFER});
   const token=(req.headers.get('authorization')||'').replace(/^Bearer\s+/i,'').trim();
   if(!token)return reply({error:'Sign in to manage billing'},401);
