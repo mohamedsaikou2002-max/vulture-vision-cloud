@@ -8,12 +8,9 @@ import type { Agent, RiskProfile } from "../../supabase/functions/_shared/autosi
 import RecentNews from "@/components/sim/RecentNews";
 import WorldState from "@/components/sim/WorldState";
 import DimensionCanvas, { label } from "@/components/sim/DimensionCanvas";
-import corpus from "@/data/historicalCorpus.json";
 import { AGENTS, DIMENSIONS, AGENT_RESPONSES, type Dim } from "../../supabase/functions/_shared/autosim_engine";
 import { ApiError, interrogateAgent, jobStatus, listJobs, loadJob, runSimulation, type AutoSimResult, type JobRow } from "@/lib/autoSimApi";
 import { pct, signedPct } from "@/lib/autosimFormat";
-import { ResearchCascadePanel } from "@/components/research/ResearchCascadePanel";
-import { ResearchExchangePanel } from "@/components/research/ResearchExchangePanel";
 import { speak, stopSpeaking, useVoiceInput } from "@/hooks/useVoiceInput";
 import "@/styles/simulator.css";
 
@@ -62,8 +59,6 @@ export default function Simulator() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [injDim, setInjDim] = useState<Dim>("liquidity");
   const [injDelta, setInjDelta] = useState(-0.05);
-  const [corpusOpen, setCorpusOpen] = useState(false);
-  const [corpusQ, setCorpusQ] = useState("");
   const poll = useRef<number | null>(null);
   const scenarioRef = useRef(scenario);
   scenarioRef.current = scenario;
@@ -157,39 +152,30 @@ export default function Simulator() {
     const timer=setInterval(()=>{if(!busyRef.current && !pendingJob && countdown===null && !voice.listening && !voice.processing && !voice.error && !window.speechSynthesis?.speaking)voice.start();},700);
     return()=>clearInterval(timer);
   },[handsFree,voiceArmed,pendingJob,countdown,voice]);
-  const corpusRows = useMemo(() => (corpus as { event_id: string; name: string; start_date: string; category: string }[]).filter(e => (e.name + e.category).toLowerCase().includes(corpusQ.toLowerCase())), [corpusQ]);
   const stageIdx = STAGES.findIndex(([k]) => k === stage);
 
   return (
     <VVLayout status={{ label: busy ? "SIMULATING" : "RESEARCH", tone: busy ? "cyan" : "gold" }}>
       <div className="scroll-inner autosim-workspace">
-      <div className="autosim-header"><div><span className="room-eyebrow">VULTURE VISION / RESEARCH</span><h1>Simulation Room</h1><p className="sim-note">Public workspace: scenarios and results are shared. Do not enter confidential information.</p></div><Link to="/simulations/simple">Quick simulator ↗</Link><Link to="/research">RESEARCH CHAT ↗</Link></div>
+      <div className="autosim-header"><div><span className="room-eyebrow">VULTURE VISION / RESEARCH</span><h1>Simulation Room</h1><p className="sim-note">Your saved simulations are available only to your account.</p></div><Link to="/simulations/simple">Quick simulator ↗</Link><Link to="/research">RESEARCH CHAT ↗</Link></div>
       <p className="sim-note">NASDAQ COMPOSITE · ECONOMIC ACTOR SWARM · DATED WORLD STATE</p>
-      <ResearchCascadePanel context="Research-only information diffusion" />
-      <ResearchExchangePanel context="Research-only signals" />
       <div className="sim-root">
         <aside className="sim-left">
-          <RecentNews />
-          <section className="panel sim-card">
-            <div className="panel-title">World state</div>
-            <WorldState compact />
-          </section>
-
           <section className="panel sim-card sim-scenario-card">
-            <div className="panel-title">SETUP / NASDAQ SCENARIO</div>
-            <label className="sim-field-label" htmlFor="scenario-narrative">Narrative</label>
-            <textarea id="scenario-narrative" className="sim-input" rows={5} value={scenario} maxLength={2000} placeholder="Describe what happens. Type it or tap the mic and say it." onChange={e => setScenario(e.target.value)} aria-label="Scenario" />
+            <div className="panel-title">01 / INPUT · NASDAQ SCENARIO</div>
+            <label className="sim-field-label" htmlFor="scenario-narrative">What should we simulate?</label>
+            <textarea id="scenario-narrative" className="sim-input" rows={5} value={scenario} maxLength={2000} placeholder="Example: What if inflation rises while the Fed keeps interest rates high?" onChange={e => setScenario(e.target.value)} aria-label="Scenario" />
             <div className="pod-constraints">
               <label>Market<select className="sim-select" disabled aria-label="Simulated market"><option>Nasdaq Composite · ^IXIC</option></select></label>
               <label>Horizon<select className="sim-select" value={horizon} onChange={e=>setHorizon(Number(e.target.value))} disabled={busy||!!pendingJob} aria-label="Simulation horizon"><option value={0}>Derive from scenario</option>{[7,14,30].map(d=><option key={d} value={d}>{d} days</option>)}</select></label>
               <label>Risk constraint<select className="sim-select" value={risk} onChange={e=>setRisk(e.target.value as RiskProfile)} disabled={busy||!!pendingJob} aria-label="Risk constraint">{['conservative','balanced','aggressive'].map(p=><option key={p} value={p}>{p}</option>)}</select></label>
-              <label>Canvas samples <span>{samples}</span><input type="range" min={100} max={1000} step={100} value={samples} onChange={e=>setSamples(Number(e.target.value))} aria-label="Canvas samples"/></label>
             </div>
-            <p className="sim-fine">Seven actor cohorts · ten economic dimensions. Risk settings constrain execution costs and leverage; sampled dots change the visualization only.</p>
+            <p className="sim-fine">The analysis uses available market observations and news context. Choose a time horizon and risk profile, then run your scenario.</p>
+            <details className="sim-advanced-options"><summary>Advanced display options</summary><label>Canvas samples <span>{samples}</span><input type="range" min={100} max={1000} step={100} value={samples} onChange={e=>setSamples(Number(e.target.value))} aria-label="Canvas samples"/></label><p className="sim-note">This controls visualized dots only, not the model calculations.</p></details>
             {voice.listening && <p className="sim-note sim-live">Listening… {voice.interim}</p>}
             {countdown !== null && <p className="sim-note sim-live">Running in {countdown}… <Button variant="ghost" className="sim-link" onClick={() => setCountdown(null)}>Cancel</Button></p>}
             {voice.processing && <p className="sim-note">Transcribing with {voice.engine}…</p>}
-            <p className="sim-note">Voice engine: {voice.engine}. Recording ends after a pause or 15 seconds.</p>
+
             {voice.error && <p className="sim-note sim-warn">{voice.error}</p>}
             <div className="sim-row">
               <Button variant="ghost" className={`sim-mic${voice.listening ? " on" : ""}`} disabled={!voice.supported || busy || voice.processing} onClick={()=>{if(voice.listening){setVoiceArmed(false);voice.stop();}else{setVoiceArmed(true);voice.start();}}} aria-label={voice.listening ? "Stop recording" : "Start voice input"} title={voice.supported ? "Tap to speak" : "Voice input isn't supported in this browser"}>{voice.listening ? <Square size={18} /> : <Mic size={18} />}</Button>
@@ -198,11 +184,19 @@ export default function Simulator() {
             <label className="sim-check"><input type="checkbox" checked={handsFree} onChange={e => {setHandsFree(e.target.checked);if(!e.target.checked){setVoiceArmed(false);voice.stop();}}} /> Hands-free: run automatically after I speak</label>
             {voiceArmed && handsFree && <Button variant="ghost" className="sim-ghost" onClick={()=>{setVoiceArmed(false);voice.stop();setCountdown(null);}}>Stop hands-free listening</Button>}
             <label className="sim-check"><input type="checkbox" checked={speakOn} onChange={e => setSpeakOn(e.target.checked)} /> Read the summary aloud</label>
-            {!scenario && <div className="sim-chips">{EXAMPLES.map(x => <Button variant="ghost" key={x} className="sim-chip-btn" onClick={() => setScenario(x)}>{x}</Button>)}</div>}
+            <div className="sim-chips" aria-label="Example scenarios">{EXAMPLES.map(x => <Button variant="ghost" key={x} className="sim-chip-btn" disabled={busy || !!pendingJob} onClick={() => setScenario(x)}>{x}</Button>)}</div>
             {articleIds.length > 0 && <p className="sim-note">{articleIds.length} selected headline reference(s) will be checked for freshness and included as related context.</p>}
             {pendingJob && <Button variant="ghost" className="sim-ghost" disabled={busy} onClick={() => void recoverPending()}>Check pending run</Button>}
             {error && <p className="sim-note sim-warn" role="alert">{error}</p>}
           </section>
+
+          <details className="panel sim-card sim-supporting-data">
+            <summary>News and economic baseline</summary>
+            <p className="sim-note">Explore the reporting and economic observations used to inform the scenario.</p>
+            <RecentNews />
+            <div className="panel-title">Economic baseline</div>
+            <WorldState compact />
+          </details>
 
           {(busy || stageIdx >= 0) && (
             <section className="panel sim-card" aria-live="polite">
@@ -222,16 +216,25 @@ export default function Simulator() {
             <p className="sim-note">Creates a new run you can compare. The original stays frozen.</p>
           </section>
 
-          <section className="panel sim-card">
-            <Button variant="ghost" className="sim-link" onClick={() => setCorpusOpen(o => !o)} aria-expanded={corpusOpen}>Corpus · {(corpus as unknown[]).length} historical events {corpusOpen ? "▾" : "▸"}</Button>
-            {corpusOpen && (<>
-              <input className="sim-input" placeholder="Search events" value={corpusQ} onChange={e => setCorpusQ(e.target.value)} aria-label="Search corpus" />
-              <ul className="sim-corpus">{corpusRows.map(e => <li key={e.event_id}><b>{e.start_date}</b> {e.name} <span className="sim-chip">{e.category}</span></li>)}</ul>
-            </>)}
-          </section>
         </aside>
 
-        <section className="sim-right" aria-label="Swarm workspace">
+        <section className="sim-right" aria-label="Simulation output">
+          <section className="panel sim-card sim-result-overview" aria-live="polite" aria-label="Simulation result overview">
+            <div className="panel-title">02 / OUTPUT · SIMULATION RESULTS</div>
+            {result ? <>
+              <h2 className="sim-result-heading">{result.analysis?.headline || "Nasdaq scenario analysis"}</h2>
+              <p className="sim-result-description">{result.analysis?.summary || "Review the scenario ranges and supporting analysis below."}</p>
+              <div className="sim-result-metrics">
+                {([["Downside", result.strategies.buy_hold_scenario.p5_return], ["Middle", result.strategies.buy_hold_scenario.median_return], ["Upside", result.strategies.buy_hold_scenario.p95_return]] as const).map(([name, value]) => (
+                  <div className="sim-result-metric" key={name}><span>{name}</span><strong>{pct(value, 1)}</strong></div>
+                ))}
+              </div>
+              <p className="sim-fine">Simulated returns, not a market prediction. Use the tabs below to inspect evidence, assumptions, and alternatives.</p>
+            </> : <>
+              <h2 className="sim-result-heading">Your results will appear here</h2>
+              <p className="sim-result-description">{busy ? "Analyzing your scenario. The progress steps are shown beside this panel." : "Describe a market event on the left, choose your settings, then select Simulate scenario."}</p>
+            </>}
+          </section>
           <div className="sim-tabs" role="tablist" aria-label="Pod room views">{TABS.map(t => <Button variant="ghost" key={t} role="tab" id={`pod-tab-${t}`} aria-controls="pod-panel" tabIndex={tab===t?0:-1} onKeyDown={e=>{const direction=e.key==="ArrowRight"?1:e.key==="ArrowLeft"?-1:0;if(direction||e.key==="Home"||e.key==="End"){e.preventDefault();const next=e.key==="Home"?TABS[0]:e.key==="End"?TABS[TABS.length-1]:TABS[(TABS.indexOf(t)+direction+TABS.length)%TABS.length];setTab(next);document.getElementById(`pod-tab-${next}`)?.focus();}}} aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{TAB_LABELS[t]}</Button>)}</div>
           <div className="panel sim-body" id="pod-panel" role="tabpanel" aria-labelledby={`pod-tab-${tab}`}>
             {result && result.warnings.length > 0 && <div className="sim-warnbox">{result.warnings.map((w, i) => <p key={i}>{w}</p>)}</div>}
