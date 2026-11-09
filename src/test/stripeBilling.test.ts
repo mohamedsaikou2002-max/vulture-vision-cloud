@@ -1,6 +1,6 @@
 import { it, expect, vi } from "vitest";
 import { loadEdgeHandler } from "./helpers/edgeHarness";
-import { BILLING_OFFER, checkoutParameters, subscriptionState } from "../../supabase/functions/_shared/stripe_billing";
+import { BILLING_OFFER, checkoutParameters, stripeRequest, subscriptionState } from "../../supabase/functions/_shared/stripe_billing";
 
 it("keeps checkout off until configured, with the approved exact prices", async () => {
   const network = vi.fn(), database = vi.fn();
@@ -46,4 +46,15 @@ it("never grants paid access from subscription status alone without the introduc
   };
   expect(subscriptionState(sub, "price_month").status).toBe("incomplete");
   expect(subscriptionState({ ...sub, latest_invoice: { paid: true, amount_paid: 9900 } }, "price_month").status).toBe("trialing");
+});
+
+it("rejects live-mode Stripe keys before making any provider request", async () => {
+  const network = vi.fn();
+  vi.stubGlobal("fetch", network);
+  try {
+    await expect(stripeRequest("sk_live_forbidden", "prices")).rejects.toThrow("TEST mode");
+    expect(network).not.toHaveBeenCalled();
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

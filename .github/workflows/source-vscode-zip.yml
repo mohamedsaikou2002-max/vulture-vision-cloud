@@ -1,0 +1,44 @@
+name: Package complete Vulture Vision VS Code project
+on:
+  push:
+    branches:
+      - release/vulture-monochrome-vscode-20261109
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build source ZIP from tracked files only
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+
+          output = Path("VultureVision-VSCode-Complete.zip")
+          filenames = subprocess.check_output(["git", "ls-files", "-z"]).split(b"\0")
+          with ZipFile(output, "w", compression=ZIP_DEFLATED, compresslevel=8) as archive:
+              for raw in filenames:
+                  if not raw:
+                      continue
+                  relative = os.fsdecode(raw)
+                  if not Path(relative).is_file():
+                      continue
+                  archive.write(relative, f"VultureVision-VSCode/{relative}")
+          print(f"Source archive: {output}, {output.stat().st_size} bytes")
+          PY
+          python -m zipfile -t VultureVision-VSCode-Complete.zip
+      - name: Upload complete VS Code sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: VultureVision-VSCode-Complete
+          path: VultureVision-VSCode-Complete.zip
+          if-no-files-found: error
+          retention-days: 14
