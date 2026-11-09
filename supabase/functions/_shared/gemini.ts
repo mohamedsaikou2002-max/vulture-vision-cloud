@@ -7,6 +7,7 @@ export class GeminiError extends Error {
     super(message); this.name = 'GeminiError';
   }
 }
+const isAbortError = (error: unknown) => !!error && typeof error === 'object' && 'name' in error && typeof error.name === 'string' && /^(TimeoutError|AbortError)$/.test(error.name);
 interface ProviderAnswer {
  candidates?:{content?:{parts?:{text?:unknown;thought?:boolean}[]}}[];
  choices?:{message?:{content?:unknown}}[];
@@ -69,7 +70,7 @@ export async function generateGemini(key: string, configuredModel: string | unde
     }
     let result;
     try { result = await readAnswer(response, deadline); } catch(e) {
-      if(Date.now()>=deadline || (e instanceof Error && /TimeoutError|AbortError/.test(e.name)))throw new GeminiError('timeout','AI request timed out while reading the answer',504);
+      if(Date.now()>=deadline || isAbortError(e))throw new GeminiError('timeout','AI request timed out while reading the answer',504);
       throw new GeminiError('bad_output', 'AI returned invalid JSON', 502);
     }
     const parts = result?.candidates?.[0]?.content?.parts;
