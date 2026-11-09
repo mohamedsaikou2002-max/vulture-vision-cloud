@@ -1,0 +1,97 @@
+/* Investor/mobile workspace: monochrome, touch targets, readable overflow.
+   Scoped to the private workspace; public marketing remains unchanged. */
+.belicia-workspace.pr7-workspace.vv-refined {
+  --gold:#dfdfdf; --gold-bright:#fff; --gold-dim:#a6a6a6;
+  --text:#f1f1f1; --dim:#a3a3a3; --cyan:#d7d7d7;
+  --dark:#0d0d0f; --dark2:#18181a;
+  --primary:0 0% 88%; --primary-foreground:0 0% 4%;
+  --foreground:0 0% 92%; --border:0 0% 24%;
+  --input:0 0% 30%; --ring:0 0% 75%;
+  background:#0b0b0d; color:var(--text);
+}
+.vv-refined .video-bg, .vv-refined .scanlines, .vv-refined .noise,
+.vv-refined .corner { display:none !important; }
+.vv-refined .video-overlay { background:linear-gradient(160deg,#101012,#171719 55%,#0b0b0d); }
+.belicia-workspace.pr7-workspace.vv-refined .nav {
+  background:rgba(12,12,14,.97); border-bottom:1px solid #343436;
+  padding:10px 20px; gap:12px; min-height:64px; box-shadow:0 4px 22px #0006;
+}
+.belicia-workspace.pr7-workspace.vv-refined .nav-logo{
+  color:#f5f5f5; letter-spacing:.10em; font-size:clamp(12px,2.5vw,16px);
+}
+.belicia-workspace.pr7-workspace.vv-refined .nav-link{
+  border-radius:999px; border:1px solid #3c3c3d; background:#202023;
+  color:#d6d6d6; font:600 10px/1.2 system-ui,sans-serif;
+  letter-spacing:.035em; padding:11px 12px; min-height:40px;
+}
+.belicia-workspace.pr7-workspace.vv-refined .nav-link.active,
+.belicia-workspace.pr7-workspace.vv-refined .nav-link:hover{
+  background:#ececec; color:#090909; border-color:#eee;
+}
+.belicia-workspace.pr7-workspace.vv-refined .nav-status{color:#ddd;white-space:nowrap}
+.belicia-workspace.pr7-workspace.vv-refined .panel,
+.belicia-workspace.pr7-workspace.vv-refined .news-col{
+  border-radius:20px; border:1px solid #39393c; background:#19191ce8;
+  box-shadow:0 8px 30px #0003;
+}
+.belicia-workspace.pr7-workspace.vv-refined .badge,
+.belicia-workspace.pr7-workspace.vv-refined .tag,
+.belicia-workspace.pr7-workspace.vv-refined .synthesize-btn,
+.belicia-workspace.pr7-workspace.vv-refined .chat-send{border-radius:999px}
+.belicia-workspace.pr7-workspace.vv-refined .panel-title,
+.belicia-workspace.pr7-workspace.vv-refined .col-header{color:#eee}
+.belicia-workspace.pr7-workspace.vv-refined .page-content{
+  overflow-y:auto; overflow-x:hidden; overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.vv-refined .scroll-inner {min-height:0; overflow-y:visible; overflow-x:auto}
+.vv-refined .data-table {display:block; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch}
+.vv-refined input,.vv-refined textarea,.vv-refined select {font-size:16px}
+.vv-nav-toggle {
+  display:none; flex-shrink:0; align-items:center; justify-content:center;
+  min-width:44px; min-height:44px; padding:8px;
+  background:#252527; color:#fff; border:1px solid #555; border-radius:14px;
+}
+.vv-demo {max-width:980px; margin:0 auto; padding:clamp(16px,3vw,36px)}
+.vv-demo .demo-kicker {color:#c8c8ca; font-size:11px; letter-spacing:.2em; text-transform:uppercase}
+.vv-demo h1 {font-family:Orbitron,system-ui,sans-serif; font-size:clamp(22px,5vw,34px); line-height:1.25;margin:12px 0}
+.vv-demo p {line-height:1.65;color:#d5d5d6}
+.vv-demo-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:22px}
+.vv-demo-card {background:#1b1b1e;border:1px solid #39393d;border-radius:22px;padding:20px;min-width:0}
+.vv-demo-card h2 {font-size:15px; margin:0 0 12px}
+.vv-demo-card button,.vv-demo-card select {
+  width:100%; min-height:44px; border-radius:12px;
+  background:#29292c;color:#f1f1f1;border:1px solid #5b5b5e;padding:10px;
+}
+.vv-demo-card button:focus-visible,.vv-nav-toggle:focus-visible{outline:3px solid white;outline-offset:3px}
+.vv-demo-chip {display:inline-block;border:1px solid #666;border-radius:999px;padding:5px 11px;font-size:11px;color:#d4d4d4;margin:12px 0}
+.vv-demo-output {white-space:pre-wrap;line-height:1.7;padding:18px;border-radius:16px;background:#101012;border:1px solid #39393c}
+.vv-demo-actions {display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+.vv-demo-actions a {border:1px solid #666;border-radius:999px;padding:11px 17px;color:#fff;text-decoration:none}
+.vv-demo-actions a:hover {background:#353538}
+@media(max-width:860px) {
+  .vv-nav-toggle{display:flex}
+  .belicia-workspace.pr7-workspace.vv-refined .nav{flex-wrap:nowrap;justify-content:space-between}
+  .belicia-workspace.pr7-workspace.vv-refined .nav-logo{flex:1;min-width:0}
+  .belicia-workspace.pr7-workspace.vv-refined .nav-status{display:none}
+  .belicia-workspace.pr7-workspace.vv-refined .nav-links{
+    display:none;position:absolute;top:100%;left:10px;right:10px;
+    max-height:min(72dvh,540px);overflow-y:auto;flex-direction:column;
+    align-items:stretch;gap:7px;background:#151517;border:1px solid #48484a;
+    border-radius:20px;padding:12px;box-shadow:0 20px 35px #000b;
+  }
+  .belicia-workspace.pr7-workspace.vv-refined .nav-links.is-open{display:flex}
+  .belicia-workspace.pr7-workspace.vv-refined .nav-link{font-size:12px;text-align:left}
+  .vv-demo-grid{grid-template-columns:1fr}
+  .vv-refined .stat-row {flex-wrap:wrap}
+  .vv-refined .stat-card {min-width:min(100%,260px);flex:1}
+}
+@media(max-width:480px) {
+ .vv-demo {padding:14px}
+ .vv-demo-card{padding:17px;border-radius:18px}
+ .belicia-workspace.pr7-workspace.vv-refined .nav{padding:8px 12px}
+ .vv-refined .page-content{padding-left:0;padding-right:0}
+}
+@media(prefers-reduced-motion:reduce){
+ .vv-refined *, .vv-refined *::before, .vv-refined *::after {animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
