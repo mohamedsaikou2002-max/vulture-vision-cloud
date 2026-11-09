@@ -2,6 +2,7 @@
 export const BILLING_OFFER={currency:'usd',introCents:9900,monthlyCents:105000,days:7} as const;
 export const STRIPE_VERSION='2025-02-24.acacia';
 export async function stripeRequest(key:string,path:string,params?:URLSearchParams,idempotency?:string){
+ if (!key.startsWith('sk_test_')) throw new Error('Only Stripe TEST mode API keys are permitted in this build');
  const response=await fetch('https://api.stripe.com/v1/'+path,{method:params?'POST':'GET',headers:{Authorization:`Bearer ${key}`,'Stripe-Version':STRIPE_VERSION,...(params?{'Content-Type':'application/x-www-form-urlencoded'}:{}),...(idempotency?{'Idempotency-Key':idempotency}:{})},body:params,signal:AbortSignal.timeout(12000)});
  if(!response.ok)throw new Error(`Stripe request failed (HTTP ${response.status})`);
  return response.json();
