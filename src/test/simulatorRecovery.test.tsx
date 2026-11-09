@@ -18,7 +18,7 @@ describe('Simulator result identity and handoff',()=>{
     let completedId='';
     api.run.mockImplementationOnce(async p=>{completedId=p.job_id;return {job_id:p.job_id,result:simulationFixture()};}).mockRejectedValueOnce(new ApiError('fixture_failed','Second run failed',503));
     mount();fireEvent.change(screen.getByRole('textbox',{name:'Scenario'}),{target:{value:'First funding scenario'}});fireEvent.click(screen.getByRole('button',{name:'Simulate scenario'}));
-    await screen.findByText('Fixture scenario');
+    await screen.findAllByText('Fixture scenario');
     fireEvent.change(screen.getByRole('textbox',{name:'Scenario'}),{target:{value:'Second funding scenario'}});fireEvent.click(screen.getByRole('button',{name:'Simulate scenario'}));
     await screen.findByText('Second run failed');fireEvent.click(screen.getByRole('tab',{name:'Archetypes'}));
     fireEvent.change(screen.getByRole('textbox',{name:'Question'}),{target:{value:'What changed?'}});fireEvent.click(screen.getByRole('button',{name:/^Ask$/}));
@@ -35,7 +35,7 @@ describe('Simulator result identity and handoff',()=>{
     let pendingId='';api.run.mockImplementation(async p=>{pendingId=p.job_id;throw new ApiError('timeout','Response lost',0);});api.status.mockResolvedValue('completed');api.load.mockResolvedValue(simulationFixture());
     mount();fireEvent.change(screen.getByRole('textbox',{name:'Scenario'}),{target:{value:'Funding stress with lost response'}});fireEvent.click(screen.getByRole('button',{name:'Simulate scenario'}));
     await screen.findByText('Response lost');expect(screen.getByRole('button',{name:'Simulate scenario'})).toBeDisabled();fireEvent.click(screen.getByRole('button',{name:'Check pending run'}));
-    await screen.findByText('Fixture scenario');expect(api.load).toHaveBeenCalledWith(pendingId);expect(api.run).toHaveBeenCalledTimes(1);
+    await screen.findAllByText('Fixture scenario');expect(api.load).toHaveBeenCalledWith(pendingId);expect(api.run).toHaveBeenCalledTimes(1);
   });
 });
 it('submits economic risk constraints and supports keyboard navigation between Pod Room views',async()=>{
@@ -46,6 +46,6 @@ it('submits economic risk constraints and supports keyboard navigation between P
  fireEvent.change(screen.getByRole('combobox',{name:'Simulation horizon'}),{target:{value:'7'}});
  fireEvent.change(screen.getByRole('combobox',{name:'Risk constraint'}),{target:{value:'conservative'}});
  fireEvent.change(screen.getByRole('textbox',{name:'Scenario'}),{target:{value:'Nasdaq faces tighter credit conditions'}});
- fireEvent.click(screen.getByRole('button',{name:'Simulate scenario'}));await screen.findByText('Fixture scenario');
+ fireEvent.click(screen.getByRole('button',{name:'Simulate scenario'}));await screen.findAllByText('Fixture scenario');
  expect(api.run.mock.calls[0][0].constraints).toEqual({horizon_days:7,risk_profile:'conservative'});
 });
