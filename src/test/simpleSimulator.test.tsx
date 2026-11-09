@@ -12,11 +12,24 @@ beforeEach(()=>{vi.stubGlobal('crypto',webcrypto);run.mockReset();status.mockRes
 const mount=()=>render(<MemoryRouter><SimpleSimulator/></MemoryRouter>);
 it('uses the existing engine with conservative seven-day constraints',async()=>{
  run.mockImplementation(async p=>({job_id:p.job_id,result:simulationFixture()}));mount();
- fireEvent.change(screen.getByRole('textbox',{name:'What happens?'}),{target:{value:'Nasdaq faces credit stress'}});fireEvent.click(screen.getByRole('button',{name:'Explore this scenario'}));
+ fireEvent.change(screen.getByRole('textbox',{name:'What happens?'}),{target:{value:'Nasdaq faces credit stress'}});fireEvent.click(screen.getByRole('button',{name:'Run simulation'}));
  await screen.findByText('Fixture scenario');expect(run.mock.calls[0][0].constraints).toEqual({horizon_days:7,risk_profile:'conservative'});expect(screen.getByText('Lower range')).toBeInTheDocument();
 });
 it('recovers a lost response without starting another paid request',async()=>{
  let id='';run.mockImplementation(async p=>{id=p.job_id;throw new ApiError('timeout','Response lost',0);});status.mockResolvedValue('completed');load.mockResolvedValue(simulationFixture());mount();
- fireEvent.change(screen.getByRole('textbox',{name:'What happens?'}),{target:{value:'Nasdaq faces credit stress'}});fireEvent.click(screen.getByRole('button',{name:'Explore this scenario'}));await screen.findByText('Response lost');
+ fireEvent.change(screen.getByRole('textbox',{name:'What happens?'}),{target:{value:'Nasdaq faces credit stress'}});fireEvent.click(screen.getByRole('button',{name:'Run simulation'}));await screen.findByText('Response lost');
  fireEvent.click(screen.getByRole('button',{name:'Check pending run'}));await screen.findByText('Fixture scenario');await waitFor(()=>expect(load).toHaveBeenCalledWith(id));expect(run).toHaveBeenCalledTimes(1);
+});
+
+it('submits independently selected horizon and risk with the existing engine',async()=>{
+ run.mockImplementation(async p=>({job_id:p.job_id,result:simulationFixture()}));mount();
+ fireEvent.change(screen.getByRole('textbox',{name:'What happens?'}),{target:{value:'A global liquidity squeeze hits large technology stocks'}});
+ fireEvent.change(screen.getByLabelText('Time horizon'),{target:{value:'30'}});
+ fireEvent.change(screen.getByLabelText('Risk assumptions'),{target:{value:'balanced'}});
+ fireEvent.click(screen.getByRole('button',{name:'Run simulation'}));
+ await screen.findByText('Fixture scenario');
+ expect(run.mock.calls[0][0].constraints).toEqual({horizon_days:30,risk_profile:'balanced'});
+ expect(screen.getByText('Simulation results')).toBeInTheDocument();
+ expect(screen.queryByText(/Information Cascade Research/)).toBeNull();
+ expect(screen.queryByText(/DARPA research exchange/)).toBeNull();
 });
