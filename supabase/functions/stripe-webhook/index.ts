@@ -8,6 +8,7 @@ Deno.serve(async req=>{
  let event;
  try{event=await signedStripeEvent(await boundedBody(req),req.headers.get('stripe-signature')||'',secret);}catch{return reply({error:'Invalid webhook signature or payload'},400);}
  const supported=['checkout.session.completed','checkout.session.async_payment_succeeded','customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','invoice.paid','invoice.payment_failed'];
+ if(event.livemode!==false)return reply({error:'Live-mode Stripe events are not accepted'},400);
  if(!supported.includes(event.type))return reply({received:true,ignored:true});
  try{
   const object=event.data.object;
