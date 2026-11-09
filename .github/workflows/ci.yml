@@ -56,3 +56,37 @@ jobs:
           path: artifacts/VultureVision-Standalone-Backend.zip
           if-no-files-found: error
           retention-days: 14
+
+  vscode-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Zip all tracked frontend and backend files
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          paths = subprocess.check_output(["git", "ls-files", "-z"]).split(b"\0")
+          name = "VultureVision-VSCode-Complete.zip"
+          with ZipFile(name, "w", ZIP_DEFLATED, compresslevel=8) as z:
+              for raw in paths:
+                  if not raw:
+                      continue
+                  relative = os.fsdecode(raw)
+                  if Path(relative).is_file():
+                      z.write(relative, "VultureVision-VSCode/" + relative)
+          print(name, Path(name).stat().st_size, "bytes")
+          PY
+          python -m zipfile -t VultureVision-VSCode-Complete.zip
+      - name: Upload VS Code complete source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: VultureVision-VSCode-Complete
+          path: VultureVision-VSCode-Complete.zip
+          if-no-files-found: error
+          retention-days: 14
