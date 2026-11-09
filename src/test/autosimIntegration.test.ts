@@ -107,22 +107,14 @@ describe('AutoSim real handler and shared engine',()=>{
     expect(r.data.world_pulse.top_shocks.some((h:{title:string})=>h.title==='Old funding news')).toBe(false);
     expect(f.fetcher.mock.calls.some(c=>String(c[0]).includes('generativelanguage'))).toBe(false);
   });
-  it('uses configured Lovable AI credentials when no native Gemini key is bound',async()=>{
-    const f=fixture();delete f.env.GEMINI_API_KEY;f.env.LOVABLE_API_KEY='gateway-fixture';
-    const original=f.fetcher.getMockImplementation()!;
-    f.fetcher.mockImplementation(async(input:string|URL,init:RequestInit)=>{
-      if(String(input).includes('ai.gateway.lovable.dev')){
-        const body=JSON.parse(String(init.body));
-        const data=body.messages.at(-1).content.includes('Return JSON: headline')?{headline:'Gateway explanation',drivers:['Funding context']}:{event_type:'liquidity_crunch',horizon_days:3,asset:'NASDAQ Composite',search_keywords:['funding'],risk_profile:'balanced',confidence:.5};
-        expect((init.headers as Record<string,string>).Authorization).toBe('Bearer gateway-fixture');
-        return Response.json({choices:[{message:{content:JSON.stringify(data)}}]});
-      }
-      return original(input,init);
-    });
+  it('keeps the numerical simulation when only a legacy Lovable credential is present',async()=>{
+    const f=fixture();delete f.env.GEMINI_API_KEY;f.env.LOVABLE_API_KEY='legacy-ignored';
     const r=await f.call({action:'run',job_id:job1,scenario:'A funding liquidity crunch'});
-    expect(r.status).toBe(200);expect(r.data.result.model).toBe('google/gemini-2.5-flash-lite');
-    expect(r.data.result.analysis.headline).toBe('Gateway explanation');
-    expect(f.fetcher.mock.calls.some(c=>String(c[0]).includes('generativelanguage'))).toBe(false);
+    expect(r.status).toBe(200);
+    expect(r.data.result.model).toBe('none');
+    expect(r.data.result.analysis).toBeNull();
+    expect(r.data.result.strategies.scenario).toHaveLength(6);
+    expect(f.fetcher.mock.calls.some(c=>String(c[0]).includes('ai.gateway.lovable.dev'))).toBe(false);
   });
   it('cannot replay a request ID into another paid provider run',async()=>{
     const f=fixture();const payload={action:'run',job_id:job1,scenario:'A funding liquidity crunch'};
