@@ -15,6 +15,10 @@ const ResearchChat=lazy(()=>import("./pages/ResearchChat"));
 const SimpleSimulator=lazy(()=>import("./pages/SimpleSimulator"));
 const Simulator=lazy(()=>import("./pages/Simulator"));
 import NotFound from "./pages/NotFound";
+import AuthGate from "./components/AuthGate";
+import MembershipGate from "./components/MembershipGate";
+const Login = lazy(() => import("./pages/Login"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 
 const queryClient = new QueryClient();
@@ -29,7 +33,11 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/pricing" element={<Welcome />} />
-          <Route path="/account" element={<Account />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route element={<AuthGate />}>
+            <Route path="/account" element={<Account />} />
+            <Route element={<MembershipGate />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/socioeconomics" element={<SocioEconomics />} />
@@ -38,6 +46,8 @@ const App = () => (
           <Route path="/simulations" element={<Simulator />} />
           <Route path="/research" element={<ResearchChat />} />
           <Route path="/simulations/pilot" element={<Navigate to="/research" replace />} />
+            </Route>
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes></Suspense>
       </BrowserRouter>

@@ -1,3 +1,5 @@
+> **SUPERSEDED by the 2026-11-07 authenticated membership migration.** This file documents a historical free-workspace release and must not be used to configure the new Netlify paid release. See [AUTH_STRIPE_LAUNCH.md](AUTH_STRIPE_LAUNCH.md) instead.
+
 # Public workspace deployment — no sign-in
 
 The owner explicitly removed account login, anonymous Auth, Stripe billing, and app-level per-user research quotas. No Supabase Auth provider needs to be enabled.

@@ -1,4 +1,8 @@
-project_id = "wfxjufhqdgzajidciwxb"
+# Local CLI identifier only. Remote target is supplied explicitly using --project-ref.
+project_id = "vulture-vision-standalone"
+[functions.vv-billing]
+verify_jwt = false
+
 [functions.stripe-webhook]
 verify_jwt = false
 

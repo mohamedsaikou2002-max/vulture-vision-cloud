@@ -1,5 +1,5 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "vulture-vision",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -16,7 +16,8 @@
     "check:public-env": "node scripts/check-public-env.mjs",
     "test:deployment": "node --test scripts/public-env.test.mjs",
     "check:backend": "node scripts/check-backend.mjs",
-    "check:site": "node scripts/check-site.mjs"
+    "check:site": "node scripts/check-site.mjs",
+    "build:vercel": "node scripts/check-public-env.mjs && vite build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -97,7 +98,6 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "jsdom": "^20.0.3",
-    "lovable-tagger": "^1.1.13",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",

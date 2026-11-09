@@ -12,6 +12,13 @@ export function loadEdgeHandler(name:string,fetcher:typeof fetch,values:Record<s
     const context=createContext({exports,console,URL,URLSearchParams,Request,Response,Headers,AbortSignal,DOMException,setTimeout,clearTimeout,TextEncoder,TextDecoder,Uint32Array,crypto:webcrypto,fetch:fetcher,
       Deno:{env:{get:(key:string)=>values[key],toObject:()=>({...values})},serve:(fn:typeof handler)=>{handler=fn;}},
       require:(specifier:string)=>{
+        if (specifier.endsWith("/access.ts") && values.__TEST_MEMBER_ID) {
+          const check = (req: Request) => req.headers.get("authorization") === "Bearer fixture-member";
+          return {
+            authorize: async (req: Request) => check(req) ? null : Response.json({error:"Sign in required"}, {status:401}),
+            memberIdentity: async (req: Request) => check(req) ? {userId:values.__TEST_MEMBER_ID} : Response.json({error:"Sign in required"}, {status:401}),
+          };
+        }
         if(specifier==='npm:@supabase/supabase-js@2/cors')return {corsHeaders:{}};
         if(specifier.startsWith('https://esm.sh/@supabase/supabase-js'))return {createClient};
         return load(resolve(dirname(file),specifier));

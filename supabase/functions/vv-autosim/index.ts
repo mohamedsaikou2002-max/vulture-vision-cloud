@@ -4,6 +4,7 @@
 // engine, picks fees/slippage/leverage automatically, tests the six strategies, and has Gemini explain the
 // numbers. Every response uses the same envelope: { ok:true, ... } or { ok:false, error:{code,message} }.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { memberIdentity } from "../_shared/access.ts";
 import { parseAutoSimRequest, boundedPaths } from "../_shared/autosim_request.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildWorldPulse } from "../_shared/world_pulse.ts";
@@ -29,6 +30,8 @@ const DIM_HELP = "fear↑=more fear; trust↑=more trust; liquidity↑=easier fu
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return fail("method_not_allowed", "Use POST", 405);
+  const identity = await memberIdentity(req);
+  if (identity instanceof Response) return identity;
   let body: Record<string, unknown>;
   try {
     const raw = await req.text();
@@ -38,8 +41,8 @@ Deno.serve(async (req) => {
 
   const url = Deno.env.get("SUPABASE_URL"), service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !service) return fail("configuration_error", "Supabase environment is not configured", 503);
-  // Public jobs are separate from existing private account research.
-  const user = { id: '00000000-0000-4000-8000-000000000000' };
+  // Paid members retain their own existing simulation history.
+  const user = { id: identity.userId };
   const sb = createClient(url, service);
   const action = typeof body.action === "string" ? body.action : "run";
 

@@ -18,8 +18,11 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit -p tsconfig.app.json
       - run: npm test
+        env:
+          VITE_SUPABASE_URL: https://ci-project.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_build_only
       - run: npm run test:deployment
-      - run: npm run build:netlify
+      - run: npm run build:vercel
         env:
           VITE_SUPABASE_URL: https://ci-project.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_build_only
@@ -34,3 +37,22 @@ jobs:
           python-version: '3.12'
       - run: pip install -r news-crawler/requirements.txt
       - run: python -m unittest discover -s news-crawler/tests -v
+
+  backend-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Package actual backend sources for offline VS Code
+        run: |
+          python scripts/package-backend.py
+          python -m zipfile -t artifacts/VultureVision-Standalone-Backend.zip
+      - name: Upload backend ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: VultureVision-Standalone-Backend
+          path: artifacts/VultureVision-Standalone-Backend.zip
+          if-no-files-found: error
+          retention-days: 14

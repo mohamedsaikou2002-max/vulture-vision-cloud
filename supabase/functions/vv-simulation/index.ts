@@ -1,3 +1,4 @@
+import { authorize } from "../_shared/access.ts";
 import { MAX_REQUEST_BYTES, validateSeedSize } from '../_shared/simulation_payload.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -7,10 +8,11 @@ const allowed = [/^\/api\/report\/generate$/, /^\/api\/report\/by-simulation\/[a
 Deno.serve(async req => {
   const reply = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers });
   if (req.method === "OPTIONS") return new Response("ok", { headers });
+  const denied = await authorize(req, true); if (denied) return denied;
   if (req.method !== "POST") return reply({ error: "Method not allowed" }, 405);
   const auth = req.headers.get("authorization") ?? "";
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
-  const { data: { user }, error } = await sb.auth.getUser();
+  const { data: { user }, error } = await sb.auth.getUser(auth.replace(/^Bearer\s+/i, ""));
   if (error || !user) return reply({ error: "Sign in required" }, 401);
   const operators = (Deno.env.get("MIROFISH_ALLOWED_USER_IDS") ?? "").split(",").map(s => s.trim());
   if (!operators.includes(user.id)) {
