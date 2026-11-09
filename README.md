@@ -1,19 +1,33 @@
 # Vulture Vision
 
-Public market intelligence, Nasdaq analytics, news and socioeconomic scenario research. React/Vite frontend hosted on Netlify; Supabase database and Edge functions provide backend services. Customer workspace requires Supabase Auth and a server-confirmed Stripe subscription. Checkout is kept disabled until live staging verification; the public landing and account pages remain accessible.
+AI-assisted financial, geopolitical and socioeconomic intelligence with Nasdaq historical analytics, attributed news and scenario research. The original React/Vite interface is preserved. **Commercial production is not yet live.**
 
-## Develop
+## Architecture and deploy target
 
-Use Node 22.12+ and npm. Run `npm ci`, copy `.env.example` to `.env.local`, set the two public Supabase variables, then run `npm run dev`. Supabase Auth must be configured with email/password or Google OAuth, and the Stripe test-mode backend needs signed webhook validation before enabling checkout. Server/provider credentials belong only in backend secret storage.
+- Frontend: **Vercel** (Vite build, `dist`, `vercel.json` SPA routes, owned custom domain after DNS verification).
+- New backend: **Supabase** project `sqxnulqhmykvlgxxvhmt` for Auth, PostgreSQL, RLS and Edge Functions. At initial 2026-11-09 inspection this project was healthy but empty; migrations, functions and provider credentials must still be deployed.
+- Billing: Stripe hosted Checkout and signed webhooks; premium access requires a server-confirmed subscription. **Checkout stays disabled until staging tests pass.**
+- Separate compute: crawler, translation/context workers, optional Whisper.
 
-## Publish on Netlify
+**Start with [the Vercel + standalone Supabase release checklist](docs/VERCEL_RELEASE.md)** and [paid Auth/Stripe launch requirements](docs/AUTH_STRIPE_LAUNCH.md). The older Netlify guide and `netlify.toml` are retained for fallback only. Do not point the new site to the former Lovable backend or the older inactive Supabase project.
 
-For a new independent backend, start with [the standalone cutover guide](docs/STANDALONE_NETLIFY_SUPABASE_CUTOVER.md), then [the Netlify release guide](docs/NETLIFY_RELEASE.md). The older Lovable-managed backend must not be reused accidentally. Connect this repository's main branch; `netlify.toml` sets the build command, dist output, direct-route rewrites and asset headers. Configure public environment values in Netlify before the first build.
+## Local development
 
-`npm run build:netlify` validates frontend configuration and builds. `npm run check:backend` checks the connected backend; add `-- --ai` for one real AI request. After deployment run `npm run check:site -- https://YOUR-SITE.netlify.app`.
+Use Node 22.12+ and npm. Run `npm ci`, copy `.env.example` to `.env.local` (ignored by Git), and set the public Supabase URL/publishable key for the **same** project. Then run `npm run dev`.
 
-Read [the live schema/error repair steps](docs/LIVE_ERROR_REPAIR.md) if simulation history or translation columns are missing. A frontend deploy does not deploy Supabase or host the separate Python/Whisper services.
+Backend secrets such as Stripe, AI provider and service-role keys belong only in Supabase protected secrets, never in `VITE_` variables or repository files.
 
-## Checks
+## Deploy and validate
 
-`npm test`, `npm run test:deployment`, `npm run test:migrations`, `npm run lint`, and `npx tsc --noEmit -p tsconfig.app.json`. CI builds the Netlify target with public test configuration. Live provider and ingestion checks remain separate from fixture tests.
+```sh
+npm run lint
+npx tsc --noEmit -p tsconfig.app.json
+npm test
+npm run test:migrations
+npm run test:deployment
+npm run build:vercel
+npm run check:backend -- --ai
+npm run check:site -- https://YOUR-VERCEL-PREVIEW.vercel.app
+```
+
+Vercel static hosting does **not** run database migrations, deploy Edge Functions, configure Stripe webhooks or host the separate workers. Fixture tests are not evidence that live providers, subscription enforcement or licensed real-time data work.
